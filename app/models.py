@@ -81,6 +81,31 @@ class Artist(Base):
     performances = relationship("Performance", back_populates="artist")
     song_links = relationship("SongArtistLink", back_populates="artist")
 
+    @property
+    def songs_contributed(self):
+        """
+        このアーティストが関わった全楽曲貢献情報を、楽曲単位でグルーピングして返します。
+        """
+        
+        # 貢献データを {song_id: {title: ..., roles: [...]}, ...} の形式で集計
+        contributions_map = {}
+        
+        for link in self.song_links:
+            song_id = link.song_id
+            
+            if song_id not in contributions_map:
+                contributions_map[song_id] = {
+                    "song_id": song_id,
+                    "title": link.song.title,
+                    "roles": [] # 新しい役割リスト
+                }
+            
+            # 役割をリストに追加
+            contributions_map[song_id]["roles"].append(link.role)
+
+        # マップの 'values' (値) をリストとして返します。これが Pydantic スキーマに適合します。
+        return list(contributions_map.values())
+
 class ArtistAlias(Base):
     __tablename__ = 'artist_aliases'
     id = Column(Integer, primary_key=True, index=True)

@@ -31,7 +31,7 @@ class AliasInfo(BaseModel):
 class SongContribution(BaseModel):
     song_id: int
     title: str  # 楽曲名
-    role: str   # 役割 (Composer, Vocalist, etc.)
+    roles: List[str]  # 役割 (Composer, Vocalist, etc.)
     
     class Config:
         orm_mode = True
@@ -157,3 +157,13 @@ class SongDetail(BaseModel):
     class Config:
         orm_mode = True
         allow_population_by_field_name = True # エイリアスが機能するために必要
+
+# --- Song Search Result (検索結果) ---
+class SongSearchResult(BaseModel):
+    id: int
+    title: str
+    release_date: Optional[date]
+    role: str # このアーティストがその曲で果たした役割
+
+    class Config:
+        orm_mode = True
