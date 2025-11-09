@@ -44,3 +44,35 @@ class Song(BaseModel):
 
     class Config:
         orm_mode = True # SQLAlchemyモデルをPydanticモデルに変換
+
+# --- SongArtistLink (アーティスト紐付け) ---
+class SongArtistLinkCreate(BaseModel):
+    song_id: int
+    artist_id: int
+    role: str # 例: "Composer", "Vocalist", "Guitarist"
+
+class SongArtistLink(BaseModel):
+    id: int # v2.5からidを返す
+    song_id: int
+    artist_id: int
+    role: str
+
+    class Config:
+        orm_mode = True
+        
+# --- SongTieupLink (タイアップ紐付け) ---
+class SongTieupLinkCreate(BaseModel):
+    song_id: int
+    tieup_id: int
+    context: Optional[str] = None
+    sort_index: Optional[int] = None # 10, 20, 30...
+
+class SongTieupLink(BaseModel):
+    id: int
+    song_id: int
+    tieup_id: int
+    context: Optional[str] = None
+    sort_index: Optional[int] = None
+
+    class Config:
+        orm_mode = True

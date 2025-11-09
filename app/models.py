@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Date, Table
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Date, Table, UniqueConstraint, Index
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 
 # --- 1. データベース接続設定 (まずはSQLite) ---
@@ -10,21 +10,48 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# --- 2. テーブル定義 (スキーマv2.3) ---
+# --- 2. テーブル定義 (スキーマv2.5) ---
 
-# (中間テーブルの定義)
-song_artists_link = Table('song_artists_link', Base.metadata,
-    Column('song_id', Integer, ForeignKey('songs.id'), primary_key=True),
-    Column('artist_id', Integer, ForeignKey('artists.id'), primary_key=True),
-    Column('role', String(100))
-)
+class SongArtistLink(Base):
+    __tablename__ = 'song_artists_link'
+    
+    # CSV(v2.5)に合わせて、id (PK) を追加
+    id = Column(Integer, primary_key=True, index=True)
+    
+    song_id = Column(Integer, ForeignKey('songs.id'))
+    artist_id = Column(Integer, ForeignKey('artists.id'))
+    role = Column(String(100), nullable=False) # 例: "Composer"
+    
+    # 外部キーにインデックスを貼る (検索高速化)
+    __table_args__ = (
+        Index('idx_song_artist_role', 'song_id', 'artist_id', 'role'),
+        # 「曲」「アーティスト」「役割」の組み合わせの重複を禁止
+        UniqueConstraint('song_id', 'artist_id', 'role', name='_song_artist_role_uc'),
+    )
 
-song_tieups_link = Table('song_tieups_link', Base.metadata,
-    Column('song_id', Integer, ForeignKey('songs.id'), primary_key=True),
-    Column('tieup_id', Integer, ForeignKey('tieups.id'), primary_key=True),
-    Column('context', String(255), nullable=True)
-)
+    artist = relationship("Artist", back_populates="song_links")
+    song = relationship("Song", back_populates="artist_links")
 
+class SongTieupLink(Base):
+    __tablename__ = 'song_tieups_link'
+    
+    # CSV(v2.5)に合わせて、id (PK) を追加
+    id = Column(Integer, primary_key=True, index=True)
+
+    song_id = Column(Integer, ForeignKey('songs.id'))
+    tieup_id = Column(Integer, ForeignKey('tieups.id'))
+    context = Column(String(255), nullable=True) # 例: "1期 OP"
+    sort_index = Column(Integer) # 例: 10, 20
+
+    # 外部キーにインデックスを貼る
+    __table_args__ = (
+        Index('idx_tieup_sort', 'tieup_id', 'sort_index'),
+        # 「タイアップ先」と「並び順」の組み合わせの重複を禁止
+        UniqueConstraint('tieup_id', 'sort_index', name='_tieup_sort_index_uc'),
+    )
+
+    song = relationship("Song", back_populates="tieup_links")
+    tieup = relationship("Tieup", back_populates="song_links")
 
 class Artist(Base):
     __tablename__ = 'artists'
@@ -38,7 +65,7 @@ class Artist(Base):
     relationships_a = relationship("ArtistRelationship", foreign_keys="[ArtistRelationship.artist_id_1]")
     relationships_b = relationship("ArtistRelationship", foreign_keys="[ArtistRelationship.artist_id_2]")
     performances = relationship("Performance", back_populates="artist")
-    songs = relationship("Song", secondary=song_artists_link, back_populates="artists")
+    song_links = relationship("SongArtistLink", back_populates="artist")
 
 class ArtistAlias(Base):
     __tablename__ = 'artist_aliases'
@@ -66,8 +93,8 @@ class Song(Base):
     lyrics = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
-    artists = relationship("Artist", secondary=song_artists_link, back_populates="songs")
-    tieups = relationship("Tieup", secondary=song_tieups_link, back_populates="songs")
+    artist_links = relationship("SongArtistLink", back_populates="song")
+    tieup_links = relationship("SongTieupLink", back_populates="song")
     setlist_entries = relationship("SetlistEntry", back_populates="song")
 
 class Tieup(Base):
@@ -75,7 +102,7 @@ class Tieup(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     category = Column(String(100)) # "Anime", "Game"
-    songs = relationship("Song", secondary=song_tieups_link, back_populates="tieups")
+    song_links = relationship("SongTieupLink", back_populates="tieup")
 
 class Tour(Base):
     __tablename__ = 'tours'

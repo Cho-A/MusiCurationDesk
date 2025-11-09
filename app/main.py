@@ -103,3 +103,51 @@ def create_song(
     
     # 5. 登録した楽曲情報を返す
     return new_song
+
+# [POST] /song_artist_links/
+# ----------------------------------------------------
+@app.post("/song_artist_links/", response_model=schemas.SongArtistLink, tags=["Links"])
+def link_song_to_artist(
+    link: schemas.SongArtistLinkCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    楽曲 (song_id) とアーティスト (artist_id) を、
+    指定された役割 (role) で紐付けます。
+    
+    (エラーチェック: song_id, artist_id がDBに存在するか確認します)
+    """
+    
+    # --- 外部キー制約のチェック ---
+    
+    # 1. 楽曲 (Song) が存在するかチェック
+    db_song = db.query(models.Song).filter(models.Song.id == link.song_id).first()
+    if db_song is None:
+        raise HTTPException(status_code=404, detail=f"Song ID {link.song_id} が見つかりません。")
+        
+    # 2. アーティスト (Artist) が存在するかチェック
+    db_artist = db.query(models.Artist).filter(models.Artist.id == link.artist_id).first()
+    if db_artist is None:
+        raise HTTPException(status_code=404, detail=f"Artist ID {link.artist_id} が見つかりません。")
+
+    # --- 紐付けデータ (Association Object) を作成 ---
+    new_link = models.SongArtistLink(
+        song_id=link.song_id,
+        artist_id=link.artist_id,
+        role=link.role
+    )
+    
+    db.add(new_link)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # ★ v2.5のUNIQUE制約エラーをここでキャッチ
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=400, detail="この紐付け（曲・アーティスト・役割の組み合わせ）は既に存在します。")
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_link)
+    
+    return new_link
