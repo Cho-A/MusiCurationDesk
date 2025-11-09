@@ -88,7 +88,8 @@ class Song(Base):
     title = Column(String(255), nullable=False, index=True)
     release_date = Column(Date, nullable=True)
     spotify_song_id = Column(String(100), nullable=True, unique=True)
-    jasrac_code = Column(String(50), nullable=True, index=True)
+    spotify_song_title = Column(String(255), nullable=True)
+    jasrac_code = Column(String(20), nullable=True, index=True, unique=True)
     jasrac_title = Column(String(255), nullable=True)
     lyrics = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
@@ -134,6 +135,32 @@ class SetlistEntry(Base):
 
     performance = relationship("Performance", back_populates="setlist_entries")
     song = relationship("Song", back_populates="setlist_entries")
+
+class Album(Base):
+    __tablename__ = 'albums'
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    artist_id = Column(Integer, ForeignKey('artists.id'), nullable=True)
+    release_date = Column(Date)
+    spotify_album_id = Column(String(100), nullable=True, unique=True)
+    
+    album_tracks = relationship("AlbumTrack", back_pop_ulates="album")
+
+class AlbumTrack(Base):
+    __tablename__ = 'album_tracks'
+    id = Column(Integer, primary_key=True, index=True)
+    album_id = Column(Integer, ForeignKey('albums.id'))
+    song_id = Column(Integer, ForeignKey('songs.id'))
+    track_number = Column(Integer)
+    disc_number = Column(Integer, default=1)
+    
+    __table_args__ = (
+        UniqueConstraint('album_id', 'song_id', name='_album_song_uc'),
+        UniqueConstraint('album_id', 'disc_number', 'track_number', name='_album_track_order_uc'),
+    )
+    
+    album = relationship("Album", back_pop_ulates="album_tracks")
+    song = relationship("Song", back_pop_ulates="album_links")
 
 # --- 3. データベースの初期化関数 ---
 def create_db_and_tables():
