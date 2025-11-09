@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from . import models , schemas # 先ほど作成したファイルをインポート
 
@@ -103,6 +103,30 @@ def create_song(
     
     # 5. 登録した楽曲情報を返す
     return new_song
+
+@app.delete("/songs/{song_id}", tags=["Songs"], status_code=204)
+def delete_song(song_id: int, db: Session = Depends(models.get_db)):
+    """
+    指定されたIDの楽曲をデータベースから削除します。
+    """
+    # 1. 楽曲をIDで検索
+    song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    
+    # 2. 楽曲が存在しない場合は404エラー
+    if song is None:
+        raise HTTPException(status_code=404, detail=f"Song with ID {song_id} not found")
+
+    # 3. 削除を実行
+    # 注: この曲に紐づく artist_links, album_tracks などの中間テーブルの
+    # エントリも同時に削除されるように、models.py側でCASCADE設定が必要です。
+    # (現在の設計では未設定の可能性がありますが、一旦進めます)
+    db.delete(song)
+    
+    # 4. データベースに変更をコミット
+    db.commit()
+    
+    # 5. 成功を示すHTTP 204 No Contentを返却
+    return Response(status_code=204)
 
 # [POST] /song_artist_links/
 # ----------------------------------------------------

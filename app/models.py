@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Date, Table, UniqueConstraint, Index
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Date, Table, UniqueConstraint, Index, text
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 
 # --- 1. データベース接続設定 (まずはSQLite) ---
@@ -97,6 +97,19 @@ class Song(Base):
     artist_links = relationship("SongArtistLink", back_populates="song")
     tieup_links = relationship("SongTieupLink", back_populates="song")
     setlist_entries = relationship("SetlistEntry", back_populates="song")
+    album_links = relationship("AlbumTrack", back_populates="song")
+
+    __table_args__ = (
+        # title + release_date を、「spotify_song_id と jasrac_code が両方 NULL の行」に限ってユニーク
+        Index(
+            "uq_song_title_date_when_both_ids_null",
+            "title", "release_date",
+            unique=True,
+            sqlite_where=text("(spotify_song_id IS NULL) AND (jasrac_code IS NULL)"),
+            # PostgreSQL も使うなら↓も併記可
+            # postgresql_where=text("(spotify_song_id IS NULL) AND (jasrac_code IS NULL)"),
+        ),
+    )
 
 class Tieup(Base):
     __tablename__ = 'tieups'
@@ -144,7 +157,7 @@ class Album(Base):
     release_date = Column(Date)
     spotify_album_id = Column(String(100), nullable=True, unique=True)
     
-    album_tracks = relationship("AlbumTrack", back_pop_ulates="album")
+    album_tracks = relationship("AlbumTrack", back_populates="album")
 
 class AlbumTrack(Base):
     __tablename__ = 'album_tracks'
@@ -159,8 +172,8 @@ class AlbumTrack(Base):
         UniqueConstraint('album_id', 'disc_number', 'track_number', name='_album_track_order_uc'),
     )
     
-    album = relationship("Album", back_pop_ulates="album_tracks")
-    song = relationship("Song", back_pop_ulates="album_links")
+    album = relationship("Album", back_populates="album_tracks")
+    song = relationship("Song", back_populates="album_links")
 
 # --- 3. データベースの初期化関数 ---
 def create_db_and_tables():
