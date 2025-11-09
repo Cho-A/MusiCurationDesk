@@ -65,3 +65,41 @@ def read_artist(artist_id: int, db: Session = Depends(models.get_db)):
     if db_artist is None:
         raise HTTPException(status_code=404, detail="アーティストが見つかりません。")
     return db_artist
+
+# --- ★楽曲登録APIエンドポイント★ ---
+#
+# [POST] /songs/
+# ----------------------------------------------------
+@app.post("/songs/", response_model=schemas.Song, tags=["Songs"])
+def create_song(
+    song: schemas.SongCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しい楽曲をデータベースに登録します。
+    
+    - **title**: 楽曲の「正」となる名前 (必須)
+    - **release_date**: 発売日 (任意)
+    - **spotify_song_id**: (任意)
+    - **jasrac_title**: (任意)
+    """
+    
+    # 1. 受け取ったデータ (song) を、DBモデル (models.Song) に変換
+    #    **kwargs を使うと、SongCreateの全フィールドを自動で渡せる
+    new_song = models.Song(**song.dict())
+    
+    # 2. データベースに追加 (INSERT)
+    db.add(new_song)
+    
+    # 3. 変更を確定
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback() # エラーが出たら変更を元に戻す
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+
+    # 4. 確定したデータ (IDが採番された状態) をリフレッシュ
+    db.refresh(new_song)
+    
+    # 5. 登録した楽曲情報を返す
+    return new_song
