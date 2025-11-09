@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional,List
 from datetime import date
 
 # --- Artist (アーティスト) ---
@@ -20,6 +20,36 @@ class Artist(BaseModel):
     class Config:
         orm_mode = True # SQLAlchemyモデルをPydanticモデルに変換できるようにする
 
+class AliasInfo(BaseModel):
+    alias_name: str
+    context: Optional[str]
+    
+    class Config:
+        orm_mode = True
+
+# --- Song Contribution (楽曲貢献情報) ---
+class SongContribution(BaseModel):
+    song_id: int
+    title: str  # 楽曲名
+    role: str   # 役割 (Composer, Vocalist, etc.)
+    
+    class Config:
+        orm_mode = True
+
+# --- Artist Detail (最終応答スキーマ) ---
+class ArtistDetail(BaseModel):
+    id: int
+    name: str
+    spotify_artist_id: Optional[str]
+    notes: Optional[str]
+
+    # ★ 関連情報をリストとして含める ★
+    aliases: List[AliasInfo] = []
+    songs_contributed: List[SongContribution] = []
+
+    class Config:
+        orm_mode = True
+        allow_population_by_field_name = True
 
 # --- Song (楽曲) ---
 
@@ -89,3 +119,41 @@ class Tieup(BaseModel):
 
     class Config:
         orm_mode = True
+
+# SongArtistLinkの情報を簡略化して返すためのスキーマ
+class ArtistLinkInfo(BaseModel):
+    artist_id: int
+    role: str
+    
+    # Artistマスター情報の一部をネストして含める
+    artist_name: str
+    
+    class Config:
+        orm_mode = True
+
+# SongTieupLinkの情報を簡略化して返すためのスキーマ
+class TieupLinkInfo(BaseModel):
+    tieup_id: int
+    context: Optional[str]
+    sort_index: Optional[int]
+    
+    # Tieupマスター情報の一部をネストして含める
+    tieup_name: str
+    tieup_category: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+# 既存のSongスキーマを拡張し、関連情報を含める
+class SongDetail(BaseModel):
+    id: int
+    title: str
+    release_date: Optional[date]
+    spotify_song_id: Optional[str]
+    
+    artists: List[ArtistLinkInfo] = Field(..., alias="artist_links") # 'artist_links' リレーションシップを参照
+    tieups: List[TieupLinkInfo] = Field(..., alias="tieup_links")   # 'tieup_links' リレーションシップを参照
+
+    class Config:
+        orm_mode = True
+        allow_population_by_field_name = True # エイリアスが機能するために必要

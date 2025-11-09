@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Response
-from sqlalchemy.orm import Session
+from typing import List
+from sqlalchemy.orm import Session, joinedload
 from . import models , schemas # 先ほど作成したファイルをインポート
 
 # --- 1. FastAPIアプリの初期化 ---
@@ -103,6 +104,50 @@ def create_song(
     
     # 5. 登録した楽曲情報を返す
     return new_song
+
+# [GET] /songs/{song_id}
+# ----------------------------------------------------
+@app.get("/songs/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
+def read_song(song_id: int, db: Session = Depends(models.get_db)):
+    """
+    指定されたIDの楽曲情報に加え、紐づくアーティストとタイアップ情報を取得します。
+    """
+    # 1. 楽曲をIDで検索し、関連テーブルを事前に結合 (Eager Load) して取得
+    db_song = db.query(models.Song)\
+        .options(
+            # Artists (SongArtistLink) 情報を取得
+            joinedload(models.Song.artist_links)\
+                .joinedload(models.SongArtistLink.artist),
+            # Tieups (SongTieupLink) 情報を取得
+            joinedload(models.Song.tieup_links)\
+                .joinedload(models.SongTieupLink.tieup),
+        )\
+        .filter(models.Song.id == song_id).first()
+    
+    if db_song is None:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+        
+    return db_song
+
+# --- ★全楽曲の一覧を取得するAPI★ ---
+# 
+# [GET] /songs/
+# ----------------------------------------------------
+@app.get("/songs/", response_model=List[schemas.Song], tags=["Songs"])
+def read_songs(
+    skip: int = 0, # スキップする件数 (ページネーション用)
+    limit: int = 100, # 取得する最大件数 (ページネーション用)
+    db: Session = Depends(models.get_db)
+):
+    """
+    データベースに登録されている楽曲の一覧を取得します。
+    (デフォルトで最新100件を表示)
+    """
+    # 1. 楽曲テーブルからデータを取得
+    songs = db.query(models.Song).offset(skip).limit(limit).all()
+    
+    # 2. 取得したリストを返却
+    return songs
 
 @app.delete("/songs/{song_id}", tags=["Songs"], status_code=204)
 def delete_song(song_id: int, db: Session = Depends(models.get_db)):

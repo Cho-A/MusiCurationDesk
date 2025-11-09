@@ -29,6 +29,11 @@ class SongArtistLink(Base):
         UniqueConstraint('song_id', 'artist_id', 'role', name='_song_artist_role_uc'),
     )
 
+    # ★ Artistの名前を取得するプロパティを追加
+    @property
+    def artist_name(self):
+        return self.artist.name if self.artist else None
+
     artist = relationship("Artist", back_populates="song_links")
     song = relationship("Song", back_populates="artist_links")
 
@@ -49,6 +54,15 @@ class SongTieupLink(Base):
         # 「タイアップ先」と「並び順」の組み合わせの重複を禁止
         UniqueConstraint('tieup_id', 'sort_index', name='_tieup_sort_index_uc'),
     )
+
+    # ★ Tieupの名前とカテゴリを取得するプロパティを追加
+    @property
+    def tieup_name(self):
+        return self.tieup.name if self.tieup else None
+    
+    @property
+    def tieup_category(self):
+        return self.tieup.category if self.tieup else None
 
     song = relationship("Song", back_populates="tieup_links")
     tieup = relationship("Tieup", back_populates="song_links")
