@@ -220,48 +220,40 @@ def create_song(
     # 5. 登録した楽曲情報を返す
     return new_song
 
-# [GET] /songs/{song_id}
-# ----------------------------------------------------
-@app.get("/songs/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
-def read_song(song_id: int, db: Session = Depends(models.get_db)):
-    """
-    指定されたIDの楽曲情報に加え、紐づくアーティストとタイアップ情報を取得します。
-    """
-    # 1. 楽曲をIDで検索し、関連テーブルを事前に結合 (Eager Load) して取得
-    db_song = db.query(models.Song)\
-        .options(
-            # Artists (SongArtistLink) 情報を取得
-            joinedload(models.Song.artist_links)\
-                .joinedload(models.SongArtistLink.artist),
-            # Tieups (SongTieupLink) 情報を取得
-            joinedload(models.Song.tieup_links)\
-                .joinedload(models.SongTieupLink.tieup),
-        )\
-        .filter(models.Song.id == song_id).first()
-    
-    if db_song is None:
-        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
-        
-    return db_song
-
-# --- ★全楽曲の一覧を取得するAPI★ ---
-# 
 # [GET] /songs/
 # ----------------------------------------------------
 @app.get("/songs/", response_model=List[schemas.Song], tags=["Songs"])
 def read_songs(
     skip: int = 0, # スキップする件数 (ページネーション用)
     limit: int = 100, # 取得する最大件数 (ページネーション用)
+    title_search: Optional[str] = Query(None, description="曲名での部分一致検索"),
+    sort_by: str = Query("id", description="ソート基準 (id, title, release_date)"),
     db: Session = Depends(models.get_db)
 ):
     """
-    データベースに登録されている楽曲の一覧を取得します。
-    (デフォルトで最新100件を表示)
+    データベースに登録されている楽曲の一覧を、検索・ソートして取得します。
     """
-    # 1. 楽曲テーブルからデータを取得
-    songs = db.query(models.Song).offset(skip).limit(limit).all()
     
-    # 2. 取得したリストを返却
+    # 1. クエリの組み立て開始
+    query = db.query(models.Song)
+
+    # 2. 検索 (フィルタリング)
+    if title_search:
+        # PostgreSQL/SQLite の大文字小文字を区別しない部分一致検索
+        query = query.filter(models.Song.title.ilike(f"%{title_search}%"))
+
+    # 3. ソート
+    if sort_by == "release_date":
+        # 発売日が新しいもの順 (降順) にソート
+        query = query.order_by(models.Song.release_date.desc(), models.Song.id.desc())
+    elif sort_by == "title":
+        query = query.order_by(models.Song.title)
+    else: # デフォルトはID順
+        query = query.order_by(models.Song.id.desc())
+
+    # 4. データの取得 (ページネーション適用)
+    songs = query.offset(skip).limit(limit).all()
+    
     return songs
 
 # [PUT] /songs/{song_id}
@@ -478,3 +470,50 @@ def link_song_to_tieup(
     db.refresh(new_link)
     
     return new_link
+
+
+# --- ★公演参加者名簿登録API★ ---
+#
+# [POST] /performance_roster/
+# ----------------------------------------------------
+@app.post("/performance_roster/", response_model=schemas.PerformanceRoster, tags=["Performances"])
+def add_performance_roster_entry(
+    roster_entry: schemas.PerformanceRosterCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    特定の公演に、サポートメンバーやゲスト (artist_id) を追加します。
+    """
+    
+    # --- 外部キー制約のチェック ---
+    # 1. 公演 (Performance) が存在するかチェック
+    db_performance = db.query(models.Performance).filter(models.Performance.id == roster_entry.performance_id).first()
+    if db_performance is None:
+        raise HTTPException(status_code=404, detail=f"Performance ID {roster_entry.performance_id} が見つかりません。")
+        
+    # 2. 参加アーティスト (Artist) が存在するかチェック
+    db_artist = db.query(models.Artist).filter(models.Artist.id == roster_entry.artist_id).first()
+    if db_artist is None:
+        raise HTTPException(status_code=404, detail=f"Artist ID {roster_entry.artist_id} が見つかりません。")
+
+    # --- 紐付けデータを作成 ---
+    new_entry = models.PerformanceRoster(
+        performance_id=roster_entry.performance_id,
+        artist_id=roster_entry.artist_id,
+        role=roster_entry.role,
+        context=roster_entry.context
+    )
+    
+    db.add(new_entry)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=400, detail="この公演に、このアーティストは既に同じ役割で登録されています。")
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_entry)
+    
+    return new_entry

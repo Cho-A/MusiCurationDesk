@@ -167,3 +167,20 @@ class SongSearchResult(BaseModel):
 
     class Config:
         orm_mode = True
+
+# --- PerformanceRoster (公演参加者) ---
+class PerformanceRosterCreate(BaseModel):
+    performance_id: int
+    artist_id: int
+    role: str
+    context: Optional[str] = None
+
+class PerformanceRoster(BaseModel):
+    id: int
+    performance_id: int
+    artist_id: int
+    role: str
+    context: Optional[str] = None
+
+    class Config:
+        orm_mode = True

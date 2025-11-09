@@ -163,6 +163,27 @@ class Tour(Base):
     name = Column(String(255), nullable=False)
     performances = relationship("Performance", back_populates="tour")
 
+class PerformanceRoster(Base):
+    """
+    公演参加者名簿
+    (サポートメンバー、ゲスト、対バン相手などを管理)
+    """
+    __tablename__ = 'performance_roster'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    performance_id = Column(Integer, ForeignKey('performances.id'))
+    artist_id = Column(Integer, ForeignKey('artists.id'))
+    role = Column(String(100), nullable=False) # 例: "Guest Vocal", "Opposing Act"
+    context = Column(String(255), nullable=True) # 例: "〇〇曲のみ参加"
+
+    # UNIQUE(performance_id, artist_id)
+    __table_args__ = (
+        UniqueConstraint('performance_id', 'artist_id', name='_performance_artist_uc'),
+    )
+
+    performance = relationship("Performance", back_populates="roster_entries")
+    artist = relationship("Artist") # PerformanceRoster は Artist に紐づく
+
 class Performance(Base):
     __tablename__ = 'performances'
     id = Column(Integer, primary_key=True, index=True)
@@ -175,6 +196,9 @@ class Performance(Base):
 
     artist = relationship("Artist", back_populates="performances")
     tour = relationship("Tour", back_populates="performances")
+    setlist_entries = relationship("SetlistEntry", back_populates="performance")
+
+    roster_entries = relationship("PerformanceRoster", back_populates="performance")
     setlist_entries = relationship("SetlistEntry", back_populates="performance")
 
 class SetlistEntry(Base):
