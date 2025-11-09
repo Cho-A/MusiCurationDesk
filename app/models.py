@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Date, Table, UniqueConstraint, Index, text
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Date, Table, UniqueConstraint, Index, Time, text
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 
 # --- 1. データベース接続設定 (まずはSQLite) ---
@@ -188,11 +188,15 @@ class Performance(Base):
     __tablename__ = 'performances'
     id = Column(Integer, primary_key=True, index=True)
     artist_id = Column(Integer, ForeignKey('artists.id'))
-    tour_id = Column(Integer, ForeignKey('tours.id'), nullable=True)
     performance_type = Column(String(100)) # "Tour", "One-Man", "Festival"
     name = Column(String(255))
     date = Column(Date)
     venue = Column(String(255), nullable=True)
+
+    open_time = Column(Time, nullable=True)     # 開場時間
+    start_time = Column(Time, nullable=True)    # 開演時間
+    end_time = Column(Time, nullable=True)      # 終演時間 (セッション終了)
+    stage_name = Column(String, nullable=True)  # フェスなどのステージ名
 
     artist = relationship("Artist", back_populates="performances")
     main_artist = relationship("Artist", primaryjoin="Performance.artist_id == Artist.id", uselist=False)

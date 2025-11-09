@@ -681,3 +681,49 @@ def create_tour(
     db.refresh(new_tour)
     
     return new_tour
+
+# --- ★セットリスト登録APIエンドポイント★ ---
+#
+# [POST] /setlist_entries/
+# ----------------------------------------------------
+@app.post("/setlist_entries/", response_model=schemas.SetlistEntry, tags=["Performances"])
+def create_setlist_entry(
+    entry: schemas.SetlistEntryCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    特定の公演 (performance_id) に、演奏された楽曲 (song_id) を追加します。
+    
+    (エラーチェック: performance_id, song_id がDBに存在するか確認します)
+    """
+    
+    # --- 外部キー制約のチェック ---
+    
+    # 1. 公演 (Performance) が存在するかチェック
+    db_performance = db.query(models.Performance).filter(models.Performance.id == entry.performance_id).first()
+    if db_performance is None:
+        raise HTTPException(status_code=404, detail=f"Performance ID {entry.performance_id} が見つかりません。")
+        
+    # 2. 楽曲 (Song) が存在するかチェック
+    db_song = db.query(models.Song).filter(models.Song.id == entry.song_id).first()
+    if db_song is None:
+        raise HTTPException(status_code=404, detail=f"Song ID {entry.song_id} が見つかりません。")
+
+    # --- 紐付けデータを作成 ---
+    new_entry = models.SetlistEntry(**entry.dict())
+    
+    db.add(new_entry)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # ★ UNIQUE制約エラーをここでキャッチ
+        if "UNIQUE constraint failed" in str(e):
+            # 内部的な複合主キー (performance_id, song_id, order_index) の重複を防ぐ
+            raise HTTPException(status_code=400, detail="この公演に、同じ曲順または同じ曲が重複して登録されています。")
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_entry)
+    
+    return new_entry

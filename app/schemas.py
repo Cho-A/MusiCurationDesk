@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional,List
-from datetime import date
+from datetime import date, time
 
 # --- Artist (アーティスト) ---
 
@@ -184,6 +184,11 @@ class PerformanceCreate(BaseModel):
     name: str
     date: date
     venue: Optional[str] = None
+    
+    open_time: Optional[time] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    stage_name: Optional[str] = None
 
 # --- PerformanceRoster (公演参加者) ---
 class PerformanceRosterCreate(BaseModel):
@@ -202,9 +207,16 @@ class PerformanceRoster(BaseModel):
     class Config:
         orm_mode = True
 
-# 2. SetlistEntry の読み取り用スキーマ（song_id を含む）
+# --- SetlistEntry (セットリストのエントリ) ---
+class SetlistEntryCreate(BaseModel):
+    performance_id: int
+    song_id: int
+    order_index: int
+    notes: Optional[str] = None # "Encore 1", "Medley" など
+
 class SetlistEntry(BaseModel):
-    # id: int
+    id: int
+    performance_id: int
     song_id: int
     order_index: int
     notes: Optional[str] = None
@@ -234,6 +246,11 @@ class Performance(BaseModel):
     name: str
     date: date
     venue: Optional[str] = None
+
+    open_time: Optional[time] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    stage_name: Optional[str] = None
     
     # ★ ネストされた関連データの追加 ★
     setlist_entries: List[SetlistEntry] = []  # SetlistEntry のリスト
@@ -255,6 +272,11 @@ class PerformanceSummary(BaseModel):
     name: str
     date: date
     venue: Optional[str] = None
+
+    open_time: Optional[time] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    stage_name: Optional[str] = None
     
     class Config:
         orm_mode = True
