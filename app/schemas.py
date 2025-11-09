@@ -76,3 +76,16 @@ class SongTieupLink(BaseModel):
 
     class Config:
         orm_mode = True
+
+# --- Tieup (タイアップ先) ---
+class TieupCreate(BaseModel):
+    name: str # "呪術廻戦", "チェンソーマン"
+    category: Optional[str] = None # "Anime", "Game", "CM"
+
+class Tieup(BaseModel):
+    id: int
+    name: str
+    category: Optional[str] = None
+
+    class Config:
+        orm_mode = True
