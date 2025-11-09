@@ -51,6 +51,14 @@ class ArtistDetail(BaseModel):
         orm_mode = True
         allow_population_by_field_name = True
 
+# --- ArtistMini (参照用) ---
+class ArtistMini(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
 # --- Song (楽曲) ---
 
 # 楽曲登録時にAPIが「受け取る」データの型
@@ -168,6 +176,15 @@ class SongSearchResult(BaseModel):
     class Config:
         orm_mode = True
 
+# --- PerformanceCreate (公演の基本情報) ---
+class PerformanceCreate(BaseModel):
+    artist_id: int
+    tour_id: Optional[int] = None
+    performance_type: str
+    name: str
+    date: date
+    venue: Optional[str] = None
+
 # --- PerformanceRoster (公演参加者) ---
 class PerformanceRosterCreate(BaseModel):
     performance_id: int
@@ -178,9 +195,66 @@ class PerformanceRosterCreate(BaseModel):
 class PerformanceRoster(BaseModel):
     id: int
     performance_id: int
-    artist_id: int
+    artist: ArtistMini
     role: str
     context: Optional[str] = None
 
+    class Config:
+        orm_mode = True
+
+# 2. SetlistEntry の読み取り用スキーマ（song_id を含む）
+class SetlistEntry(BaseModel):
+    # id: int
+    song_id: int
+    order_index: int
+    notes: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+class Tour(BaseModel):
+    id: int
+    name: str
+    
+    class Config:
+        orm_mode = True
+
+# --- Tour (ツアー) ---
+class TourCreate(BaseModel):
+    name: str # ツアーの名称 (例: "TOUR 2024『Catcher In The Spy』")
+
+
+# 3. Performance 詳細（親）スキーマ
+class Performance(BaseModel):
+    id: int
+    artist_id: int
+    main_artist: ArtistMini = None
+    tour: Optional[Tour] = None
+    performance_type: str
+    name: str
+    date: date
+    venue: Optional[str] = None
+    
+    # ★ ネストされた関連データの追加 ★
+    setlist_entries: List[SetlistEntry] = []  # SetlistEntry のリスト
+    roster_entries: List[PerformanceRoster] = []  # PerformanceRoster のリスト
+    
+    class Config:
+        orm_mode = True
+
+# --- PerformanceSummary (一覧表示用) ---
+class PerformanceSummary(BaseModel):
+    id: int
+    artist_id: int
+    
+    # 読み取りを高速化するため、ネストされたオブジェクトもサマリーに含める
+    main_artist: ArtistMini
+    tour: Optional[Tour] = None
+    
+    performance_type: str
+    name: str
+    date: date
+    venue: Optional[str] = None
+    
     class Config:
         orm_mode = True

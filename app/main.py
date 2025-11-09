@@ -492,6 +492,47 @@ def link_song_to_tieup(
     
     return new_link
 
+# --- ★公演登録APIエンドポイント★ ---
+#
+# [POST] /performances/
+# ----------------------------------------------------
+@app.post("/performances/", response_model=schemas.Performance, tags=["Performances"])
+def create_performance(
+    performance: schemas.PerformanceCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しい公演（ツアー公演、フェス出演、ワンマンなど）をデータベースに登録します。
+    """
+    
+    # --- 外部キー制約のチェック ---
+    
+    # 1. アーティスト (Artist) が存在するかチェック
+    db_artist = db.query(models.Artist).filter(models.Artist.id == performance.artist_id).first()
+    if db_artist is None:
+        raise HTTPException(status_code=404, detail=f"Artist ID {performance.artist_id} が見つかりません。")
+        
+    # 2. ツアー (Tour) IDが提供された場合、存在するかチェック
+    if performance.tour_id:
+        db_tour = db.query(models.Tour).filter(models.Tour.id == performance.tour_id).first()
+        if db_tour is None:
+            raise HTTPException(status_code=404, detail=f"Tour ID {performance.tour_id} が見つかりません。")
+
+    # --- データ作成 ---
+    new_performance = models.Performance(**performance.dict())
+    
+    db.add(new_performance)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_performance)
+    
+    return new_performance
+
 
 # --- ★公演参加者名簿登録API★ ---
 #
@@ -538,3 +579,105 @@ def add_performance_roster_entry(
     db.refresh(new_entry)
     
     return new_entry
+
+# --- ★公演詳細情報 API★ ---
+
+# [GET] /performances/
+# ----------------------------------------------------
+@app.get("/performances/", response_model=List[schemas.PerformanceSummary], tags=["Performances"])
+def read_performances(
+    # クエリパラメータを定義
+    artist_id: Optional[int] = Query(None, description="メインアクトのアーティストIDでフィルタリングします。"),
+    skip: int = Query(0, ge=0, description="取得を開始するレコードのオフセット（ページネーション用）。"),
+    limit: int = Query(100, ge=1, le=100, description="取得するレコードの最大数（ページネーション用）。"),
+    db: Session = Depends(models.get_db)
+):
+    """
+    公演履歴を一覧で取得します。アーティストIDによるフィルタリングと、日付降順でのソートを行います。
+    """
+    
+    query = db.query(models.Performance)\
+        .options(
+            # 一覧表示に必要な情報のみをEager Loadする (N+1問題対策)
+            joinedload(models.Performance.main_artist),
+            joinedload(models.Performance.tour),
+        )
+    
+    # --- フィルタリング処理 ---
+    if artist_id is not None:
+        # artist_idが指定された場合、そのアーティストの公演のみに絞り込む
+        query = query.filter(models.Performance.artist_id == artist_id)
+        
+    # --- ソート処理 ---
+    # 新しい公演から順に（日付降順）並べる
+    query = query.order_by(models.Performance.date.desc())
+    
+    # --- ページネーション処理 ---
+    performances = query.offset(skip).limit(limit).all()
+    
+    # 取得したリストを返却する
+    return performances
+
+# [GET] /performances/{performance_id}
+# ----------------------------------------------------
+@app.get("/performances/{performance_id}", response_model=schemas.Performance, tags=["Performances"])
+def read_performance(
+    performance_id: int, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    指定されたIDの公演情報を取得します。
+    セットリスト、公演参加者 (ゲスト/サポート) の詳細を含みます。
+    """
+    
+    db_performance = db.query(models.Performance)\
+        .options(
+            joinedload(models.Performance.tour),
+
+            joinedload(models.Performance.main_artist), 
+
+            # セットリスト情報を取得（ソートはmodels.pyで定義済み）
+            joinedload(models.Performance.setlist_entries), 
+
+            # ★★★ 修正点: Roster情報と、そのアーティスト情報をロード ★★★
+            joinedload(models.Performance.roster_entries).joinedload(models.PerformanceRoster.artist),
+        )\
+        .filter(models.Performance.id == performance_id).first()
+    
+    if db_performance is None:
+        raise HTTPException(status_code=404, detail="公演情報が見つかりません。")
+        
+    return db_performance
+
+# --- ★ツアー登録APIエンドポイント★ ---
+#
+# [POST] /tours/
+# ----------------------------------------------------
+@app.post("/tours/", response_model=schemas.Tour, tags=["Tours"])
+def create_tour(
+    tour: schemas.TourCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しいツアーのマスターデータ（例: ツアー名）をデータベースに登録します。
+    """
+    
+    # 既に同じ名前のツアーがないかチェック (名前の重複は防ぐ)
+    db_tour = db.query(models.Tour).filter(models.Tour.name == tour.name).first()
+    if db_tour:
+        raise HTTPException(status_code=400, detail=f"ツアー名 '{tour.name}' は既に使用されています。")
+    
+    # 1. データ作成
+    new_tour = models.Tour(name=tour.name)
+    
+    db.add(new_tour)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_tour)
+    
+    return new_tour

@@ -195,11 +195,16 @@ class Performance(Base):
     venue = Column(String(255), nullable=True)
 
     artist = relationship("Artist", back_populates="performances")
+    main_artist = relationship("Artist", primaryjoin="Performance.artist_id == Artist.id", uselist=False)
     tour = relationship("Tour", back_populates="performances")
     setlist_entries = relationship("SetlistEntry", back_populates="performance")
-
-    roster_entries = relationship("PerformanceRoster", back_populates="performance")
-    setlist_entries = relationship("SetlistEntry", back_populates="performance")
+    roster_entries = relationship("PerformanceRoster", back_populates="performance", cascade="all, delete-orphan")
+    setlist_entries = relationship(
+        "SetlistEntry", 
+        back_populates="performance", 
+        cascade="all, delete-orphan",
+        order_by="SetlistEntry.order_index" # ★ ここでソート順を定義
+    )
 
 class SetlistEntry(Base):
     __tablename__ = 'setlist_entries'
