@@ -220,39 +220,60 @@ def create_song(
     # 5. 登録した楽曲情報を返す
     return new_song
 
+# --- ★★★ 全楽曲の一覧を取得するAPI (上書き) ★★★ ---
+# 
 # [GET] /songs/
 # ----------------------------------------------------
 @app.get("/songs/", response_model=List[schemas.Song], tags=["Songs"])
 def read_songs(
-    skip: int = 0, # スキップする件数 (ページネーション用)
-    limit: int = 100, # 取得する最大件数 (ページネーション用)
+    skip: int = 0,
+    limit: int = 100,
     title_search: Optional[str] = Query(None, description="曲名での部分一致検索"),
     sort_by: str = Query("id", description="ソート基準 (id, title, release_date)"),
+    # ★ 拡張検索パラメータの追加 ★
+    role_filter: Optional[str] = Query(None, description="役割によるフィルタ (カンマ区切り、例: Composer,Vocalist)"),
+    tieup_id_filter: Optional[int] = Query(None, description="タイアップIDによるフィルタ"),
+    # ★★★ 新規追加 ★★★
+    artist_id_filter: Optional[int] = Query(None, description="特定のアーティストIDで絞り込む"),
     db: Session = Depends(models.get_db)
 ):
     """
-    データベースに登録されている楽曲の一覧を、検索・ソートして取得します。
+    データベースに登録されている楽曲の一覧を、検索・ソート・フィルタリングして取得します。
     """
     
     # 1. クエリの組み立て開始
     query = db.query(models.Song)
 
-    # 2. 検索 (フィルタリング)
+    # 2. フィルタリング (ArtistとRoleの絞り込みを統合)
+    if role_filter or artist_id_filter:
+        # artist_id_filter がある場合、必ず SongArtistLink を JOIN する
+        query = query.join(models.Song.artist_links)
+        
+        if role_filter:
+            role_list = [r.strip() for r in role_filter.split(',')]
+            # SongArtistLinkのroleがリストに含まれる AND (かつ) artist_idが一致
+            query = query.filter(models.SongArtistLink.role.in_(role_list))
+            
+        if artist_id_filter:
+            # 必須: 特定のアーティストIDに絞り込む
+            query = query.filter(models.SongArtistLink.artist_id == artist_id_filter)
+        
     if title_search:
-        # PostgreSQL/SQLite の大文字小文字を区別しない部分一致検索
         query = query.filter(models.Song.title.ilike(f"%{title_search}%"))
-
-    # 3. ソート
+        
+    if tieup_id_filter:
+        query = query.join(models.Song.tieup_links).filter(models.SongTieupLink.tieup_id == tieup_id_filter)
+        
+    # 3. ソート (変更なし)
     if sort_by == "release_date":
-        # 発売日が新しいもの順 (降順) にソート
         query = query.order_by(models.Song.release_date.desc(), models.Song.id.desc())
     elif sort_by == "title":
         query = query.order_by(models.Song.title)
-    else: # デフォルトはID順
+    else:
         query = query.order_by(models.Song.id.desc())
 
     # 4. データの取得 (ページネーション適用)
-    songs = query.offset(skip).limit(limit).all()
+    songs = query.distinct().offset(skip).limit(limit).all()
     
     return songs
 
