@@ -330,6 +330,42 @@ def update_song(
     db.refresh(db_song)
     return db_song
 
+# --- ★★★ 楽曲詳細取得API (GET /songs/{song_id}) ★★★ ---
+#
+# [GET] /songs/{song_id}
+# ----------------------------------------------------
+@app.get("/songs/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
+def read_song(song_id: int, db: Session = Depends(models.get_db)):
+    """
+    指定されたIDの楽曲詳細情報を取得します。
+    アーティスト貢献度、タイアップ、タグ、最終演奏日、演奏回数を含みます。
+    """
+    
+    # 1. 楽曲をIDで検索し、関連テーブルを事前に結合 (Eager Load) して取得
+    db_song = db.query(models.Song)\
+        .options(
+            # 貢献アーティスト (ArtistLink -> Artist)
+            joinedload(models.Song.artist_links)\
+                .joinedload(models.SongArtistLink.artist),
+            
+            # タイアップ (TieupLink -> Tieup)
+            joinedload(models.Song.tieup_links)\
+                .joinedload(models.SongTieupLink.tieup),
+                
+            # タグ (Tag)
+            joinedload(models.Song.tags)
+        )\
+        .filter(models.Song.id == song_id).first()
+    
+    if db_song is None:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+        
+    # 2. 応答
+    # FastAPIが自動で response_model (SongDetail) に基づき、
+    # db_song オブジェクトと、models.pyで定義した @property (last_played_date, play_count)
+    # を解決してJSONを構築します。
+    return db_song
+
 @app.delete("/songs/{song_id}", tags=["Songs"], status_code=204)
 def delete_song(song_id: int, db: Session = Depends(models.get_db)):
     """
@@ -727,3 +763,421 @@ def create_setlist_entry(
     db.refresh(new_entry)
     
     return new_entry
+
+# --- ★タグマスター登録APIエンドポイント★ ---
+#
+# [POST] /tags/
+# ----------------------------------------------------
+@app.post("/tags/", response_model=schemas.Tag, tags=["Tags"])
+def create_tag(
+    tag: schemas.TagCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しいタグ（例: "バラード", "ライブ定番曲"）をデータベースに登録します。
+    """
+    
+    # 既に同じ名前のタグがないかチェック (タグ名はUNIQUE制約)
+    db_tag = db.query(models.Tag).filter(models.Tag.name == tag.name).first()
+    if db_tag:
+        raise HTTPException(status_code=400, detail=f"タグ名 '{tag.name}' は既に使用されています。")
+    
+    # 1. データ作成
+    new_tag = models.Tag(**tag.dict())
+    
+    db.add(new_tag)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_tag)
+    
+    return new_tag
+
+# --- ★楽曲にタグを紐付けるAPI★ ---
+#
+# [POST] /songs/{song_id}/tags/{tag_id}
+# ----------------------------------------------------
+@app.post("/songs/{song_id}/tags/{tag_id}", response_model=schemas.SongDetail, tags=["Tags"])
+def link_song_to_tag(
+    song_id: int,
+    tag_id: int,
+    db: Session = Depends(models.get_db)
+):
+    """
+    特定の楽曲 (song_id) に、タグ (tag_id) を紐付けます。
+    (SQLAlchemyの Simple Many-to-Many パターンを使用)
+    """
+    
+    # 1. 楽曲 (Song) を取得
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if db_song is None:
+        raise HTTPException(status_code=404, detail=f"Song ID {song_id} が見つかりません。")
+        
+    # 2. タグ (Tag) を取得
+    db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if db_tag is None:
+        raise HTTPException(status_code=404, detail=f"Tag ID {tag_id} が見つかりません。")
+
+    # 3. 既に追加されていないかチェック
+    if db_tag in db_song.tags:
+        raise HTTPException(status_code=400, detail="この曲には既にこのタグが紐付いています。")
+
+    # 4. 紐付け (中間テーブルへの書き込み)
+    db_song.tags.append(db_tag)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(db_song)
+    
+    # 5. 更新された楽曲情報（タグリスト含む）を返す
+    # (再度Eager Loadをかけて、完全な情報を返す)
+    updated_song = read_song(song_id=song_id, db=db)
+    return updated_song
+
+# --- ★アルバムマスター登録APIエンドポイント★ ---
+#
+# [POST] /albums/
+# ----------------------------------------------------
+@app.post("/albums/", response_model=schemas.Album, tags=["Albums"])
+def create_album(
+    album: schemas.AlbumCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しいアルバム（例: "Catcher In The Spy"）をデータベースに登録します。
+    """
+    
+    # 1. 外部キー (artist_id) が指定されていれば存在チェック
+    if album.artist_id:
+        db_artist = db.query(models.Artist).filter(models.Artist.id == album.artist_id).first()
+        if db_artist is None:
+            raise HTTPException(status_code=404, detail=f"Artist ID {album.artist_id} が見つかりません。")
+
+    # 2. 重複チェック (Spotify Album ID)
+    if album.spotify_album_id:
+        db_album = db.query(models.Album).filter(models.Album.spotify_album_id == album.spotify_album_id).first()
+        if db_album:
+            raise HTTPException(status_code=400, detail=f"Spotify Album ID '{album.spotify_album_id}' は既に使用されています。")
+    
+    # 3. データ作成
+    new_album = models.Album(**album.dict())
+    
+    db.add(new_album)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_album)
+    
+    return new_album
+
+# [POST] /album_tracks/
+# ----------------------------------------------------
+@app.post("/album_tracks/", response_model=schemas.AlbumTrack, tags=["Albums"])
+def link_song_to_album(
+    track: schemas.AlbumTrackCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    アルバム (album_id) に、楽曲 (song_id) を
+    特定のディスク番号 (disc_number) と曲順 (track_number) で紐付けます。
+    """
+    
+    # 1. アルバム (Album) が存在するかチェック
+    db_album = db.query(models.Album).filter(models.Album.id == track.album_id).first()
+    if db_album is None:
+        raise HTTPException(status_code=404, detail=f"Album ID {track.album_id} が見つかりません。")
+        
+    # 2. 楽曲 (Song) が存在するかチェック
+    db_song = db.query(models.Song).filter(models.Song.id == track.song_id).first()
+    if db_song is None:
+        raise HTTPException(status_code=404, detail=f"Song ID {track.song_id} が見つかりません。")
+
+    new_track = models.AlbumTrack(**track.dict())
+    db.add(new_track)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=400, detail="このアルバムには既にこの曲または曲順が登録されています。")
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_track)
+    return new_track
+
+# --- ★アルバム関連付けAPIエンドポイント★ ---
+#
+# [POST] /album_relationships/
+# ----------------------------------------------------
+@app.post("/album_relationships/", response_model=schemas.AlbumRelationship, tags=["Albums"])
+def create_album_relationship(
+    link: schemas.AlbumRelationshipCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    アルバム (album_id_1) と別アルバム (album_id_2) を、
+    指定された関係 (relationship_type) で紐付けます。
+    
+    例: 「初回盤」が「特典DVD」を "Includes" する。
+    """
+    
+    # --- 外部キー制約のチェック ---
+    db_album1 = db.query(models.Album).filter(models.Album.id == link.album_id_1).first()
+    if db_album1 is None:
+        raise HTTPException(status_code=404, detail=f"Album ID (親) {link.album_id_1} が見つかりません。")
+        
+    db_album2 = db.query(models.Album).filter(models.Album.id == link.album_id_2).first()
+    if db_album2 is None:
+        raise HTTPException(status_code=404, detail=f"Album ID (子) {link.album_id_2} が見つかりません。")
+
+    # --- 紐付けデータを作成 ---
+    new_link = models.AlbumRelationship(**link.dict())
+    
+    db.add(new_link)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=400, detail="このアルバムの関連付けは既に存在します。")
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_link)
+    
+    return new_link
+
+# --- ★グッズマスター登録API★ ---
+# [POST] /merchandise/
+# ----------------------------------------------------
+@app.post("/merchandise/", response_model=schemas.Merchandise, tags=["Goods & Stores"])
+def create_merchandise(
+    merch: schemas.MerchandiseCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しいグッズ（例: "ツアーTシャツ"）をデータベースに登録します。
+    """
+    db_merch = db.query(models.Merchandise).filter(models.Merchandise.name == merch.name).first()
+    if db_merch:
+        raise HTTPException(status_code=400, detail=f"グッズ名 '{merch.name}' は既に使用されています。")
+    
+    new_merch = models.Merchandise(**merch.dict())
+    db.add(new_merch)
+    try:
+        db.commit()
+        db.refresh(new_merch)
+        return new_merch
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+
+# --- ★店舗マスター登録API★ ---
+# [POST] /stores/
+# ----------------------------------------------------
+@app.post("/stores/", response_model=schemas.Store, tags=["Goods & Stores"])
+def create_store(
+    store: schemas.StoreCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しい店舗（例: "タワーレコード"）をデータベースに登録します。
+    """
+    db_store = db.query(models.Store).filter(models.Store.name == store.name).first()
+    if db_store:
+        raise HTTPException(status_code=400, detail=f"店舗名 '{store.name}' は既に使用されています。")
+    
+    new_store = models.Store(**store.dict())
+    db.add(new_store)
+    try:
+        db.commit()
+        db.refresh(new_store)
+        return new_store
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+# --- ★グッズ関連付けAPIエンドポイント★ ---
+#
+# [POST] /merchandise_relationships/
+# ----------------------------------------------------
+@app.post("/merchandise_relationships/", response_model=schemas.MerchandiseRelationship, tags=["Goods & Stores"])
+def create_merchandise_relationship(
+    link: schemas.MerchandiseRelationshipCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    グッズ (merch_id_1) と別グッズ (merch_id_2) を、
+    指定された関係 (relationship_type) で紐付けます。
+    
+    例: 「Tシャツ(白)」が「Tシャツ」の "Variation Of" である。
+    """
+    
+    # --- 外部キー制約のチェック ---
+    db_merch1 = db.query(models.Merchandise).filter(models.Merchandise.id == link.merchandise_id_1).first()
+    if db_merch1 is None:
+        raise HTTPException(status_code=404, detail=f"Merchandise ID (子) {link.merchandise_id_1} が見つかりません。")
+        
+    db_merch2 = db.query(models.Merchandise).filter(models.Merchandise.id == link.merchandise_id_2).first()
+    if db_merch2 is None:
+        raise HTTPException(status_code=404, detail=f"Merchandise ID (親) {link.merchandise_id_2} が見つかりません。")
+
+    # --- 紐付けデータを作成 ---
+    new_link = models.MerchandiseRelationship(**link.dict())
+    
+    db.add(new_link)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=400, detail="このグッズの関連付けは既に存在します。")
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_link)
+    
+    return new_link
+
+# --- ★ユーザー登録APIエンドポイント★ ---
+#
+# [POST] /users/
+# ----------------------------------------------------
+@app.post("/users/", response_model=schemas.User, tags=["Users"])
+def create_user(
+    user: schemas.UserCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    新しいユーザーをデータベースに登録します。
+    (この段階ではパスワードはハッシュ化されません - 認証実装時に修正)
+    """
+    
+    # 1. 既存チェック (username)
+    db_user_by_username = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user_by_username:
+        raise HTTPException(status_code=400, detail=f"ユーザー名 '{user.username}' は既に使用されています。")
+        
+    # 2. 既存チェック (email)
+    db_user_by_email = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user_by_email:
+        raise HTTPException(status_code=400, detail=f"メールアドレス '{user.email}' は既に使用されています。")
+
+    # ★★★【重要】★★★
+    # 本来はここでパスワードをハッシュ化する
+    # hashed_password = auth_utils.hash_password(user.password)
+    # が、今は認証を実装していないため、ダミーのハッシュ（または平文のまま）を保存
+    # (※セキュリティ上、本番環境では絶対に行わないでください)
+    dummy_hashed_password = f"DUMMY_HASH_FOR_{user.password}"
+    
+    # 3. データ作成
+    new_user = models.User(
+        username=user.username,
+        email=user.email,
+        hashed_password=dummy_hashed_password 
+    )
+    
+    db.add(new_user)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_user)
+    
+    return new_user
+
+# --- ★ユーザーの所有物登録API★ ---
+#
+# [POST] /user_possessions/
+# ----------------------------------------------------
+@app.post("/user_possessions/", response_model=schemas.UserPossession, tags=["Users"])
+def create_user_possession(
+    possession: schemas.UserPossessionCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    ユーザー (user_id) が特定のアイテム (entity_id) を
+    所有している (Owned) または欲しい (Wishlist) ことを登録します。
+    """
+    
+    # --- 外部キー制約のチェック ---
+    # 1. ユーザー (User) が存在するかチェック
+    db_user = db.query(models.User).filter(models.User.id == possession.user_id).first()
+    if db_user is None:
+        raise HTTPException(status_code=404, detail=f"User ID {possession.user_id} が見つかりません。")
+        
+    # 2. entity_type に応じて、対象のアイテムが存在するかチェック (任意だが推奨)
+    if possession.entity_type == "album":
+        db_item = db.query(models.Album).filter(models.Album.id == possession.entity_id).first()
+    elif possession.entity_type == "merchandise":
+        db_item = db.query(models.Merchandise).filter(models.Merchandise.id == possession.entity_id).first()
+    else:
+        raise HTTPException(status_code=400, detail=f"無効な entity_type: '{possession.entity_type}'")
+        
+    if db_item is None:
+        raise HTTPException(status_code=404, detail=f"{possession.entity_type} ID {possession.entity_id} が見つかりません。")
+
+    # --- データ作成 ---
+    new_possession = models.UserPossession(**possession.dict())
+    
+    db.add(new_possession)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_possession)
+    
+    return new_possession
+
+# [POST] /user_attendance/
+# ----------------------------------------------------
+@app.post("/user_attendance/", response_model=schemas.UserAttendance, tags=["Users"])
+def create_user_attendance(
+    attendance: schemas.UserAttendanceCreate, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    ユーザー (user_id) が特定の公演 (performance_id) に
+    参加した (Attended) ことを登録します。
+    """
+    
+    # 1. ユーザー (User) が存在するかチェック
+    db_user = db.query(models.User).filter(models.User.id == attendance.user_id).first()
+    if db_user is None:
+        raise HTTPException(status_code=404, detail=f"User ID {attendance.user_id} が見つかりません。")
+        
+    # 2. 公演 (Performance) が存在するかチェック
+    db_performance = db.query(models.Performance).filter(models.Performance.id == attendance.performance_id).first()
+    if db_performance is None:
+        raise HTTPException(status_code=404, detail=f"Performance ID {attendance.performance_id} が見つかりません。")
+
+    new_attendance = models.UserAttendance(**attendance.dict())
+    db.add(new_attendance)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
+    
+    db.refresh(new_attendance)
+    return new_attendance

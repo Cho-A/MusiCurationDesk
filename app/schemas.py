@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional,List
-from datetime import date, time
+from datetime import date, time, datetime
 
 # --- Artist (アーティスト) ---
 
@@ -55,6 +55,19 @@ class ArtistDetail(BaseModel):
 class ArtistMini(BaseModel):
     id: int
     name: str
+
+    class Config:
+        orm_mode = True
+
+# --- Tag (タグ・マスター) ---
+class TagCreate(BaseModel):
+    name: str # タグ名 (例: "バラード", "ライブ定番曲")
+    color: Optional[str] = None # UI用 (例: "#FF0000")
+
+class Tag(BaseModel):
+    id: int
+    name: str
+    color: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -161,6 +174,8 @@ class SongDetail(BaseModel):
     
     artists: List[ArtistLinkInfo] = Field(..., alias="artist_links") # 'artist_links' リレーションシップを参照
     tieups: List[TieupLinkInfo] = Field(..., alias="tieup_links")   # 'tieup_links' リレーションシップを参照
+
+    tags: List[Tag] = [] # 👈 この曲に紐づくタグのリスト
 
     class Config:
         orm_mode = True
@@ -278,5 +293,142 @@ class PerformanceSummary(BaseModel):
     end_time: Optional[time] = None
     stage_name: Optional[str] = None
     
+    class Config:
+        orm_mode = True
+
+# --- Album (アルバム・マスター) ---
+class AlbumCreate(BaseModel):
+    main_title: str
+    version_title: Optional[str] = None
+    artist_id: Optional[int] = None # メインアーティスト (コンピの場合はNULL)
+    physical_release_date: Optional[date] = None
+    digital_release_date: Optional[date] = None
+    spotify_album_id: Optional[str] = None
+
+class Album(BaseModel):
+    id: int
+    main_title: str
+    version_title: Optional[str] = None
+    artist_id: Optional[int] = None
+    physical_release_date: Optional[date] = None
+    digital_release_date: Optional[date] = None
+    spotify_album_id: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+# --- AlbumRelationship (アルバム関連) ---
+class AlbumRelationshipCreate(BaseModel):
+    album_id_1: int # 親 (例: 初回盤)
+    album_id_2: int # 子 (例: 特典DVD)
+    relationship_type: str # "Includes", "Version Of"
+
+class AlbumRelationship(BaseModel):
+    id: int
+    album_id_1: int
+    album_id_2: int
+    relationship_type: str
+
+    class Config:
+        orm_mode = True
+
+class AlbumTrackCreate(BaseModel):
+    album_id: int
+    song_id: int
+    track_number: int
+    disc_number: int = 1 # デフォルト値を1に設定
+
+class AlbumTrack(BaseModel):
+    id: int
+    album_id: int
+    song_id: int
+    track_number: int
+    disc_number: int
+    class Config:
+        orm_mode = True
+
+# --- Merchandise (グッズ・マスター) ---
+class MerchandiseCreate(BaseModel):
+    name: str
+    merch_type: Optional[str] = None # "Live Goods", "Album Bonus"
+
+class Merchandise(BaseModel):
+    id: int
+    name: str
+    merch_type: Optional[str] = None
+    class Config:
+        orm_mode = True
+
+# --- Store (店舗マスター) ---
+class StoreCreate(BaseModel):
+    name: str # "タワーレコード", "HMV"
+
+class Store(BaseModel):
+    id: int
+    name: str
+    class Config:
+        orm_mode = True
+
+# --- MerchandiseRelationship (グッズ関連) ---
+class MerchandiseRelationshipCreate(BaseModel):
+    merchandise_id_1: int # 子 (例: Tシャツ(白))
+    merchandise_id_2: int # 親 (例: Tシャツ)
+    relationship_type: str # "Variation Of"
+
+class MerchandiseRelationship(BaseModel):
+    id: int
+    merchandise_id_1: int
+    merchandise_id_2: int
+    relationship_type: str
+
+    class Config:
+        orm_mode = True
+
+# --- User (ユーザー) ---
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr # pydanticによるメール形式のバリデーション
+    password: str # APIが受け取る平文のパスワード
+
+class User(BaseModel):
+    id: int
+    username: str
+    email: EmailStr
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# --- UserPossession (ユーザーの所有物) ---
+class UserPossessionCreate(BaseModel):
+    user_id: int
+    entity_type: str # "album", "merchandise"
+    entity_id: int
+    status: Optional[str] = "Owned" # デフォルト "Owned"
+    notes: Optional[str] = None
+
+class UserPossession(BaseModel):
+    id: int
+    user_id: int
+    entity_type: str
+    entity_id: int
+    status: Optional[str]
+    notes: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+class UserAttendanceCreate(BaseModel):
+    user_id: int
+    performance_id: int
+    status: Optional[str] = "Attended" # デフォルト "Attended"
+    notes: Optional[str] = None
+
+class UserAttendance(BaseModel):
+    id: int
+    user_id: int
+    performance_id: int
+    status: Optional[str]
+    notes: Optional[str]
     class Config:
         orm_mode = True
