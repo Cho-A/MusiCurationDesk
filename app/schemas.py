@@ -432,3 +432,11 @@ class UserAttendance(BaseModel):
     notes: Optional[str]
     class Config:
         orm_mode = True
+
+# --- Song Search (GET /songs/ の検索条件) ---
+class SongSearch(BaseModel):
+    title_search: Optional[str] = None
+    sort_by: str = "id"
+    role_filter: Optional[str] = None
+    tieup_id_filter: Optional[int] = None
+    artist_id_filter: Optional[int] = None
