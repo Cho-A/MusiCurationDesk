@@ -6,7 +6,6 @@ from .. import models , schemas # 先ほど作成したファイルをインポ�
 # --- 1. APIRouter のインスタンスを作成 ---
 router = APIRouter(
     prefix="/songs", # このファイル内のAPIはすべて "/songs" で始まる
-    tags=["Songs"]   # Swagger UIでのグループ名
 )
 
 
