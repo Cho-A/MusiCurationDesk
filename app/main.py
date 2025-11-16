@@ -1,9 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException, Response, Query
-from typing import List, Optional
-from sqlalchemy.orm import Session, joinedload, aliased
-from . import models , schemas # 先ほど作成したファイルをインポート
-from .routers import songs,artists,links,performances,playlists,tags,tieups,tours,albums,goods_and_stores,users
-
+from fastapi import FastAPI
+from . import models # 先ほど作成したファイルをインポート
+from .routers import songs,artists,links,performances,playlists,tags,tieups,tours,albums,goods_and_stores,users,auth
+from fastapi.middleware.cors import CORSMiddleware
 
 # --- 1. FastAPIアプリの初期化 ---
 app = FastAPI(
@@ -34,5 +32,19 @@ app.include_router(goods_and_stores.merchandice_relationship_router)
 app.include_router(users.user_router)
 app.include_router(users.user_possessions_router)
 app.include_router(users.user_attendance_router)
+app.include_router(auth.token_router)
+app.include_router(auth.refresh_router)
+app.include_router(auth.logout_router)
 
+# ReactアプリのURL（開発中は http://localhost:3000）を許可リストに入れる
+origins = [
+    "http://localhost:3000",
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,      # 許可するオリジン
+    allow_credentials=True,     # Cookieや認証ヘッダーの送信を許可（重要！）
+    allow_methods=["*"],        # すべてのHTTPメソッドを許可
+    allow_headers=["*"],        # すべてのヘッダーを許可
+)

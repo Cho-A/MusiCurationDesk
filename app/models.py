@@ -468,6 +468,8 @@ class User(Base):
     possessions = relationship("UserPossession", back_populates="owner", cascade="all, delete-orphan")
     attendance_history = relationship("UserAttendance", back_populates="owner", cascade="all, delete-orphan")
 
+    refresh_tokens = relationship("RefreshToken", back_populates="owner", cascade="all, delete-orphan")
+
 class UserPossession(Base):
     """
     ユーザーの所有物 (v4.2)
@@ -497,6 +499,21 @@ class UserAttendance(Base):
     
     owner = relationship("User", back_populates="attendance_history")
     performance = relationship("Performance") # (簡易的な一方向のリレーション)
+
+class RefreshToken(Base):
+    """
+    発行済みリフレッシュトークンの管理テーブル
+    (ログアウトや強制無効化に使用)
+    """
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    token = Column(String(255), unique=True, index=True) # トークン文字列そのもの（またはハッシュ）
+    expires_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    owner = relationship("User", back_populates="refresh_tokens")
 
 # --- 3. データベースの初期化関数 ---
 def create_db_and_tables():

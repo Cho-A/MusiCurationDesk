@@ -433,6 +433,19 @@ class UserAttendance(BaseModel):
     class Config:
         orm_mode = True
 
+# --- UserPossession (入力用: user_id なし) ---
+class UserPossessionInput(BaseModel):
+    entity_type: str # "album", "merchandise"
+    entity_id: int
+    status: Optional[str] = "Owned"
+    notes: Optional[str] = None
+
+# --- UserAttendance (入力用: user_id なし) ---
+class UserAttendanceInput(BaseModel):
+    performance_id: int
+    status: Optional[str] = "Attended"
+    notes: Optional[str] = None
+
 # --- Song Search (GET /songs/ の検索条件) ---
 class SongSearch(BaseModel):
     title_search: Optional[str] = None
@@ -440,3 +453,13 @@ class SongSearch(BaseModel):
     role_filter: Optional[str] = None
     tieup_id_filter: Optional[int] = None
     artist_id_filter: Optional[int] = None
+
+# --- Token (トークンレスポンス) ---
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str # ★ 追加
+    token_type: str
+
+# --- TokenData (トークンの中身) ---
+class TokenData(BaseModel):
+    username: Optional[str] = None
