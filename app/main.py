@@ -39,6 +39,7 @@ app.include_router(auth.logout_router)
 # ReactアプリのURL（開発中は http://localhost:3000）を許可リストに入れる
 origins = [
     "http://localhost:3000",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
