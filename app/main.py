@@ -1,17 +1,31 @@
 from fastapi import FastAPI
-from . import models # 先ほど作成したファイルをインポート
-from .routers import songs,artists,links,performances,playlists,tags,tieups,tours,albums,goods_and_stores,users,auth
 from fastapi.middleware.cors import CORSMiddleware
+
+from . import models  # 先ほど作成したファイルをインポート
+from .routers import (
+    albums,
+    artists,
+    auth,
+    goods_and_stores,
+    links,
+    performances,
+    songs,
+    tags,
+    tieups,
+    tours,
+    users,
+    external_search,
+)
 
 # --- 1. FastAPIアプリの初期化 ---
 app = FastAPI(
     title="MusiCuration Desk API",
-    description="音楽キュレーションデータベース「MCD」のバックエンドAPI"
+    description="音楽キュレーションデータベース「MCD」のバックエンドAPI",
 )
 
 # --- 2. データベースの初期化 ---
 # (最初の起動時にDBとテーブルを作成)
-models.create_db_and_tables() 
+models.create_db_and_tables()
 
 app.include_router(songs.router)
 app.include_router(artists.router)
@@ -35,6 +49,7 @@ app.include_router(users.user_attendance_router)
 app.include_router(auth.token_router)
 app.include_router(auth.refresh_router)
 app.include_router(auth.logout_router)
+app.include_router(external_search.router)
 
 # ReactアプリのURL（開発中は http://localhost:3000）を許可リストに入れる
 origins = [
@@ -44,8 +59,8 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,      # 許可するオリジン
-    allow_credentials=True,     # Cookieや認証ヘッダーの送信を許可（重要！）
-    allow_methods=["*"],        # すべてのHTTPメソッドを許可
-    allow_headers=["*"],        # すべてのヘッダーを許可
+    allow_origins=origins,  # 許可するオリジン
+    allow_credentials=True,  # Cookieや認証ヘッダーの送信を許可（重要！）
+    allow_methods=["*"],  # すべてのHTTPメソッドを許可
+    allow_headers=["*"],  # すべてのヘッダーを許可
 )
