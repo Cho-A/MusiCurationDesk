@@ -10,9 +10,10 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="songs" element={<Songs />} />
-          <Route path="artists" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>Artists Page (Coming Soon)</div>} />
-          <Route path="concerts" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>Concerts Page (Coming Soon)</div>} />
-          <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>Analytics Page (Coming Soon)</div>} />
+          <Route path="artists" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>アーティストページ (準備中)</div>} />
+          <Route path="concerts" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>ライブ・公演ページ (準備中)</div>} />
+          <Route path="merchandise" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>グッズページ (準備中)</div>} />
+          <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>分析ページ (準備中)</div>} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -148,14 +148,16 @@ class SongTieupLink(BaseModel):
 
 # --- Tieup (タイアップ先) ---
 class TieupCreate(BaseModel):
-    name: str  # "呪術廻戦", "チェンソーマン"
-    category: str | None = None  # "Anime", "Game", "CM"
+    name: str  # "呪術廻戦", "チェンソーマン", "BLEACH 千年血戦篇"
+    category: str | None = None  # "Anime", "Game", "Franchise"
+    parent_id: int | None = None # 階層化用 (親タイアップのID)
 
 
 class Tieup(BaseModel):
     id: int
     name: str
     category: str | None = None
+    parent_id: int | None = None
 
     class Config:
         orm_mode = True

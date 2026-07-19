@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Music, Users, CalendarDays, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, Music, Users, CalendarDays, BarChart3, Settings, ShoppingBag } from 'lucide-react';
 
 const Sidebar = () => {
   const navItems = [
-    { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
-    { name: 'Songs', icon: <Music size={20} />, path: '/songs' },
-    { name: 'Artists', icon: <Users size={20} />, path: '/artists' },
-    { name: 'Concerts', icon: <CalendarDays size={20} />, path: '/concerts' },
-    { name: 'Analytics', icon: <BarChart3 size={20} />, path: '/analytics' },
+    { name: 'ホーム', icon: <LayoutDashboard size={20} />, path: '/' },
+    { name: '楽曲', icon: <Music size={20} />, path: '/songs' },
+    { name: 'アーティスト', icon: <Users size={20} />, path: '/artists' },
+    { name: 'ライブ・公演', icon: <CalendarDays size={20} />, path: '/concerts' },
+    { name: 'グッズ', icon: <ShoppingBag size={20} />, path: '/merchandise' },
+    { name: '分析', icon: <BarChart3 size={20} />, path: '/analytics' },
   ];
 
   return (
@@ -65,7 +66,7 @@ const Sidebar = () => {
           fontWeight: 500, transition: 'color 0.2s ease'
         }}>
           <Settings size={20} />
-          Settings
+          設定
         </button>
       </div>
     </aside>

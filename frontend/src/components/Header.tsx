@@ -39,7 +39,7 @@ const Header = () => {
           <Search size={20} color="var(--text-tertiary)" />
           <input
             type="text"
-            placeholder="Search songs, artists, concerts, tags..."
+            placeholder="楽曲、アーティスト、ライブ、タグを検索..."
             style={{
               border: 'none', background: 'transparent', outline: 'none',
               width: '100%', color: 'var(--text-primary)', fontSize: '1rem'
@@ -74,8 +74,8 @@ const Header = () => {
             U
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>My Page</span>
-            <strong style={{ fontSize: '0.95rem' }}>Guest User</strong>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>マイページ</span>
+            <strong style={{ fontSize: '0.95rem' }}>ゲストユーザー</strong>
           </div>
         </div>
 
@@ -84,7 +84,7 @@ const Header = () => {
           display: 'flex', alignItems: 'center', gap: '8px',
           color: 'var(--text-secondary)', fontWeight: 500
         }}>
-          Logout
+          ログアウト
           <LogOut size={18} />
         </button>
       </div>

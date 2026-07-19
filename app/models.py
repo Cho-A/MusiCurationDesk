@@ -262,7 +262,13 @@ class Tieup(Base):
     __tablename__ = "tieups"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    category = Column(String(100))  # "Anime", "Game"
+    category = Column(String(100))  # "Anime", "Game", "Franchise"
+    parent_id = Column(Integer, ForeignKey("tieups.id"), nullable=True)
+
+    # 自己参照リレーション (親と子)
+    parent = relationship("Tieup", remote_side=[id], back_populates="children")
+    children = relationship("Tieup", back_populates="parent", cascade="all, delete-orphan")
+
     song_links = relationship("SongTieupLink", back_populates="tieup")
 
 
