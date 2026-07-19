@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload, aliased

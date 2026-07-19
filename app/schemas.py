@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import List
 from datetime import date, datetime, time
 
 from pydantic import BaseModel, EmailStr, Field
@@ -35,7 +37,7 @@ class AliasInfo(BaseModel):
 class SongContribution(BaseModel):
     song_id: int
     title: str  # 楽曲名
-    roles: list[str]  # 役割 (Composer, Vocalist, etc.)
+    roles: List[str]  # 役割 (Composer, Vocalist, etc.)
 
     class Config:
         orm_mode = True
@@ -49,8 +51,8 @@ class ArtistDetail(BaseModel):
     notes: str | None
 
     # ★ 関連情報をリストとして含める ★
-    aliases: list[AliasInfo] = []
-    songs_contributed: list[SongContribution] = []
+    aliases: List[AliasInfo] = []
+    songs_contributed: List[SongContribution] = []
 
     class Config:
         orm_mode = True
@@ -192,16 +194,16 @@ class SongDetail(BaseModel):
     release_date: date | None
     spotify_song_id: str | None
 
-    artists: list[ArtistLinkInfo] = Field(
+    artists: List[ArtistLinkInfo] = Field(
         ...,
         alias="artist_links",
     )  # 'artist_links' リレーションシップを参照
-    tieups: list[TieupLinkInfo] = Field(
+    tieups: List[TieupLinkInfo] = Field(
         ...,
         alias="tieup_links",
     )  # 'tieup_links' リレーションシップを参照
 
-    tags: list[Tag] = []  # 👈 この曲に紐づくタグのリスト
+    tags: List[Tag] = []  # 👈 この曲に紐づくタグのリスト
 
     class Config:
         orm_mode = True
@@ -302,8 +304,8 @@ class Performance(BaseModel):
     stage_name: str | None = None
 
     # ★ ネストされた関連データの追加 ★
-    setlist_entries: list[SetlistEntry] = []  # SetlistEntry のリスト
-    roster_entries: list[PerformanceRoster] = []  # PerformanceRoster のリスト
+    setlist_entries: List[SetlistEntry] = []  # SetlistEntry のリスト
+    roster_entries: List[PerformanceRoster] = []  # PerformanceRoster のリスト
 
     class Config:
         orm_mode = True

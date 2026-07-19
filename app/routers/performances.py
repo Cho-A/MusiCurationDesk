@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
@@ -140,7 +142,7 @@ def add_performance_roster_entry(
 # [GET] /performances/
 # ----------------------------------------------------
 @performance_router.get(
-    "/", response_model=list[schemas.PerformanceSummary], tags=["Performances"]
+    "/", response_model=List[schemas.PerformanceSummary], tags=["Performances"]
 )
 def read_performances(
     # クエリパラメータを定義
