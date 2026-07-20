@@ -6,12 +6,18 @@ import SongDetail from './pages/SongDetail';
 import TieupDetail from './pages/TieupDetail';
 import PerformanceDetail from './pages/PerformanceDetail';
 import TourDetail from './pages/TourDetail';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="songs" element={<Songs />} />
           <Route path="songs/:id" element={<SongDetail />} />
@@ -25,6 +31,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </AuthProvider>
   );
 }
 

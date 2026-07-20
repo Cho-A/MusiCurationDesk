@@ -62,12 +62,36 @@ def insert_initial_data():
     # --- 1. マスターデータの登録 ---
     print("\n--- 1. マスターデータの登録 ---")
     
-    # 1a. ユーザー登録
-    ids['user']['main_user'] = post_data("/users/", {
-        "username": "mcd_user",
-        "email": "user@example.com",
-        "password": "password123"
-    })
+    # 1a. ユーザーの作成 (ID: user)
+    # user_router.post("/") (app/routers/users.py) を使用してハッシュ化させる
+    user_data = {
+        "username": "testuser",
+        "email": "testuser@example.com",
+        "password": "password"
+    }
+    
+    # ユーザー作成用エンドポイントにPOST (models.py の User を直接叩かず、/users/ にPOSTする)
+    user_id = None
+    try:
+        user_response = requests.post(f"{BASE_URL}/users/", headers=HEADERS, json=user_data)
+        if user_response.status_code == 200 or user_response.status_code == 201:
+            user_id = user_response.json().get('id')
+            print(f"POST /users/: testuser -> 成功。ID: {user_id}")
+        elif user_response.status_code == 400 and "既に使用されています" in user_response.text:
+            print(f"POST /users/: testuser -> 警告: 既に存在します。スキップします。")
+            # 既存のIDを取得する処理
+            # ログインテストをしてIDを取得
+            login_res = requests.post(f"{BASE_URL}/token/", data={"username": "testuser", "password": "password"})
+            if login_res.ok:
+                print("testuserのログイン確認成功。")
+            else:
+                print(f"testuserのログイン失敗。DBをリセットするかパスワードを確認してください。: {login_res.text}")
+        else:
+             print(f"POST /users/: testuser -> エラー発生 ({user_response.status_code}): {user_response.text}")
+    except Exception as e:
+         print(f"POST /users/ failed: {e}")
+    
+    ids['user']['main_user'] = user_id
     
     # 1b. アーティスト登録
     ids['artist']['tabuchi'] = post_data("/artists/", {"name": "田淵智也"})
