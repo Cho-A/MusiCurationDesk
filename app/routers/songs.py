@@ -48,6 +48,14 @@ def create_song(
     # 5. 登録した楽曲情報を返す
     return new_song
 
+@router.get("/recent", response_model=List[schemas.Song], tags=["Songs"])
+def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
+    """
+    最近追加された楽曲を取得します。
+    """
+    recent_songs = db.query(models.Song).order_by(models.Song.created_at.desc()).limit(limit).all()
+    return recent_songs
+
 # --- ★★★ 全楽曲の一覧を取得するAPI (上書き) ★★★ ---
 # 
 # [GET] /songs/
@@ -181,7 +189,11 @@ def read_song(song_id: int, db: Session = Depends(models.get_db)):
                 .joinedload(models.SongTieupLink.tieup),
                 
             # タグ (Tag)
-            joinedload(models.Song.tags)
+            joinedload(models.Song.tags),
+            
+            # アルバム情報 (AlbumTrack -> Album)
+            joinedload(models.Song.album_links)\
+                .joinedload(models.AlbumTrack.album)
         )\
         .filter(models.Song.id == song_id).first()
     
@@ -220,6 +232,100 @@ def delete_song(song_id: int, db: Session = Depends(models.get_db)):
 
 # --- ★楽曲にタグを紐付けるAPI★ ---
 #
+# [POST] /songs/{song_id}/tieups
+# ----------------------------------------------------
+@router.post("/{song_id}/tieups", response_model=schemas.SongTieupLink, tags=["Songs", "Tieups"])
+def add_tieup_to_song(
+    song_id: int,
+    link: schemas.SongTieupLinkCreate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    指定された楽曲にタイアップを紐付けます。
+    """
+    if song_id != link.song_id:
+        raise HTTPException(status_code=400, detail="URLのsong_idとリクエストボディのsong_idが一致しません。")
+        
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not db_song:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+        
+    new_link = models.SongTieupLink(**link.dict())
+    db.add(new_link)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー (重複の可能性があります): {e}")
+
+    db.refresh(new_link)
+    return new_link
+
+# --- ★★★ クレジット (SongArtistLink) 追加・削除 API ★★★ ---
+#
+# [POST] /songs/{song_id}/artists
+# ----------------------------------------------------
+@router.post("/{song_id}/artists", response_model=schemas.SongArtistLink, tags=["Songs", "Artists"])
+def add_credit_to_song(
+    song_id: int,
+    link: schemas.SongArtistLinkCreate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    楽曲にアーティストのクレジット（役割）を追加します。
+    """
+    if song_id != link.song_id:
+        raise HTTPException(status_code=400, detail="URLのsong_idとリクエストボディのsong_idが一致しません。")
+        
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not db_song:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+        
+    new_link = models.SongArtistLink(**link.dict())
+    db.add(new_link)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"データベース登録エラー (既に同じ役割で登録されている可能性があります): {e}")
+
+    db.refresh(new_link)
+    return new_link
+
+# [DELETE] /songs/{song_id}/artists/{artist_id}
+# ----------------------------------------------------
+@router.delete("/{song_id}/artists/{artist_id}", status_code=204, tags=["Songs", "Artists"])
+def remove_credit_from_song(
+    song_id: int,
+    artist_id: int,
+    role_category: str = Query(..., description="削除する役割の大分類"),
+    role_detail: Optional[str] = Query(None, description="削除する役割の詳細"),
+    db: Session = Depends(models.get_db)
+):
+    """
+    楽曲から特定のアーティストのクレジット（役割）を削除します。
+    """
+    query = db.query(models.SongArtistLink).filter(
+        models.SongArtistLink.song_id == song_id,
+        models.SongArtistLink.artist_id == artist_id,
+        models.SongArtistLink.role_category == role_category
+    )
+    
+    if role_detail:
+        query = query.filter(models.SongArtistLink.role_detail == role_detail)
+    else:
+        query = query.filter(models.SongArtistLink.role_detail.is_(None))
+        
+    link = query.first()
+    if not link:
+        raise HTTPException(status_code=404, detail="指定されたクレジットが見つかりません。")
+        
+    db.delete(link)
+    db.commit()
+    return Response(status_code=204)
+
 # [POST] /songs/{song_id}/tags/{tag_id}
 # ----------------------------------------------------
 @router.post("/{song_id}/tags/{tag_id}", response_model=schemas.SongDetail, tags=["Tags"])
@@ -303,10 +409,36 @@ def generate_spotify_ids_from_search(
     else:
         query = query.order_by(models.Song.id.desc())
 
-    # --- ★ 最終的な出力 (Spotify IDのみ) ---
+    # --- ★ 最終的な出力 ---
     results = query.distinct().all()
     
-    # spotify_song_id が NULL でないものだけを抽出
-    spotify_ids = [song.spotify_song_id for song in results if song.spotify_song_id]
+    return results
+
+# --- ★楽曲にタグを紐付ける/解除するAPI★ ---
+@router.post("/{song_id}/tags/{tag_id}", response_model=schemas.SongDetail, tags=["Songs", "Tags"])
+def add_tag_to_song(song_id: int, tag_id: int, db: Session = Depends(models.get_db)):
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not db_song or not db_tag:
+        raise HTTPException(status_code=404, detail="楽曲またはタグが見つかりません")
     
-    return spotify_ids
+    if db_tag not in db_song.tags:
+        db_song.tags.append(db_tag)
+        db.commit()
+        db.refresh(db_song)
+        
+    return db_song
+
+@router.delete("/{song_id}/tags/{tag_id}", response_model=schemas.SongDetail, tags=["Songs", "Tags"])
+def remove_tag_from_song(song_id: int, tag_id: int, db: Session = Depends(models.get_db)):
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not db_song or not db_tag:
+        raise HTTPException(status_code=404, detail="楽曲またはタグが見つかりません")
+        
+    if db_tag in db_song.tags:
+        db_song.tags.remove(db_tag)
+        db.commit()
+        db.refresh(db_song)
+        
+    return db_song

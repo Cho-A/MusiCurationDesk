@@ -53,6 +53,17 @@ class MusicBrainzClient:
         params = {"inc": "artist-credits+artist-rels+work-rels"}
         return self._make_request(f"recording/{mb_id}", params)
 
+    def _map_instrument_to_category(self, instrument_name: str) -> str:
+        instrument_name = instrument_name.lower()
+        if 'guitar' in instrument_name: return 'Guitar'
+        if 'bass' in instrument_name: return 'Bass'
+        if 'drum' in instrument_name or 'percussion' in instrument_name: return 'Drums & Percussion'
+        if 'keyboard' in instrument_name or 'piano' in instrument_name or 'synth' in instrument_name: return 'Keyboard & Synth'
+        if 'vocal' in instrument_name or 'choir' in instrument_name: return 'Vocal'
+        if 'violin' in instrument_name or 'cello' in instrument_name or 'strings' in instrument_name: return 'Strings'
+        if 'trumpet' in instrument_name or 'sax' in instrument_name or 'brass' in instrument_name or 'horn' in instrument_name: return 'Brass & Woodwinds'
+        return 'Other Instrument'
+
     def extract_credits(self, mb_recording_data):
         """MusicBrainzのAPIレスポンスから、本アプリのRole形式に変換してクレジットを抽出する"""
         credits = []
@@ -67,15 +78,20 @@ class MusicBrainzClient:
                 attributes = rel.get('attributes', [])
                 
                 # 詳細な役割（ギター、ベースなど）がある場合はそちらを優先
-                if attributes:
+                role_category = role_type.capitalize()
+                role_detail = None
+                
+                if role_type == 'instrument' and attributes:
                     specific_role = attributes[0]
-                    role = f"{specific_role.capitalize()}ist" if specific_role in ['guitar', 'bass', 'drum'] else specific_role.capitalize()
-                else:
-                    role = role_type.capitalize()
+                    role_category = self._map_instrument_to_category(specific_role)
+                    role_detail = specific_role.title()
+                elif attributes:
+                    role_detail = attributes[0].title()
                     
                 credits.append({
                     "artist_name": artist_name,
-                    "role": role,
+                    "role_category": role_category,
+                    "role_detail": role_detail,
                     "source": "MusicBrainz (Recording)"
                 })
                 

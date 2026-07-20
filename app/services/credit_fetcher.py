@@ -49,7 +49,7 @@ class MusicImporter:
         # 4. Spotifyのメインアーティストを紐付け
         for artist_data in track_data['artists']:
             artist_id = self._get_or_create_artist(artist_data['id'], artist_data['name'], db)
-            link = models.SongArtistLink(song_id=new_song.id, artist_id=artist_id, role="Artist")
+            link = models.SongArtistLink(song_id=new_song.id, artist_id=artist_id, role_category="Artist")
             db.add(link)
             
         # 5. MusicBrainzからクレジット情報を取得して補完 (ISRCが存在する場合)
@@ -60,7 +60,8 @@ class MusicImporter:
             
             for credit in credits:
                 artist_name = credit['artist_name']
-                role = credit['role']
+                role_category = credit['role_category']
+                role_detail = credit['role_detail']
                 
                 # アーティストがDBになければ作成（MusicBrainzからの補完用）
                 mb_artist = db.query(models.Artist).filter(models.Artist.name == artist_name).first()
@@ -74,11 +75,17 @@ class MusicImporter:
                 existing_link = db.query(models.SongArtistLink).filter(
                     models.SongArtistLink.song_id == new_song.id,
                     models.SongArtistLink.artist_id == mb_artist.id,
-                    models.SongArtistLink.role == role
+                    models.SongArtistLink.role_category == role_category,
+                    models.SongArtistLink.role_detail == role_detail
                 ).first()
                 
                 if not existing_link:
-                    link = models.SongArtistLink(song_id=new_song.id, artist_id=mb_artist.id, role=role)
+                    link = models.SongArtistLink(
+                        song_id=new_song.id, 
+                        artist_id=mb_artist.id, 
+                        role_category=role_category,
+                        role_detail=role_detail
+                    )
                     db.add(link)
                     
         db.commit()

@@ -94,6 +94,18 @@ def insert_initial_data():
         "name": "UNISON SQUARE GARDEN TOUR 2025-2026 「うるわしの前の晩」"
     })
     
+    # 1d-2. 会場登録
+    ids['venue'] = {}
+    ids['venue']['kanamoto'] = post_data("/venues/", {
+        "name": "カナモトホール",
+        "prefecture": "北海道",
+        "capacity": 1500
+    })
+    ids['venue']['air_g'] = post_data("/venues/", {
+        "name": "AIR-G' スタジオ",
+        "prefecture": "北海道"
+    })
+    
     # 1e. 公演登録 (北海道公演)
     ids['performance']['hokkaido'] = post_data("/performances/", {
         "artist_id": ids['artist']['unison'],
@@ -101,18 +113,44 @@ def insert_initial_data():
         "performance_type": "Tour",
         "name": "2025/12/05 北海道・カナモトホール公演",
         "date": date(2025, 12, 5).isoformat(),
-        "venue": "カナモトホール",
+        "venue_id": ids['venue']['kanamoto'],
         "start_time": time(18, 30).isoformat()
+    })
+    
+    # 1e-2. ラジオイベント (セトリなし)
+    ids['performance']['radio_event'] = post_data("/performances/", {
+        "artist_id": ids['artist']['unison'],
+        "performance_type": "Other",
+        "event_type": "Radio",
+        "name": "機材車ラジオ 公開収録",
+        "date": date(2025, 12, 6).isoformat(),
+        "venue_id": ids['venue']['air_g'],
+        "start_time": time(20, 0).isoformat()
     })
     
     # 1f. アルバム登録
     ids['album']['jet_co'] = post_data("/albums/", {
-        "main_title": "JET CO.",
+        "main_title": "UNISON SQUARE GARDEN",
         "version_title": "通常盤",
         "artist_id": ids['artist']['unison'],
         "physical_release_date": date(2009, 4, 15).isoformat(),
         "album_type": "Audio"
     })
+    
+    # 1g. タイアップ登録 (階層テスト)
+    ids['tieup'] = {}
+    # シリーズ (IP)
+    ids['tieup']['tiger_bunny_ip'] = post_data("/tieups/", {
+        "name": "TIGER & BUNNY",
+        "category": "Series"
+    })
+    # アニメ版
+    if ids['tieup']['tiger_bunny_ip']:
+        ids['tieup']['tiger_bunny_anime'] = post_data("/tieups/", {
+            "name": "TIGER & BUNNY",
+            "category": "Anime",
+            "parent_id": ids['tieup']['tiger_bunny_ip']
+        })
 
     # --- 2. 紐付けの登録 ---
     print("\n--- 2. 紐付けの登録 ---")
@@ -120,13 +158,13 @@ def insert_initial_data():
     # 2a. センチメンタルピリオドの貢献度 (各メンバーとバンド)
     if ids['song']['sentipiri'] and ids['artist']['tabuchi']:
         s_id = ids['song']['sentipiri']
-        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['tabuchi'], "role": "Composer"})
-        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['tabuchi'], "role": "Lyricist"})
-        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['tabuchi'], "role": "Bassist"})
-        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['saito'], "role": "Vocalist"})
-        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['saito'], "role": "Guitarist"})
-        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['suzuki'], "role": "Drummer"})
-        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['unison'], "role": "Artist"})
+        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['tabuchi'], "role_category": "Composer"})
+        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['tabuchi'], "role_category": "Lyricist"})
+        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['tabuchi'], "role_category": "Bassist"})
+        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['saito'], "role_category": "Vocalist"})
+        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['saito'], "role_category": "Guitarist"})
+        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['suzuki'], "role_category": "Drummer"})
+        post_data("/song_artist_links/", {"song_id": s_id, "artist_id": ids['artist']['unison'], "role_category": "Artist"})
         
     # 2b. 公演セットリストの登録
     if ids['performance']['hokkaido'] and ids['song']['sentipiri'] and ids['song']['orion']:
@@ -146,6 +184,15 @@ def insert_initial_data():
             "song_id": ids['song']['sentipiri'],
             "track_number": 2,
             "disc_number": 1
+        })
+
+    # 2e. 楽曲とタイアップの紐付け
+    if 'tieup' in ids and 'tiger_bunny_anime' in ids['tieup'] and ids['song']['orion']:
+        post_data("/song_tieup_links/", {
+            "song_id": ids['song']['orion'],
+            "tieup_id": ids['tieup']['tiger_bunny_anime'],
+            "context": "第1クール オープニングテーマ",
+            "sort_index": 10
         })
 
     # --- 3. ユーザーデータの登録 ---

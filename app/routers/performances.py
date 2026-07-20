@@ -72,6 +72,25 @@ def create_performance(
 
     return new_performance
 
+@performance_router.get("/{performance_id}", response_model=schemas.PerformanceDetail, tags=["Performances"])
+def get_performance(performance_id: int, db: Session = Depends(models.get_db)):
+    """指定されたIDの公演詳細（セットリスト、参加メンバー等含む）を取得します。"""
+    performance = (
+        db.query(models.Performance)
+        .options(
+            joinedload(models.Performance.setlist_entries).joinedload(models.SetlistEntry.song),
+            joinedload(models.Performance.roster_entries).joinedload(models.PerformanceRoster.artist),
+            joinedload(models.Performance.venue),
+            joinedload(models.Performance.main_artist),
+            joinedload(models.Performance.tour)
+        )
+        .filter(models.Performance.id == performance_id)
+        .first()
+    )
+    if not performance:
+        raise HTTPException(status_code=404, detail="Performance not found")
+    return performance
+
 
 # --- ★公演参加者名簿登録API★ ---
 #

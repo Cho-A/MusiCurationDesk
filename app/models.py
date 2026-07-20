@@ -61,13 +61,14 @@ class SongArtistLink(Base):
 
     song_id = Column(Integer, ForeignKey("songs.id"))
     artist_id = Column(Integer, ForeignKey("artists.id"))
-    role = Column(String(100), nullable=False)  # 例: "Composer"
+    role_category = Column(String(50), nullable=False)  # 例: "Guitar", "Vocal", "Producer"
+    role_detail = Column(String(100), nullable=True)    # 例: "Acoustic Guitar", "Lead Vocal"
 
     # 外部キーにインデックスを貼る (検索高速化)
     __table_args__ = (
-        Index("idx_song_artist_role", "song_id", "artist_id", "role"),
-        # 「曲」「アーティスト」「役割」の組み合わせの重複を禁止
-        UniqueConstraint("song_id", "artist_id", "role", name="_song_artist_role_uc"),
+        Index("idx_song_artist_role", "song_id", "artist_id", "role_category"),
+        # 「曲」「アーティスト」「役割（詳細込み）」の組み合わせの重複を禁止
+        UniqueConstraint("song_id", "artist_id", "role_category", "role_detail", name="_song_artist_role_uc"),
     )
 
     # ★ Artistの名前を取得するプロパティを追加
@@ -262,7 +263,7 @@ class Tieup(Base):
     __tablename__ = "tieups"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    category = Column(String(100))  # "Anime", "Game", "Franchise"
+    category = Column(String(100))  # "Anime", "Game", "Series"
     parent_id = Column(Integer, ForeignKey("tieups.id"), nullable=True)
 
     # 自己参照リレーション (親と子)
@@ -307,20 +308,34 @@ class PerformanceRoster(Base):
     artist = relationship("Artist")  # PerformanceRoster は Artist に紐づく
 
 
+class Venue(Base):
+    __tablename__ = "venues"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    prefecture = Column(String(50), nullable=True)  # 都道府県
+    capacity = Column(Integer, nullable=True)       # キャパシティ
+    notes = Column(Text, nullable=True)
+
+    performances = relationship("Performance", back_populates="venue")
+
+
 class Performance(Base):
     __tablename__ = "performances"
     id = Column(Integer, primary_key=True, index=True)
     artist_id = Column(Integer, ForeignKey("artists.id"))
     tour_id = Column(Integer, ForeignKey("tours.id"), nullable=True)
     performance_type = Column(String(100))  # "Tour", "One-Man", "Festival"
+    event_type = Column(String(50), default="Live")  # "Live", "Radio", "Signing", etc.
     name = Column(String(255))
     date = Column(Date)
-    venue = Column(String(255), nullable=True)
+    venue_id = Column(Integer, ForeignKey("venues.id"), nullable=True)
 
     open_time = Column(Time, nullable=True)  # 開場時間
     start_time = Column(Time, nullable=True)  # 開演時間
     end_time = Column(Time, nullable=True)  # 終演時間 (セッション終了)
     stage_name = Column(String, nullable=True)  # フェスなどのステージ名
+
+    venue = relationship("Venue", back_populates="performances")
 
     artist = relationship("Artist", back_populates="performances")
     # performance.artist_id に紐づくアーティスト情報を取得するためのリレーションシップ
@@ -451,6 +466,11 @@ class Tag(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)  # タグ名は重複禁止
     color = Column(String(20), nullable=True)  # UI用 (例: "#FF0000")
+    parent_id = Column(Integer, ForeignKey("tags.id"), nullable=True) # オプトイン階層化用
+
+    # 自己参照リレーション
+    parent = relationship("Tag", remote_side=[id], back_populates="children")
+    children = relationship("Tag", back_populates="parent")
 
     # このタグが紐づく Artist / Song へのリレーション
     artists = relationship(

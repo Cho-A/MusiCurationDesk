@@ -44,7 +44,8 @@ def link_song_to_artist(
     new_link = models.SongArtistLink(
         song_id=link.song_id,
         artist_id=link.artist_id,
-        role=link.role
+        role_category=link.role_category,
+        role_detail=link.role_detail
     )
     
     db.add(new_link)

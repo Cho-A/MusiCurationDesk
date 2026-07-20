@@ -72,12 +72,13 @@ class ArtistMini(BaseModel):
 class TagCreate(BaseModel):
     name: str  # タグ名 (例: "バラード", "ライブ定番曲")
     color: str | None = None  # UI用 (例: "#FF0000")
-
+    parent_id: int | None = None # オプトイン階層用
 
 class Tag(BaseModel):
     id: int
     name: str
     color: str | None = None
+    parent_id: int | None = None
 
     class Config:
         orm_mode = True
@@ -114,14 +115,16 @@ class Song(BaseModel):
 class SongArtistLinkCreate(BaseModel):
     song_id: int
     artist_id: int
-    role: str  # 例: "Composer", "Vocalist", "Guitarist"
+    role_category: str  # 例: "Composer", "Vocalist", "Guitarist"
+    role_detail: str | None = None
 
 
 class SongArtistLink(BaseModel):
     id: int  # v2.5からidを返す
     song_id: int
     artist_id: int
-    role: str
+    role_category: str
+    role_detail: str | None = None
 
     class Config:
         orm_mode = True
@@ -149,7 +152,7 @@ class SongTieupLink(BaseModel):
 # --- Tieup (タイアップ先) ---
 class TieupCreate(BaseModel):
     name: str  # "呪術廻戦", "チェンソーマン", "BLEACH 千年血戦篇"
-    category: str | None = None  # "Anime", "Game", "Franchise"
+    category: str | None = None  # "Anime", "Game", "Series"
     parent_id: int | None = None # 階層化用 (親タイアップのID)
 
 
@@ -163,10 +166,28 @@ class Tieup(BaseModel):
         orm_mode = True
 
 
+class TieupHierarchyNode(BaseModel):
+    id: int
+    name: str
+    category: str | None = None
+
+    class Config:
+        orm_mode = True
+
+
+class TieupDetail(Tieup):
+    children: List[Tieup] = []
+    parents: List[TieupHierarchyNode] = []  # ルートからのパンくずリスト
+
+    class Config:
+        orm_mode = True
+
+
 # SongArtistLinkの情報を簡略化して返すためのスキーマ
 class ArtistLinkInfo(BaseModel):
     artist_id: int
-    role: str
+    role_category: str
+    role_detail: str | None = None
 
     # Artistマスター情報の一部をネストして含める
     artist_name: str
@@ -188,6 +209,23 @@ class TieupLinkInfo(BaseModel):
     class Config:
         orm_mode = True
 
+class AlbumMini(BaseModel):
+    id: int
+    main_title: str
+    version_title: str | None = None
+
+    class Config:
+        orm_mode = True
+
+class AlbumTrackInfo(BaseModel):
+    album_id: int
+    track_number: int
+    disc_number: int
+    album: AlbumMini
+
+    class Config:
+        orm_mode = True
+
 
 # 既存のSongスキーマを拡張し、関連情報を含める
 class SongDetail(BaseModel):
@@ -205,6 +243,11 @@ class SongDetail(BaseModel):
         alias="tieup_links",
     )  # 'tieup_links' リレーションシップを参照
 
+    albums: List[AlbumTrackInfo] = Field(
+        default=[],
+        alias="album_links",
+    )
+
     tags: List[Tag] = []  # 👈 この曲に紐づくタグのリスト
 
     class Config:
@@ -217,7 +260,26 @@ class SongSearchResult(BaseModel):
     id: int
     title: str
     release_date: date | None
-    role: str  # このアーティストがその曲で果たした役割
+    role_category: str  # このアーティストがその曲で果たした役割の大分類
+    role_detail: str | None = None
+
+    class Config:
+        orm_mode = True
+
+
+# --- Venue (会場) ---
+class VenueCreate(BaseModel):
+    name: str
+    prefecture: str | None = None
+    capacity: int | None = None
+    notes: str | None = None
+
+class Venue(BaseModel):
+    id: int
+    name: str
+    prefecture: str | None = None
+    capacity: int | None = None
+    notes: str | None = None
 
     class Config:
         orm_mode = True
@@ -228,9 +290,10 @@ class PerformanceCreate(BaseModel):
     artist_id: int
     tour_id: int | None = None
     performance_type: str
+    event_type: str = "Live"
     name: str
     date: date
-    venue: str | None = None
+    venue_id: int | None = None
 
     open_time: time | None = None
     start_time: time | None = None
@@ -296,9 +359,10 @@ class Performance(BaseModel):
     main_artist: ArtistMini = None
     tour: Tour | None = None
     performance_type: str
+    event_type: str = "Live"
     name: str
     date: date
-    venue: str | None = None
+    venue: Venue | None = None
 
     open_time: time | None = None
     start_time: time | None = None
@@ -332,6 +396,14 @@ class PerformanceSummary(BaseModel):
     end_time: time | None = None
     stage_name: str | None = None
 
+    class Config:
+        orm_mode = True
+
+# --- PerformanceDetail (詳細表示用) ---
+class PerformanceDetail(Performance):
+    setlist_entries: List[SetlistEntry] = []
+    roster_entries: List[PerformanceRoster] = []
+    
     class Config:
         orm_mode = True
 
