@@ -10,6 +10,14 @@ router = APIRouter(
     tags=["Artists"]   # Swagger UIでのグループ名
 )
 
+# [GET] /artists/
+# ----------------------------------------------------
+@router.get("/", response_model=List[schemas.ArtistDetail], tags=["Artists"])
+def read_artists(skip: int = 0, limit: int = 100, db: Session = Depends(models.get_db)):
+    """全アーティストのリストを取得する"""
+    artists = db.query(models.Artist).order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
+    return artists
+
 # [POST] /artists/
 # ----------------------------------------------------
 @router.post("/", response_model=schemas.Artist, tags=["Artists"])
