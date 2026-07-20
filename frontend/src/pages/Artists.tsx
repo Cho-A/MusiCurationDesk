@@ -9,8 +9,8 @@ interface Artist {
 
 const Artists = () => {
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchArtists = async () => {

@@ -75,12 +75,20 @@ def read_albums(
 
 # [GET] /albums/{album_id}
 # ----------------------------------------------------
-@album_router.get("/{album_id}", response_model=schemas.Album, tags=["Albums"])
+@album_router.get("/{album_id}", response_model=schemas.AlbumDetail, tags=["Albums"])
 def read_album(album_id: int, db: Session = Depends(models.get_db)):
     """
     指定されたIDのアルバム詳細情報を取得します。
+    収録されている楽曲（トラック）も同時に取得します。
     """
-    album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    album = db.query(models.Album)\
+        .options(
+            joinedload(models.Album.album_tracks)\
+            .joinedload(models.AlbumTrack.song)
+        )\
+        .filter(models.Album.id == album_id)\
+        .first()
+        
     if album is None:
         raise HTTPException(status_code=404, detail="Album not found")
     return album

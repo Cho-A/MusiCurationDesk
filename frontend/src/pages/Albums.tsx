@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Disc3 } from 'lucide-react';
+import { Disc3, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Album {
@@ -13,6 +13,7 @@ interface Album {
 
 const Albums = () => {
   const [albums, setAlbums] = useState<Album[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,6 +33,10 @@ const Albums = () => {
     return <div style={{ padding: '32px', color: 'var(--text-secondary)' }}>読み込み中...</div>;
   }
 
+  const filteredAlbums = albums.filter(album => 
+    album.main_title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
@@ -40,19 +45,36 @@ const Albums = () => {
           <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '1.1rem' }}>データベースに登録されているアルバム</p>
         </div>
         <div style={{ color: 'var(--text-tertiary)', fontWeight: 500 }}>
-          {albums.length} Albums
+          {filteredAlbums.length} Albums
         </div>
       </div>
 
-      {albums.length === 0 ? (
+      <div style={{ marginBottom: '32px', position: 'relative', maxWidth: '600px' }}>
+        <Search size={20} color="var(--text-tertiary)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+        <input 
+          type="text" 
+          placeholder="アルバムを検索..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ 
+            width: '100%', padding: '16px 16px 16px 48px', 
+            backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', 
+            borderRadius: '12px', color: 'var(--text-primary)', fontSize: '1rem',
+            outline: 'none'
+          }}
+        />
+      </div>
+
+      {filteredAlbums.length === 0 ? (
         <div style={{ padding: '48px', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: '16px' }}>
           <Disc3 size={48} color="var(--text-tertiary)" style={{ marginBottom: '16px' }} />
           <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>まだアルバムが登録されていません</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px' }}>
-          {albums.map((album) => (
-            <div key={album.id} style={{ 
+          {filteredAlbums.map((album) => (
+            <Link key={album.id} to={`/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ 
               backgroundColor: 'var(--bg-secondary)', 
               borderRadius: '16px', 
               padding: '16px',
@@ -98,6 +120,7 @@ const Albums = () => {
                 {album.physical_release_date || album.digital_release_date || '発売日不明'}
               </div>
             </div>
+            </Link>
           ))}
         </div>
       )}

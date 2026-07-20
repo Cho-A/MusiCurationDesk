@@ -380,6 +380,7 @@ class Album(Base):
     digital_release_date = Column(Date, nullable=True)  # 配信開始日
     spotify_album_id = Column(String(100), nullable=True, unique=True)
     cover_image_url = Column(String(500), nullable=True)
+    album_type = Column(String(50), nullable=True)  # "album", "single", "compilation", "dvd", etc.
 
     album_tracks = relationship("AlbumTrack", back_populates="album")
     store_bonuses = relationship(

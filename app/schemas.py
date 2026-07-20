@@ -211,6 +211,8 @@ class AlbumMini(BaseModel):
     id: int
     main_title: str
     version_title: str | None = None
+    cover_image_url: str | None = None
+    album_type: str | None = None
 
     class Config:
         orm_mode = True
@@ -433,6 +435,7 @@ class AlbumCreate(BaseModel):
     digital_release_date: date | None = None
     spotify_album_id: str | None = None
     cover_image_url: str | None = None
+    album_type: str | None = None
 
 
 class Album(BaseModel):
@@ -444,6 +447,24 @@ class Album(BaseModel):
     digital_release_date: date | None = None
     spotify_album_id: str | None = None
     cover_image_url: str | None = None
+    album_type: str | None = None
+
+    class Config:
+        orm_mode = True
+
+class AlbumTrackForAlbum(BaseModel):
+    id: int
+    song_id: int
+    track_number: int
+    disc_number: int
+    duration_ms: int | None = None
+    song: "Song"  # Songスキーマを参照
+
+    class Config:
+        orm_mode = True
+
+class AlbumDetail(Album):
+    album_tracks: List[AlbumTrackForAlbum] = []
 
     class Config:
         orm_mode = True

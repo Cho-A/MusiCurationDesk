@@ -152,6 +152,7 @@ class MusicImporter:
                     digital_release_date=r_date,
                     cover_image_url=album['images'][0]['url'] if album['images'] else None,
                     spotify_album_id=album['id'],
+                    album_type=album.get('album_type'),
                     artist_id=self._get_or_create_artist(album['artists'][0]['id'], album['artists'][0]['name'], db)
                 )
                 db.add(db_album)

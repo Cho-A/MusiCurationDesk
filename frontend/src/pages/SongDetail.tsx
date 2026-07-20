@@ -22,6 +22,7 @@ interface AlbumMini {
   id: number;
   main_title: string;
   version_title?: string;
+  cover_image_url?: string;
 }
 
 interface AlbumTrackInfo {
@@ -161,12 +162,7 @@ const SongDetail = () => {
               color: 'var(--text-secondary)',
               fontSize: '0.95rem'
             }}>
-              {song.spotify_song_id && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <img src="https://storage.googleapis.com/pr-newsrecord-assets/2024/05/2916b9cb-spotify-logo-1920x1080.jpg" alt="Spotify" style={{ width: 16, height: 16, borderRadius: '50%' }} />
-                  <span>Spotify 連携済</span>
-                </div>
-              )}
+              {/* Removed Spotify Badge as requested */}
             </div>
             <div style={{ marginTop: '16px' }}>
                 <SongTagEditor 
@@ -205,9 +201,13 @@ const SongDetail = () => {
               }}>
                 <div style={{ 
                   width: '48px', height: '48px', backgroundColor: 'rgba(255,255,255,0.1)', 
-                  borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center'
+                  borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden'
                 }}>
-                  <Disc3 size={24} color="var(--text-secondary)" />
+                  {albumLink.album.cover_image_url ? (
+                    <img src={albumLink.album.cover_image_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Disc3 size={24} color="var(--text-secondary)" />
+                  )}
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{albumLink.album.main_title}</div>
