@@ -322,7 +322,7 @@ class Venue(Base):
 class Performance(Base):
     __tablename__ = "performances"
     id = Column(Integer, primary_key=True, index=True)
-    artist_id = Column(Integer, ForeignKey("artists.id"))
+    artist_id = Column(Integer, ForeignKey("artists.id"), nullable=True) # 主催/メインアーティストがいない企画ステージに対応
     tour_id = Column(Integer, ForeignKey("tours.id"), nullable=True)
     performance_type = Column(String(100))  # "Tour", "One-Man", "Festival"
     event_type = Column(String(50), default="Live")  # "Live", "Radio", "Signing", etc.
@@ -364,7 +364,9 @@ class SetlistEntry(Base):
     __tablename__ = "setlist_entries"
     id = Column(Integer, primary_key=True, index=True)
     performance_id = Column(Integer, ForeignKey("performances.id"))
-    song_id = Column(Integer, ForeignKey("songs.id"))
+    song_id = Column(Integer, ForeignKey("songs.id"), nullable=True)
+    entry_type = Column(String(50), default="SONG", nullable=False) # "SONG", "SOLO", "JAM", "MC"
+    unresolved_song_name = Column(String(255), nullable=True) # IDがない場合のテキスト
     order_index = Column(Integer)
     notes = Column(String(100), nullable=True)  # "Encore 1"
 
@@ -381,6 +383,7 @@ class Album(Base):
     physical_release_date = Column(Date, nullable=True)  # CD発売日
     digital_release_date = Column(Date, nullable=True)  # 配信開始日
     spotify_album_id = Column(String(100), nullable=True, unique=True)
+    cover_image_url = Column(String(500), nullable=True)
 
     album_tracks = relationship("AlbumTrack", back_populates="album")
     store_bonuses = relationship(

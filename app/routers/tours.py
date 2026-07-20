@@ -14,7 +14,7 @@ router = APIRouter(
 #
 # [POST] /tours/
 # ----------------------------------------------------
-@router.post("/tours/", response_model=schemas.Tour, tags=["Tours"])
+@router.post("/", response_model=schemas.Tour, tags=["Tours"])
 def create_tour(
     tour: schemas.TourCreate,
     db: Session = Depends(models.get_db),
@@ -41,3 +41,23 @@ def create_tour(
     db.refresh(new_tour)
 
     return new_tour
+
+@router.get("/{tour_id}", response_model=schemas.TourDetail, tags=["Tours"])
+def get_tour(tour_id: int, db: Session = Depends(models.get_db)):
+    """指定されたIDのツアー/イベントシリーズ詳細と、関連する公演一覧を取得します。"""
+    from sqlalchemy.orm import joinedload
+    tour = (
+        db.query(models.Tour)
+        .options(
+            joinedload(models.Tour.performances).joinedload(models.Performance.venue),
+            joinedload(models.Tour.performances).joinedload(models.Performance.main_artist)
+        )
+        .filter(models.Tour.id == tour_id)
+        .first()
+    )
+    if not tour:
+        raise HTTPException(status_code=404, detail="Tour not found")
+    
+    # 日付でソート
+    tour.performances.sort(key=lambda p: p.date)
+    return tour

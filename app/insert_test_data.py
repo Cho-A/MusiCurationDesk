@@ -93,6 +93,9 @@ def insert_initial_data():
     ids['tour']['tour2025'] = post_data("/tours/", {
         "name": "UNISON SQUARE GARDEN TOUR 2025-2026 「うるわしの前の晩」"
     })
+    ids['tour']['buzzrhythm'] = post_data("/tours/", {
+        "name": "バズリズム LIVE 2020"
+    })
     
     # 1d-2. 会場登録
     ids['venue'] = {}
@@ -126,6 +129,16 @@ def insert_initial_data():
         "date": date(2025, 12, 6).isoformat(),
         "venue_id": ids['venue']['air_g'],
         "start_time": time(20, 0).isoformat()
+    })
+    
+    # 1e-3. 企画ステージ (メインアーティストなし)
+    ids['performance']['buzz_session'] = post_data("/performances/", {
+        "tour_id": ids['tour']['buzzrhythm'],
+        "performance_type": "Festival",
+        "event_type": "Live",
+        "name": "スペシャルセッション",
+        "date": date(2020, 11, 7).isoformat(),
+        "start_time": time(19, 30).isoformat()
     })
     
     # 1f. アルバム登録
@@ -170,12 +183,45 @@ def insert_initial_data():
     if ids['performance']['hokkaido'] and ids['song']['sentipiri'] and ids['song']['orion']:
         p_id = ids['performance']['hokkaido']
         post_data("/setlist_entries/", {"performance_id": p_id, "song_id": ids['song']['sentipiri'], "order_index": 1, "notes": "本編1曲目"})
-        post_data("/setlist_entries/", {"performance_id": p_id, "song_id": ids['song']['orion'], "order_index": 2})
+        post_data("/setlist_entries/", {
+        "performance_id": ids['performance']['hokkaido'],
+        "song_id": ids['song']['orion'],
+        "order_index": 2,
+        "entry_type": "SONG"
+    })
+    
+    # 北海道公演 ドラムソロ (曲IDなし)
+    post_data("/setlist_entries/", {
+        "performance_id": ids['performance']['hokkaido'],
+        "order_index": 3,
+        "entry_type": "SOLO",
+        "unresolved_song_name": "ドラムソロ"
+    })
+    
+    # セッションのセットリスト
+    post_data("/setlist_entries/", {
+        "performance_id": ids['performance']['buzz_session'],
+        "order_index": 1,
+        "entry_type": "JAM",
+        "unresolved_song_name": "スキマスイッチ × UNISON コラボセッション",
+        "notes": "全力少年"
+    })
 
-    # 2c. 公演参加者名簿 (ロースター) の登録
-    if ids['performance']['hokkaido'] and ids['artist']['unison']:
-        p_id = ids['performance']['hokkaido']
-        post_data("/performance_roster/", {"performance_id": p_id, "artist_id": ids['artist']['unison'], "role": "Main Act"})
+    # 2c. Roster (参加者) 登録
+    # UNISON SQUARE GARDEN メンバー
+    post_data("/performance_roster/", {
+        "performance_id": ids['performance']['hokkaido'],
+        "artist_id": ids['artist']['unison'],
+        "role": "Main Act"
+    })
+    
+    # セッションの参加者
+    post_data("/performance_roster/", {
+        "performance_id": ids['performance']['buzz_session'],
+        "artist_id": ids['artist']['unison'],
+        "role": "Guest Act",
+        "context": "スペシャルセッション参加"
+    })
 
     # 2d. アルバム収録曲の登録
     if ids['album']['jet_co'] and ids['song']['sentipiri']:

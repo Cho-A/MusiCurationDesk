@@ -35,16 +35,17 @@ def create_performance(
     # --- 外部キー制約のチェック ---
 
     # 1. アーティスト (Artist) が存在するかチェック
-    db_artist = (
-        db.query(models.Artist)
-        .filter(models.Artist.id == performance.artist_id)
-        .first()
-    )
-    if db_artist is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Artist ID {performance.artist_id} が見つかりません。",
+    if performance.artist_id is not None:
+        db_artist = (
+            db.query(models.Artist)
+            .filter(models.Artist.id == performance.artist_id)
+            .first()
         )
+        if db_artist is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Artist ID {performance.artist_id} が見つかりません。",
+            )
 
     # 2. ツアー (Tour) IDが提供された場合、存在するかチェック
     if performance.tour_id:
@@ -267,12 +268,13 @@ def create_setlist_entry(
             detail=f"Performance ID {entry.performance_id} が見つかりません。",
         )
 
-    # 2. 楽曲 (Song) が存在するかチェック
-    db_song = db.query(models.Song).filter(models.Song.id == entry.song_id).first()
-    if db_song is None:
-        raise HTTPException(
-            status_code=404, detail=f"Song ID {entry.song_id} が見つかりません。"
-        )
+    # 2. 楽曲 (Song) が存在するかチェック (song_idが指定されている場合のみ)
+    if entry.song_id is not None:
+        db_song = db.query(models.Song).filter(models.Song.id == entry.song_id).first()
+        if db_song is None:
+            raise HTTPException(
+                status_code=404, detail=f"Song ID {entry.song_id} が見つかりません。"
+            )
 
     # --- 紐付けデータを作成 ---
     new_entry = models.SetlistEntry(**entry.dict())

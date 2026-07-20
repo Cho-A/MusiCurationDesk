@@ -14,10 +14,12 @@ interface Venue {
 
 interface SetlistEntry {
   id: number;
-  song_id: number;
+  song_id?: number;
+  entry_type: string;
+  unresolved_song_name?: string;
   order_index: number;
   notes?: string;
-  song: {
+  song?: {
     id: number;
     title: string;
   };
@@ -38,6 +40,10 @@ interface PerformanceDetail {
   performance_type: string;
   main_artist: Artist;
   venue?: Venue;
+  tour?: {
+    id: number;
+    name: string;
+  };
   setlist_entries: SetlistEntry[];
   roster_entries: RosterEntry[];
 }
@@ -99,17 +105,42 @@ const PerformanceDetail = () => {
           <span style={{ color: '#aaa', fontSize: '0.9rem' }}>{performance.date}</span>
         </div>
         
+        {performance.tour && (
+          <Link to={`/tours/${performance.tour.id}`} style={{ textDecoration: 'none' }}>
+            <div style={{ 
+              display: 'inline-block',
+              background: 'rgba(76, 175, 80, 0.15)',
+              color: '#4CAF50',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              marginBottom: '8px',
+              border: '1px solid rgba(76, 175, 80, 0.3)'
+            }}>
+              🔗 ツアー / イベント: {performance.tour.name}
+            </div>
+          </Link>
+        )}
+        
         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, lineHeight: 1.2 }}>
           {performance.name}
         </h1>
         
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '8px' }}>
-          {performance.main_artist && (
+          {performance.main_artist ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#4CAF50', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                 {performance.main_artist.name[0]}
               </div>
               <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>{performance.main_artist.name}</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#FF9800', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                ✨
+              </div>
+              <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#FF9800' }}>Special Session</span>
             </div>
           )}
           {performance.venue && (
@@ -180,32 +211,53 @@ const PerformanceDetail = () => {
                           ENCORE
                         </div>
                       )}
-                      <Link to={`/songs/${entry.song.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {entry.song ? (
+                        <Link to={`/songs/${entry.song.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            padding: '16px 20px', 
+                            background: 'rgba(255,255,255,0.03)', 
+                            borderRadius: '8px',
+                            transition: 'background 0.2s',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                          >
+                            <div style={{ width: '40px', color: '#666', fontWeight: 700 }}>
+                              {entry.order_index}
+                            </div>
+                            <div style={{ flex: 1, fontSize: '1.1rem', fontWeight: 500 }}>
+                              {entry.song.title}
+                            </div>
+                            {entry.notes && !isEncore && (
+                              <div style={{ fontSize: '0.85rem', color: '#888', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px' }}>
+                                {entry.notes}
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      ) : (
                         <div style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
                           padding: '16px 20px', 
-                          background: 'rgba(255,255,255,0.03)', 
+                          background: 'transparent', 
                           borderRadius: '8px',
-                          transition: 'background 0.2s',
-                          cursor: 'pointer'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                        >
-                          <div style={{ width: '40px', color: '#666', fontWeight: 700 }}>
+                          border: '1px solid rgba(255,255,255,0.05)',
+                        }}>
+                          <div style={{ width: '40px', color: '#555', fontWeight: 700 }}>
                             {entry.order_index}
                           </div>
-                          <div style={{ flex: 1, fontSize: '1.1rem', fontWeight: 500 }}>
-                            {entry.song.title}
+                          <div style={{ flex: 1, fontSize: '1.1rem', fontWeight: 400, color: '#aaa', fontStyle: 'italic' }}>
+                            {entry.unresolved_song_name || entry.entry_type}
                           </div>
-                          {entry.notes && !isEncore && (
-                            <div style={{ fontSize: '0.85rem', color: '#888', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px' }}>
-                              {entry.notes}
-                            </div>
-                          )}
+                          <div style={{ fontSize: '0.75rem', color: '#666', border: '1px solid #444', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                            {entry.entry_type}
+                          </div>
                         </div>
-                      </Link>
+                      )}
                     </React.Fragment>
                   );
                 })}

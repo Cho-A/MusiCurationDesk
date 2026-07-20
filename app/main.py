@@ -7,6 +7,7 @@ from .routers import (
     albums,
     artists,
     auth,
+    external,
     goods_and_stores,
     links,
     performances,
@@ -38,6 +39,7 @@ app.include_router(performances.setlist_entries_router)
 app.include_router(performances.performance_roster_router)
 app.include_router(tieups.router)
 app.include_router(tours.router)
+app.include_router(external.router)
 app.include_router(tags.router)
 app.include_router(venues.router)
 app.include_router(albums.album_router)

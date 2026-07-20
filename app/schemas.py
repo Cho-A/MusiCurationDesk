@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List
+from typing import List, Optional, Any
 from datetime import date, datetime, time
 
 from pydantic import BaseModel, EmailStr, Field
@@ -287,14 +287,13 @@ class Venue(BaseModel):
 
 # --- PerformanceCreate (公演の基本情報) ---
 class PerformanceCreate(BaseModel):
-    artist_id: int
+    artist_id: int | None = None
     tour_id: int | None = None
     performance_type: str
-    event_type: str = "Live"
+    event_type: str | None = "Live"
     name: str
     date: date
     venue_id: int | None = None
-
     open_time: time | None = None
     start_time: time | None = None
     end_time: time | None = None
@@ -319,11 +318,20 @@ class PerformanceRoster(BaseModel):
     class Config:
         orm_mode = True
 
+class SongMini(BaseModel):
+    id: int
+    title: str
+
+    class Config:
+        orm_mode = True
+
 
 # --- SetlistEntry (セットリストのエントリ) ---
 class SetlistEntryCreate(BaseModel):
     performance_id: int
-    song_id: int
+    song_id: int | None = None
+    entry_type: str = "SONG"
+    unresolved_song_name: str | None = None
     order_index: int
     notes: str | None = None  # "Encore 1", "Medley" など
 
@@ -331,9 +339,12 @@ class SetlistEntryCreate(BaseModel):
 class SetlistEntry(BaseModel):
     id: int
     performance_id: int
-    song_id: int
+    song_id: int | None = None
+    entry_type: str
+    unresolved_song_name: str | None = None
     order_index: int
     notes: str | None = None
+    song: SongMini | None = None
 
     class Config:
         orm_mode = True
@@ -355,15 +366,14 @@ class TourCreate(BaseModel):
 # 3. Performance 詳細（親）スキーマ
 class Performance(BaseModel):
     id: int
-    artist_id: int
-    main_artist: ArtistMini = None
+    artist_id: int | None = None
+    main_artist: ArtistMini | None = None
     tour: Tour | None = None
     performance_type: str
-    event_type: str = "Live"
+    event_type: str
     name: str
     date: date
     venue: Venue | None = None
-
     open_time: time | None = None
     start_time: time | None = None
     end_time: time | None = None
@@ -408,6 +418,14 @@ class PerformanceDetail(Performance):
         orm_mode = True
 
 
+# --- TourDetail (ツアー詳細・公演一覧用) ---
+class TourDetail(Tour):
+    performances: List[Performance] = []
+
+    class Config:
+        orm_mode = True
+
+
 # --- Album (アルバム・マスター) ---
 class AlbumCreate(BaseModel):
     main_title: str
@@ -416,6 +434,7 @@ class AlbumCreate(BaseModel):
     physical_release_date: date | None = None
     digital_release_date: date | None = None
     spotify_album_id: str | None = None
+    cover_image_url: str | None = None
 
 
 class Album(BaseModel):
@@ -426,6 +445,7 @@ class Album(BaseModel):
     physical_release_date: date | None = None
     digital_release_date: date | None = None
     spotify_album_id: str | None = None
+    cover_image_url: str | None = None
 
     class Config:
         orm_mode = True

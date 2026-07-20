@@ -6,22 +6,85 @@ interface Song {
   id: number;
   title: string;
   release_date?: string;
+  jasrac_code?: string;
+}
+
+interface SpotifyTrack {
+  spotify_id: string;
+  title: string;
+  artist_name: string;
+  album_name: string;
+  image_url: string;
 }
 
 const Songs = () => {
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchMode, setSearchMode] = useState<'local' | 'spotify'>('local');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Song[]>([]);
-  const [recentSongs, setRecentSongs] = useState<Song[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [spotifyResults, setSpotifyResults] = useState<SpotifyTrack[]>([]);
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
+  const [importingTrackId, setImportingTrackId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   
   // 初期ロード時：最近追加された楽曲を取得
+  const fetchLocalSongs = () => {
+    setLoading(true);
+    fetch('http://127.0.0.1:8000/songs/recent?limit=10')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch songs');
+        return res.json();
+      })
+      .then((data) => setSongs(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/songs/recent?limit=6')
-      .then(res => res.json())
-      .then(data => setRecentSongs(data))
-      .catch(err => console.error(err));
+    fetchLocalSongs();
   }, []);
+
+  const handleSpotifySearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    
+    setIsSearchingSpotify(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/external/spotify/search?q=${encodeURIComponent(searchQuery)}`);
+      if (!res.ok) throw new Error('Spotify search failed');
+      const data = await res.json();
+      setSpotifyResults(data);
+    } catch (err) {
+      console.error(err);
+      alert('Spotifyの検索に失敗しました。');
+    } finally {
+      setIsSearchingSpotify(false);
+    }
+  };
+
+  const handleImport = async (trackId: string) => {
+    setImportingTrackId(trackId);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/external/spotify/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spotify_track_id: trackId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        fetchLocalSongs(); // 成功したらローカルのリストを更新
+      } else {
+        alert(`エラー: ${data.detail}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('インポートに失敗しました。');
+    } finally {
+      setImportingTrackId(null);
+    }
+  };
 
   // 検索処理
   useEffect(() => {
@@ -32,21 +95,21 @@ const Songs = () => {
     }
 
     const delayDebounceFn = setTimeout(() => {
-      setIsSearching(true);
-      fetch(`http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}`)
-        .then(res => res.json())
-        .then(data => {
-          setSearchResults(data);
-          setHasSearched(true);
-        })
-        .catch(err => console.error(err))
-        .finally(() => setIsSearching(false));
+      if (searchMode === 'local') {
+        fetch(`http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}`)
+          .then(res => res.json())
+          .then(data => {
+            setSearchResults(data);
+            setHasSearched(true);
+          })
+          .catch(err => console.error(err));
+      }
     }, 400);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, searchMode]);
 
-  // 楽曲カードコンポーネント
+  // 楽曲カードコンポーネント (画像を無くし、よりシンプルなリスト風に)
   const SongCard = ({ song }: { song: Song }) => (
     <Link to={`/songs/${song.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div style={{
@@ -58,27 +121,20 @@ const Songs = () => {
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.transform = 'translateX(4px)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.transform = 'translateX(0)';
       }}
       >
-        <div style={{
-          width: '56px', height: '56px', background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
-          borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center',
-          flexShrink: 0, boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-        }}>
-          <Music size={24} color="#1DB954" />
-        </div>
+        <Music size={20} color="#1DB954" style={{ flexShrink: 0 }} />
         <div style={{ overflow: 'hidden' }}>
           <div style={{ fontWeight: 600, fontSize: '1.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {song.title}
           </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Clock size={12} />
-            {song.release_date || '発売日不明'}
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
+            {song.jasrac_code ? `JASRAC: ${song.jasrac_code}` : '楽曲情報'}
           </div>
         </div>
       </div>
@@ -89,113 +145,184 @@ const Songs = () => {
     <div style={{ padding: '48px 32px', maxWidth: '1200px', margin: '0 auto' }}>
       
       {/* 検索ヘッダー領域 */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '64px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '40px' }}>
         <h1 style={{ fontSize: '3.5rem', fontWeight: 900, marginBottom: '24px', letterSpacing: '-0.02em', textAlign: 'center' }}>
           楽曲情報を調べる
         </h1>
-        
-        <div style={{ position: 'relative', width: '100%', maxWidth: '600px' }}>
-          <Search size={24} color="var(--text-secondary)" style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
+      </div>
+
+      {/* 検索タブ切り替え */}
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', justifyContent: 'center' }}>
+        <button
+          onClick={() => setSearchMode('local')}
+          style={{
+            padding: '8px 16px',
+            background: searchMode === 'local' ? '#4CAF50' : 'rgba(255,255,255,0.1)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            transition: 'background 0.2s'
+          }}
+        >
+          📂 データベース内
+        </button>
+        <button
+          onClick={() => setSearchMode('spotify')}
+          style={{
+            padding: '8px 16px',
+            background: searchMode === 'spotify' ? '#1DB954' : 'rgba(255,255,255,0.1)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            transition: 'background 0.2s'
+          }}
+        >
+          🎧 Spotifyから追加
+        </button>
+      </div>
+
+      {/* Spotify検索バー */}
+      {searchMode === 'spotify' && (
+        <form onSubmit={handleSpotifySearch} style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
           <input 
             type="text" 
-            placeholder="楽曲名で検索..." 
+            placeholder="Spotifyで楽曲やアーティストを検索..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
-              width: '100%', padding: '20px 20px 20px 60px',
-              fontSize: '1.2rem', borderRadius: '32px',
-              border: '2px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)',
-              color: 'var(--text-primary)', outline: 'none',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+              flex: 1,
+              padding: '16px 24px',
+              borderRadius: '30px',
+              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(255,255,255,0.05)',
+              color: '#fff',
+              fontSize: '1.1rem',
+              outline: 'none'
             }}
-            onFocus={(e) => e.target.style.borderColor = '#1DB954'}
-            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
           />
-        </div>
-      </div>
+          <button type="submit" disabled={isSearchingSpotify} style={{
+            background: '#1DB954',
+            color: 'white',
+            border: 'none',
+            borderRadius: '30px',
+            padding: '0 32px',
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            cursor: isSearchingSpotify ? 'wait' : 'pointer',
+            transition: 'transform 0.1s',
+          }}>
+            {isSearchingSpotify ? '検索中...' : '検索'}
+          </button>
+        </form>
+      )}
 
-      {/* 検索中のローディング */}
-      {isSearching && (
-        <div style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '48px 0' }}>
-          検索中...
+      {/* Spotify 検索結果表示 */}
+      {searchMode === 'spotify' && spotifyResults.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <h2 style={{ fontSize: '1.4rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '24px' }}>
+            Spotify 検索結果
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {spotifyResults.map((track) => (
+              <div key={track.spotify_id} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px',
+                background: 'rgba(255,255,255,0.03)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  {track.image_url ? (
+                    <img src={track.image_url} alt={track.album_name} style={{ width: '64px', height: '64px', borderRadius: '8px' }} />
+                  ) : (
+                    <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: '#333' }} />
+                  )}
+                  <div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{track.title}</div>
+                    <div style={{ color: '#aaa', fontSize: '0.9rem', marginTop: '4px' }}>
+                      {track.artist_name} • {track.album_name}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleImport(track.spotify_id)}
+                  disabled={importingTrackId === track.spotify_id}
+                  style={{
+                    background: importingTrackId === track.spotify_id ? '#555' : '#1DB954',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    fontWeight: 'bold',
+                    cursor: importingTrackId === track.spotify_id ? 'wait' : 'pointer'
+                  }}
+                >
+                  {importingTrackId === track.spotify_id ? '追加中...' : '➕ 追加'}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* 検索結果 */}
-      {hasSearched && !isSearching && (
-        <div>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '24px', fontWeight: 700 }}>
-            "{searchQuery}" の検索結果
-          </h2>
-          
-          {searchResults.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-              {searchResults.map(song => <SongCard key={song.id} song={song} />)}
+      {/* ローカル検索バーと結果 */}
+      {searchMode === 'local' && (
+        <>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
+            <input 
+              type="text" 
+              placeholder="ローカルデータベースから楽曲を検索..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '16px 24px',
+                borderRadius: '30px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.05)',
+                color: '#fff',
+                fontSize: '1.1rem',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          {searchQuery ? (
+            <div>
+              <h2 style={{ fontSize: '1.8rem', marginBottom: '24px', fontWeight: 700 }}>
+                "{searchQuery}" の検索結果
+              </h2>
+              {searchResults.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                  {searchResults.map((song: Song) => <SongCard key={song.id} song={song} />)}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--text-tertiary)', padding: '24px' }}>見つかりませんでした。Spotifyタブから検索して追加してください。</div>
+              )}
             </div>
           ) : (
-            <div style={{ 
-              background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.2)',
-              borderRadius: '16px', padding: '48px', textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '32px' }}>
-                データベースに見つかりませんでした。
-              </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                {/* 手動追加ボタン */}
-                <button style={{
-                  background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none',
-                  padding: '16px 32px', borderRadius: '32px', fontSize: '1rem', fontWeight: 600,
-                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                  transition: 'background 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                >
-                  <PlusCircle size={20} />
-                  楽曲を手動で追加
-                </button>
-
-                {/* Spotifyモックボタン */}
-                <button style={{
-                  background: '#1DB954', color: 'black', border: 'none',
-                  padding: '16px 32px', borderRadius: '32px', fontSize: '1rem', fontWeight: 600,
-                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                  transition: 'background 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#1ed760'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#1DB954'}
-                >
-                  <Headphones size={20} />
-                  Spotifyから検索して追加
-                </button>
-              </div>
+            <div>
+              <h2 style={{ fontSize: '1.8rem', marginBottom: '24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={24} color="#1DB954" />
+                最近追加された楽曲
+              </h2>
+              {songs.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                  {songs.map((song: Song) => <SongCard key={song.id} song={song} />)}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--text-tertiary)', padding: '24px' }}>まだ楽曲が登録されていません</div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
-
-      {/* 初期状態: 最近追加された楽曲 */}
-      {!hasSearched && (
-        <div>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Clock size={24} color="#1DB954" />
-            最近追加された楽曲
-          </h2>
-          
-          {recentSongs.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-              {recentSongs.map(song => <SongCard key={song.id} song={song} />)}
-            </div>
-          ) : (
-            <div style={{ color: 'var(--text-tertiary)', padding: '24px' }}>
-              まだ楽曲が登録されていません
-            </div>
-          )}
-        </div>
-      )}
-
     </div>
   );
 };
