@@ -8,6 +8,8 @@ import PerformanceDetail from './pages/PerformanceDetail';
 import TourDetail from './pages/TourDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Admin from './pages/Admin';
+import Artists from './pages/Artists';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -24,10 +26,11 @@ function App() {
           <Route path="tieups/:id" element={<TieupDetail />} />
           <Route path="performances/:id" element={<PerformanceDetail />} />
           <Route path="tours/:id" element={<TourDetail />} />
-          <Route path="artists" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>アーティストページ (準備中)</div>} />
+          <Route path="artists" element={<Artists />} />
           <Route path="concerts" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>ライブ・公演ページ (準備中)</div>} />
           <Route path="merchandise" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>グッズページ (準備中)</div>} />
           <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>分析ページ (準備中)</div>} />
+          <Route path="admin" element={<Admin />} />
         </Route>
       </Routes>
     </BrowserRouter>

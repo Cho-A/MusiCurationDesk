@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Home, Music, Disc, Mic2, Settings, BarChart2, Library, User, LogOut, LogIn, UserPlus, LayoutDashboard, Users, CalendarDays, ShoppingBag, BarChart3 } from 'lucide-react';
+import { Home, Music, Disc, Mic2, Settings, BarChart2, Library, User, LogOut, LogIn, UserPlus, LayoutDashboard, Users, CalendarDays, ShoppingBag, BarChart3, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
@@ -73,6 +73,19 @@ const Sidebar = () => {
           </NavLink>
         ))}
 
+        {/* Artists Link */}
+        <NavLink to="/artists" style={({ isActive }) => ({
+          display: 'flex', alignItems: 'center', gap: '12px',
+          padding: '12px 16px', borderRadius: '12px',
+          color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+          backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
+          fontWeight: isActive ? 600 : 500,
+          transition: 'all 0.2s ease'
+        })}>
+          <Mic2 size={20} />
+          <span style={{ fontWeight: 500 }}>アーティスト</span>
+        </NavLink>
+
         <NavLink to="/settings" style={({ isActive }) => ({
           display: 'flex', alignItems: 'center', gap: '12px',
           padding: '12px 16px', borderRadius: '12px',
@@ -82,7 +95,20 @@ const Sidebar = () => {
           transition: 'all 0.2s ease'
         })}>
           <Settings size={20} />
-          <span style={{ fontWeight: 500 }}>Settings</span>
+          <span style={{ fontWeight: 500 }}>設定</span>
+        </NavLink>
+
+        {/* Developer Tools (Always show for now to ensure user can click it) */}
+        <NavLink to="/admin" style={({ isActive }) => ({
+          display: 'flex', alignItems: 'center', gap: '12px',
+          padding: '12px 16px', borderRadius: '12px',
+          color: isActive ? '#ff6b6b' : 'var(--text-secondary)',
+          backgroundColor: isActive ? 'rgba(255,50,50,0.1)' : 'transparent',
+          fontWeight: isActive ? 600 : 500,
+          transition: 'all 0.2s ease'
+        })}>
+          <Database size={20} color={window.location.pathname === '/admin' ? '#ff6b6b' : undefined} />
+          <span style={{ fontWeight: 500 }}>開発者ツール</span>
         </NavLink>
       </nav>
 
@@ -115,7 +141,7 @@ const Sidebar = () => {
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
               <LogOut size={20} />
-              <span style={{ fontWeight: 500 }}>Logout</span>
+              <span style={{ fontWeight: 500 }}>ログアウト</span>
             </button>
           </>
         ) : (
@@ -130,20 +156,20 @@ const Sidebar = () => {
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
               >
                 <LogIn size={20} />
-                <span style={{ fontWeight: 500 }}>Login</span>
+                <span style={{ fontWeight: 500 }}>ログイン</span>
               </div>
             </Link>
             <Link to="/register" style={{ textDecoration: 'none' }}>
               <div style={{ 
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
-                background: 'transparent', borderRadius: '8px', color: 'var(--text-secondary)',
+                background: 'rgba(255,255,255,0.05)', borderRadius: '8px', color: 'white',
                 transition: 'background 0.2s'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
               >
                 <UserPlus size={20} />
-                <span style={{ fontWeight: 500 }}>Register</span>
+                <span style={{ fontWeight: 500 }}>新規登録</span>
               </div>
             </Link>
           </>
