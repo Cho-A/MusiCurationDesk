@@ -152,7 +152,6 @@ class MusicImporter:
                     digital_release_date=r_date,
                     cover_image_url=album['images'][0]['url'] if album['images'] else None,
                     spotify_album_id=album['id'],
-                    # とりあえずアーティストは最初の１人とする
                     artist_id=self._get_or_create_artist(album['artists'][0]['id'], album['artists'][0]['name'], db)
                 )
                 db.add(db_album)
@@ -164,8 +163,25 @@ class MusicImporter:
             tracks = self.spotify.get_album_tracks(album['id'], limit=50)
             for track in tracks:
                 try:
-                    self.import_track_from_spotify(track['id'], db, skip_mb_lookup=True)
+                    song = self.import_track_from_spotify(track['id'], db, skip_mb_lookup=True)
                     imported_tracks += 1
+                    
+                    # AlbumTrack を作成 (duration_ms 含む)
+                    existing_album_track = db.query(models.AlbumTrack).filter(
+                        models.AlbumTrack.album_id == db_album.id,
+                        models.AlbumTrack.song_id == song.id
+                    ).first()
+                    
+                    if not existing_album_track:
+                        album_track = models.AlbumTrack(
+                            album_id=db_album.id,
+                            song_id=song.id,
+                            track_number=track.get('track_number', 1),
+                            disc_number=track.get('disc_number', 1),
+                            duration_ms=track.get('duration_ms', None)
+                        )
+                        db.add(album_track)
+                        db.commit()
                 except Exception as e:
                     print(f"Failed to import track {track['name']}: {e}")
 
@@ -193,7 +209,7 @@ class MusicImporter:
         if progress_callback: progress_callback(10, f"Found {total_artists} unique artists in playlist. Starting sync...")
         
         for i, artist_id in enumerate(artist_ids_list):
-            base_prog = 10 + int(80 * (i/total_artists))
+            base_prog = 10 + int(80 * ((i + 1) / total_artists))
             if progress_callback: progress_callback(base_prog, f"Syncing artist {i+1}/{total_artists}...")
             
             try:

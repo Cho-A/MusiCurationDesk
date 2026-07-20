@@ -60,8 +60,8 @@ const Dashboard = () => {
         const discoveryData = await discoveryRes.json();
 
         setStats(statsData);
-        setRecentAlbums(recentData.recent_albums);
-        setRecentSongs(recentData.recent_songs);
+        setRecentAlbums(recentData?.recent_albums || []);
+        setRecentSongs(recentData?.recent_songs || []);
         setDiscovery(discoveryData);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);

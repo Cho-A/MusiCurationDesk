@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Admin from './pages/Admin';
 import Artists from './pages/Artists';
+import Albums from './pages/Albums';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <Route path="performances/:id" element={<PerformanceDetail />} />
           <Route path="tours/:id" element={<TourDetail />} />
           <Route path="artists" element={<Artists />} />
+          <Route path="albums" element={<Albums />} />
           <Route path="concerts" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>ライブ・公演ページ (準備中)</div>} />
           <Route path="merchandise" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>グッズページ (準備中)</div>} />
           <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>分析ページ (準備中)</div>} />

@@ -225,7 +225,6 @@ class Song(Base):
     __tablename__ = "songs"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False, index=True)
-    release_date = Column(Date, nullable=True)
     spotify_song_id = Column(String(100), nullable=True, unique=True)
     spotify_song_title = Column(String(255), nullable=True)
     jasrac_code = Column(String(20), nullable=True, index=True, unique=True)
@@ -246,15 +245,12 @@ class Song(Base):
     )
 
     __table_args__ = (
-        # title + release_date を、「spotify_song_id と jasrac_code が両方 NULL の行」に限ってユニーク
+        # title を、「spotify_song_id と jasrac_code が両方 NULL の行」に限ってユニーク
         Index(
-            "uq_song_title_date_when_both_ids_null",
+            "uq_song_title_when_both_ids_null",
             "title",
-            "release_date",
-            unique=True,
+            unique=False, # release_date が消えたので、同名異曲を許容するため unique=False に変更
             sqlite_where=text("(spotify_song_id IS NULL) AND (jasrac_code IS NULL)"),
-            # PostgreSQL も使うなら↓も併記可
-            # postgresql_where=text("(spotify_song_id IS NULL) AND (jasrac_code IS NULL)"),
         ),
     )
 
@@ -414,6 +410,7 @@ class AlbumTrack(Base):
     song_id = Column(Integer, ForeignKey("songs.id"))
     track_number = Column(Integer)
     disc_number = Column(Integer, default=1)
+    duration_ms = Column(Integer, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("album_id", "song_id", name="_album_song_uc"),

@@ -144,7 +144,7 @@ def get_personal_recent_additions(
     ).filter(models.UserAttendance.user_id == current_user.id).all()
     
     for perf in attended_performances:
-        for roster in perf.rosters:
+        for roster in perf.roster_entries:
             artist_ids.add(roster.artist_id)
             
     # 所有しているアルバムのアーティスト (今回は簡略化のためライブ参加のみで抽出)

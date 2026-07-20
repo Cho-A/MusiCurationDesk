@@ -60,6 +60,31 @@ def create_album(
     
     return new_album
 
+# [GET] /albums/
+# ----------------------------------------------------
+@album_router.get("/", response_model=List[schemas.Album], tags=["Albums"])
+def read_albums(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(models.get_db)
+):
+    """
+    全アルバムの一覧を取得します。
+    """
+    return db.query(models.Album).order_by(models.Album.id.desc()).offset(skip).limit(limit).all()
+
+# [GET] /albums/{album_id}
+# ----------------------------------------------------
+@album_router.get("/{album_id}", response_model=schemas.Album, tags=["Albums"])
+def read_album(album_id: int, db: Session = Depends(models.get_db)):
+    """
+    指定されたIDのアルバム詳細情報を取得します。
+    """
+    album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    if album is None:
+        raise HTTPException(status_code=404, detail="Album not found")
+    return album
+
 # [POST] /album_tracks/
 # ----------------------------------------------------
 @album_track_router.post("/", response_model=schemas.AlbumTrack, tags=["Albums"])

@@ -100,10 +100,8 @@ def read_songs(
     if tieup_id_filter:
         query = query.join(models.Song.tieup_links).filter(models.SongTieupLink.tieup_id == tieup_id_filter)
         
-    # 3. ソート (変更なし)
-    if sort_by == "release_date":
-        query = query.order_by(models.Song.release_date.desc(), models.Song.id.desc())
-    elif sort_by == "title":
+    # 3. ソート (release_date は削除されたため id と title のみに対応)
+    if sort_by == "title":
         query = query.order_by(models.Song.title)
     else:
         query = query.order_by(models.Song.id.desc())

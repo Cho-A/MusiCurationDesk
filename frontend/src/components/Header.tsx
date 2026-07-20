@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Sun, Moon, LogOut } from 'lucide-react';
+import { Search, Sun, Moon } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark'); // 初期テーマ
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -64,29 +66,37 @@ const Header = () => {
         </button>
 
         {/* User Info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '50%',
-            backgroundColor: 'var(--accent-primary)',
-            color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center',
-            fontWeight: 'bold'
-          }}>
-            U
+        {isAuthenticated && user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '50%',
+              backgroundColor: 'var(--accent-primary)',
+              color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center',
+              fontWeight: 'bold'
+            }}>
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>マイページ</span>
+              <strong style={{ fontSize: '0.95rem' }}>{user.username}</strong>
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>マイページ</span>
-            <strong style={{ fontSize: '0.95rem' }}>ゲストユーザー</strong>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '50%',
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-secondary)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+              fontWeight: 'bold'
+            }}>
+              G
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ゲスト</span>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>未ログイン</strong>
+            </div>
           </div>
-        </div>
-
-        {/* Logout */}
-        <button style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          color: 'var(--text-secondary)', fontWeight: 500
-        }}>
-          ログアウト
-          <LogOut size={18} />
-        </button>
+        )}
       </div>
     </header>
   );

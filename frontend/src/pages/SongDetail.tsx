@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar, Disc3 } from 'lucide-react';
+import { ArrowLeft, Clock, Disc3 } from 'lucide-react';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
 
@@ -28,6 +28,7 @@ interface AlbumTrackInfo {
   album_id: number;
   track_number: number;
   disc_number: number;
+  duration_ms?: number;
   album: AlbumMini;
 }
 
@@ -41,7 +42,6 @@ interface TagData {
 interface SongDetailData {
   id: number;
   title: string;
-  release_date?: string;
   spotify_song_id?: string;
   artist_links: ArtistLink[];
   tieup_links: TieupLink[];
@@ -141,43 +141,42 @@ const SongDetail = () => {
         戻る
       </button>
 
-      {/* ヘッダーエリア (ジャケ写と基本情報) */}
-      <div style={{ display: 'flex', gap: '32px', marginBottom: '48px', alignItems: 'flex-end' }}>
-        <div style={{ 
-          width: '232px', height: '232px', 
-          background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          borderRadius: '8px'
-        }}>
-          <Disc3 size={64} color="var(--text-tertiary)" />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase' }}>Song</span>
-          <h1 style={{ fontSize: '4rem', fontWeight: 900, margin: 0, lineHeight: 1.1, letterSpacing: '-0.04em' }}>
-            {song.title}
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            {song.release_date && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Calendar size={16} />
-                {song.release_date}
-              </span>
-            )}
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Clock size={16} />
-              4:20 {/* ダミー時間 */}
-            </span>
+        {/* Header Section */}
+        <div style={{ display: 'flex', gap: '32px', marginBottom: '40px' }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ 
+              fontSize: '2.5rem', 
+              fontWeight: 800, 
+              color: 'var(--text-primary)',
+              marginBottom: '16px',
+              letterSpacing: '-0.02em'
+            }}>
+              {song.title}
+            </h1>
+            
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '24px',
+              color: 'var(--text-secondary)',
+              fontSize: '0.95rem'
+            }}>
+              {song.spotify_song_id && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <img src="https://storage.googleapis.com/pr-newsrecord-assets/2024/05/2916b9cb-spotify-logo-1920x1080.jpg" alt="Spotify" style={{ width: 16, height: 16, borderRadius: '50%' }} />
+                  <span>Spotify 連携済</span>
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: '16px' }}>
+                <SongTagEditor 
+                  songId={song.id} 
+                  existingTags={song.tags || []} 
+                  onTagsChange={(newTags) => setSong({...song, tags: newTags})} 
+                />
+            </div>
           </div>
-
-          {/* タグエディタ */}
-          <SongTagEditor 
-            songId={song.id} 
-            existingTags={song.tags || []} 
-            onTagsChange={(newTags) => setSong({...song, tags: newTags})} 
-          />
         </div>
-      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
         {/* クレジット */}
@@ -212,8 +211,14 @@ const SongDetail = () => {
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{albumLink.album.main_title}</div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    Disc {albumLink.disc_number} - Track {albumLink.track_number}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    <span>Disc {albumLink.disc_number} - Track {albumLink.track_number}</span>
+                    {albumLink.duration_ms && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={14} />
+                        {Math.floor(albumLink.duration_ms / 60000)}:{String(Math.floor((albumLink.duration_ms % 60000) / 1000)).padStart(2, '0')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -90,7 +90,6 @@ class Tag(BaseModel):
 # 楽曲登録時にAPIが「受け取る」データの型
 class SongCreate(BaseModel):
     title: str
-    release_date: date | None = None
     spotify_song_id: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None
@@ -101,7 +100,6 @@ class SongCreate(BaseModel):
 class Song(BaseModel):
     id: int
     title: str
-    release_date: date | None = None
     spotify_song_id: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None
@@ -221,6 +219,7 @@ class AlbumTrackInfo(BaseModel):
     album_id: int
     track_number: int
     disc_number: int
+    duration_ms: int | None = None
     album: AlbumMini
 
     class Config:
@@ -231,7 +230,6 @@ class AlbumTrackInfo(BaseModel):
 class SongDetail(BaseModel):
     id: int
     title: str
-    release_date: date | None
     spotify_song_id: str | None
 
     artists: List[ArtistLinkInfo] = Field(
@@ -472,7 +470,8 @@ class AlbumTrackCreate(BaseModel):
     album_id: int
     song_id: int
     track_number: int
-    disc_number: int = 1  # デフォルト値を1に設定
+    disc_number: int | None = 1
+    duration_ms: int | None = None
 
 
 class AlbumTrack(BaseModel):
@@ -481,6 +480,7 @@ class AlbumTrack(BaseModel):
     song_id: int
     track_number: int
     disc_number: int
+    duration_ms: int | None = None
 
     class Config:
         orm_mode = True
