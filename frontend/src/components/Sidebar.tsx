@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, Download, User, LogOut, LogIn, UserPlus, Database, Mic2 } from 'lucide-react';
+import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, Download, User, LogOut, LogIn, UserPlus, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
@@ -75,44 +75,6 @@ const Sidebar = () => {
             {item.name}
           </NavLink>
         ))}
-
-        {/* Albums Link */}
-        <NavLink to="/albums" style={({ isActive }) => ({
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '12px 16px', borderRadius: '12px',
-          color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-          backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
-          fontWeight: isActive ? 600 : 500,
-          transition: 'all 0.2s ease'
-        })}>
-          <Disc3 size={20} />
-          <span style={{ fontWeight: 500 }}>アルバム</span>
-        </NavLink>
-
-        {/* Artists Link */}
-        <NavLink to="/artists" style={({ isActive }) => ({
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '12px 16px', borderRadius: '12px',
-          color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-          backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
-          fontWeight: isActive ? 600 : 500,
-          transition: 'all 0.2s ease'
-        })}>
-          <Mic2 size={20} />
-          <span style={{ fontWeight: 500 }}>アーティスト</span>
-        </NavLink>
-
-        <NavLink to="/settings" style={({ isActive }) => ({
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '12px 16px', borderRadius: '12px',
-          color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-          backgroundColor: isActive ? 'var(--bg-tertiary)' : 'transparent',
-          fontWeight: isActive ? 600 : 500,
-          transition: 'all 0.2s ease'
-        })}>
-          <Settings size={20} />
-          <span style={{ fontWeight: 500 }}>設定</span>
-        </NavLink>
 
         {/* Developer Tools (Always show for now to ensure user can click it) */}
         <NavLink to="/admin" style={({ isActive }) => ({

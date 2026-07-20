@@ -43,10 +43,14 @@ def get_recent_additions(db: Session = Depends(models.get_db)):
         
     songs_data = []
     for song in recent_songs:
+        artist_name = "Unknown Artist"
+        if song.artist_links:
+            artist_name = song.artist_links[0].artist.name
+            
         songs_data.append({
             "id": song.id,
             "title": song.title,
-            "jasrac_code": song.jasrac_code,
+            "artist_name": artist_name,
             "created_at": song.created_at
         })
 
@@ -92,7 +96,7 @@ def get_personal_dashboard_stats(
     # 1. 所有アルバム数
     total_albums = db.query(models.UserPossession).filter(
         models.UserPossession.user_id == current_user.id,
-        models.UserPossession.target_type == "ALBUM"
+        models.UserPossession.entity_type == "album"
     ).count()
 
     # 2. 参加ライブ数
@@ -178,10 +182,14 @@ def get_personal_recent_additions(
         
     songs_data = []
     for song in recent_songs:
+        artist_name = "Unknown Artist"
+        if song.artist_links:
+            artist_name = song.artist_links[0].artist.name
+            
         songs_data.append({
             "id": song.id,
             "title": song.title,
-            "jasrac_code": song.jasrac_code,
+            "artist_name": artist_name,
             "created_at": song.created_at
         })
 

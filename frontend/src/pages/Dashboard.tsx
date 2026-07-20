@@ -22,7 +22,7 @@ interface RecentAlbum {
 interface RecentSong {
   id: number;
   title: string;
-  jasrac_code: string | null;
+  artist_name: string;
   created_at: string;
 }
 
@@ -78,10 +78,10 @@ const Dashboard = () => {
   }
 
   return (
-    <div style={{ display: 'flex', gap: '32px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', maxWidth: '1400px', margin: '0 auto' }}>
       
       {/* Main Content Area (Left 75%) */}
-      <div style={{ flex: '1 1 75%', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+      <div style={{ flex: '1 1 min(75%, 1000px)', display: 'flex', flexDirection: 'column', gap: '40px', minWidth: '300px' }}>
         
         {/* KPI Stats Header */}
         <div style={{ marginBottom: '-16px' }}>
@@ -152,32 +152,34 @@ const Dashboard = () => {
             scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent'
           }}>
             {recentAlbums.length > 0 ? recentAlbums.map(album => (
-              <div key={album.id} style={{ 
-                minWidth: '200px', maxWidth: '200px', display: 'flex', flexDirection: 'column', gap: '12px',
-                cursor: 'pointer', transition: 'transform 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
+              <Link to={`/albums/${album.id}`} key={album.id} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
-                  width: '200px', height: '200px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.2)', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center'
-                }}>
-                  {album.cover_image_url ? (
-                    <img src={album.cover_image_url} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Disc size={48} color="rgba(255,255,255,0.1)" />
-                  )}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {album.title}
+                  minWidth: '200px', maxWidth: '200px', display: 'flex', flexDirection: 'column', gap: '12px',
+                  cursor: 'pointer', transition: 'transform 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{ 
+                    width: '200px', height: '200px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center'
+                  }}>
+                    {album.cover_image_url ? (
+                      <img src={album.cover_image_url} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Disc size={48} color="rgba(255,255,255,0.1)" />
+                    )}
                   </div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    {album.release_date || 'Unknown Date'}
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {album.title}
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                      {album.release_date || 'Unknown Date'}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             )) : (
               <div style={{ color: '#666' }}>No albums added yet.</div>
             )}
@@ -208,7 +210,7 @@ const Dashboard = () => {
                       {song.title}
                     </div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
-                      {song.jasrac_code ? `JASRAC: ${song.jasrac_code}` : 'No code'}
+                      {song.artist_name}
                     </div>
                   </div>
                 </div>
@@ -221,7 +223,7 @@ const Dashboard = () => {
       </div>
 
       {/* Sidebar Area (Right 25%) */}
-      <div style={{ flex: '1 1 25%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* Today's Discovery Widget */}
         <div style={{ 

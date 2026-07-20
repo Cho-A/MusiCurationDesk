@@ -198,21 +198,28 @@ def read_song(song_id: int, db: Session = Depends(models.get_db)):
     if db_song is None:
         raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
 
-    # 同じ MusicalWork に属する他のバージョンを取得
-    other_versions = []
+    # 同じ MusicalWork に属するすべての Song (自身も含む) のアルバム情報を取得
     if db_song.work_id:
-        other_versions = db.query(models.Song).filter(
-            models.Song.work_id == db_song.work_id,
-            models.Song.id != db_song.id
-        ).all()
+        all_songs_in_work = db.query(models.Song)\
+            .options(
+                joinedload(models.Song.album_links)\
+                    .joinedload(models.AlbumTrack.album)
+            )\
+            .filter(models.Song.work_id == db_song.work_id).all()
+            
+        combined_albums = []
+        for s in all_songs_in_work:
+            for track in s.album_links:
+                # SQLAlchemyのオブジェクトに一時的な属性を付与
+                setattr(track, "song_title", s.title)
+                combined_albums.append(track)
+                
+        # 自身のみのアルバムリストを、合算したアルバムリストで上書き
+        db_song.album_links = combined_albums
 
-    # SQLAlchemyモデルに一時的に属性を追加して返すアプローチ（orm_mode=Trueで動作する）
-    db_song.other_versions = other_versions
-        
-    # 2. 応答
-    # FastAPIが自動で response_model (SongDetail) に基づき、
-    # db_song オブジェクトと、models.pyで定義した @property (last_played_date, play_count)
-    # を解決してJSONを構築します。
+    # other_versionsはUIから廃止するため空にする
+    db_song.other_versions = []
+
     return db_song
 
 @router.delete("/{song_id}", tags=["Songs"], status_code=204)
@@ -451,3 +458,46 @@ def remove_tag_from_song(song_id: int, tag_id: int, db: Session = Depends(models
         db.refresh(db_song)
         
     return db_song
+
+
+@router.post("/{song_id}/detach", tags=["Songs"])
+def detach_song_from_work(song_id: int, db: Session = Depends(models.get_db)):
+    """
+    指定された Song を現在の MusicalWork から切り離し、新しい独立した MusicalWork を作成して紐付けます。
+    """
+    song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not song:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+
+    # 新しいMusicalWorkを作成
+    new_work = models.MusicalWork(title=song.title)
+    db.add(new_work)
+    db.commit()
+    db.refresh(new_work)
+
+    # 切り離し（新しいWorkに紐付け）
+    song.work_id = new_work.id
+    db.commit()
+    db.refresh(song)
+    
+    return {"message": "Successfully detached and created a new MusicalWork.", "new_work_id": new_work.id}
+
+
+@router.post("/{song_id}/attach", tags=["Songs"])
+def attach_song_to_work(song_id: int, target_work_id: int = Query(...), db: Session = Depends(models.get_db)):
+    """
+    指定された Song を別の既存の MusicalWork に結合 (Merge) します。
+    """
+    song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not song:
+        raise HTTPException(status_code=404, detail="対象の楽曲(Song)が見つかりません。")
+
+    target_work = db.query(models.MusicalWork).filter(models.MusicalWork.id == target_work_id).first()
+    if not target_work:
+        raise HTTPException(status_code=404, detail="対象の作品(MusicalWork)が見つかりません。")
+
+    song.work_id = target_work_id
+    db.commit()
+    db.refresh(song)
+
+    return {"message": "Successfully attached to the specified MusicalWork.", "work_id": target_work_id}

@@ -103,10 +103,17 @@ class Song(BaseModel):
     spotify_song_id: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None
-    # lyrics は重いので返さない (任意)
+    work_id: int | None = None
+    
+    # 検索一覧などでアーティスト情報を表示できるように追加
+    artists: List["ArtistLinkInfo"] = Field(
+        default=[],
+        alias="artist_links",
+    )
 
     class Config:
         orm_mode = True  # SQLAlchemyモデルをPydanticモデルに変換
+        allow_population_by_field_name = True
 
 
 # --- SongArtistLink (アーティスト紐付け) ---
@@ -223,6 +230,7 @@ class AlbumTrackInfo(BaseModel):
     disc_number: int
     duration_ms: int | None = None
     album: AlbumMini
+    song_title: str | None = None
     class Config:
         orm_mode = True
 
@@ -674,5 +682,6 @@ class SongDetailMini(BaseModel):
 
 # 循環参照解決のため
 TourDetail.update_forward_refs()
-AlbumTrackForAlbum.update_forward_refs(Song=Song)
-SongDetail.update_forward_refs(SongDetailMini=SongDetailMini)
+AlbumTrackForAlbum.update_forward_refs()
+SongDetail.update_forward_refs()
+Song.update_forward_refs()

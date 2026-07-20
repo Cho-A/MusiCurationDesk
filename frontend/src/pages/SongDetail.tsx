@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Disc3 } from 'lucide-react';
+import { ArrowLeft, Clock, Disc3, Edit2, Check, X, Link as LinkIcon, Unlink } from 'lucide-react';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
+import AttachWorkModal from '../components/AttachWorkModal';
 
 interface ArtistLink {
   artist_id: number;
@@ -31,6 +32,7 @@ interface AlbumTrackInfo {
   disc_number: number;
   duration_ms?: number;
   album: AlbumMini;
+  song_title?: string;
 }
 
 interface TagData {
@@ -49,6 +51,7 @@ interface SongDetailData {
   album_links?: AlbumTrackInfo[];
   tags?: TagData[];
   other_versions?: { id: number; title: string }[];
+  work_id?: number;
 }
 
 const SongDetail = () => {
@@ -56,6 +59,13 @@ const SongDetail = () => {
   const navigate = useNavigate();
   const [song, setSong] = useState<SongDetailData | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // 編集モード用のステート
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState("");
+  
+  // モーダル用のステート
+  const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
 
   const fetchSong = async () => {
     try {
@@ -106,6 +116,61 @@ const SongDetail = () => {
     }
   };
 
+  const handleUpdateTitle = async () => {
+    if (!editTitleValue.trim()) return;
+    try {
+      const payload = {
+        title: editTitleValue,
+        // 他の必須フィールドがある場合はsongオブジェクトから補完する。
+        // PUTエンドポイントはSongCreateスキーマを要求する。
+        spotify_song_id: song?.spotify_song_id || null
+      };
+      const res = await fetch(`http://127.0.0.1:8000/songs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setIsEditingTitle(false);
+        fetchSong();
+      } else {
+        alert("タイトルの更新に失敗しました");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDetachWork = async () => {
+    if (!window.confirm("この音源を現在の作品から切り離し、独立した新しい作品として登録しますか？")) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/songs/${id}/detach`, { method: 'POST' });
+      if (res.ok) {
+        alert("切り離しが完了しました");
+        fetchSong();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAttachWork = async (targetId: number) => {
+    if (!window.confirm(`この音源を Work ID: ${targetId} に結合しますか？`)) return;
+    
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/songs/${id}/attach?target_work_id=${targetId}`, { method: 'POST' });
+      if (res.ok) {
+        alert("結合が完了しました");
+        setIsAttachModalOpen(false);
+        fetchSong();
+      } else {
+        alert("結合に失敗しました。対象のWork IDが存在しない可能性があります。");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) return <div style={{ padding: '32px' }}>読み込み中...</div>;
   if (!song) return <div style={{ padding: '32px' }}>楽曲が見つかりません</div>;
 
@@ -146,15 +211,52 @@ const SongDetail = () => {
         {/* Header Section */}
         <div style={{ display: 'flex', gap: '32px', marginBottom: '40px' }}>
           <div style={{ flex: 1 }}>
-            <h1 style={{ 
-              fontSize: '2.5rem', 
-              fontWeight: 800, 
-              color: 'var(--text-primary)',
-              marginBottom: '16px',
-              letterSpacing: '-0.02em'
-            }}>
-              {song.title}
-            </h1>
+            
+            {/* Title Editing UI */}
+            {isEditingTitle ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  value={editTitleValue}
+                  onChange={(e) => setEditTitleValue(e.target.value)}
+                  style={{
+                    fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)',
+                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px', padding: '4px 12px', width: '100%', outline: 'none'
+                  }}
+                  autoFocus
+                />
+                <button onClick={handleUpdateTitle} style={{ background: '#1DB954', color: '#000', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
+                  <Check size={20} />
+                </button>
+                <button onClick={() => setIsEditingTitle(false)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                <h1 style={{ 
+                  fontSize: '2.5rem', 
+                  fontWeight: 800, 
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                  letterSpacing: '-0.02em'
+                }}>
+                  {song.title}
+                </h1>
+                <button 
+                  onClick={() => { setEditTitleValue(song.title); setIsEditingTitle(true); }}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '36px', height: '36px',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)', cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  title="タイトル・バージョン名を編集"
+                >
+                  <Edit2 size={16} />
+                </button>
+              </div>
+            )}
             
             <div style={{ 
               display: 'flex', 
@@ -223,6 +325,11 @@ const SongDetail = () => {
                     }}>
                       {albumLink.album.main_title}
                     </div>
+                    {albumLink.song_title && albumLink.song_title !== song.title && (
+                      <div style={{ fontSize: '0.85rem', color: '#1DB954', marginTop: '2px', fontWeight: 500 }}>
+                        {albumLink.song_title}
+                      </div>
+                    )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                     <span>Disc {albumLink.disc_number} - Track {albumLink.track_number}</span>
                     {albumLink.duration_ms && (
@@ -274,33 +381,51 @@ const SongDetail = () => {
             )}
           </div>
         </div>
-        {/* 別バージョン */}
-        {song.other_versions && song.other_versions.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
-              別バージョン (同一作品)
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {song.other_versions.map(version => (
-                <Link key={version.id} to={`/songs/${version.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div style={{
-                    padding: '12px 16px', background: 'rgba(255,255,255,0.05)',
-                    borderRadius: '8px', display: 'flex', alignItems: 'center',
-                    gap: '12px', transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                  >
-                    <Disc3 size={18} color="var(--text-secondary)" />
-                    <span style={{ fontWeight: 500, fontSize: '1.05rem' }}>{version.title}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+
+        {/* Advanced Management (作品の関連付け管理) */}
+        <div style={{ marginTop: '24px', padding: '24px', background: 'rgba(255,0,0,0.03)', border: '1px solid rgba(255,0,0,0.1)', borderRadius: '12px' }}>
+          <h2 style={{ fontSize: '1.2rem', color: '#ff6b6b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Advanced Management
+          </h2>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
+            現在の作品(Work) ID: <strong>{song.work_id || '未設定'}</strong>
+            <br />
+            同名異曲の分離や、別バージョンの手動統合を行います。
           </div>
-        )}
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <button 
+              onClick={handleDetachWork}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 16px', borderRadius: '8px', background: 'rgba(255,107,107,0.1)', color: '#ff6b6b',
+                border: '1px solid rgba(255,107,107,0.2)', cursor: 'pointer', fontWeight: 600
+              }}
+            >
+              <Unlink size={16} />
+              独立した作品として切り離す (Detach)
+            </button>
+            <button 
+              onClick={() => setIsAttachModalOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)',
+                border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600
+              }}
+            >
+              <LinkIcon size={16} />
+              他の作品に統合する (Merge)
+            </button>
+          </div>
+        </div>
 
       </div>
+
+      <AttachWorkModal
+        isOpen={isAttachModalOpen}
+        onClose={() => setIsAttachModalOpen(false)}
+        currentSong={song}
+        onAttach={handleAttachWork}
+      />
     </div>
   );
 };

@@ -12,7 +12,6 @@ import Admin from './pages/Admin';
 import Artists from './pages/Artists';
 import Albums from './pages/Albums';
 import AlbumDetail from './pages/AlbumDetail';
-import SpotifyImport from './pages/SpotifyImport';
 import MusicBrainzImport from './pages/MusicBrainzImport';
 import { AuthProvider } from './context/AuthContext';
 
@@ -37,6 +36,9 @@ function App() {
           <Route path="merchandise" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>グッズページ (準備中)</div>} />
           <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>分析ページ (準備中)</div>} />
           <Route path="admin" element={<Admin />} />
+          <Route path="musicbrainz" element={<MusicBrainzImport />} />
+          <Route path="settings" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>設定ページ (準備中)</div>} />
+          <Route path="*" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>ページが見つかりません (404)</div>} />
         </Route>
       </Routes>
     </BrowserRouter>
