@@ -12,6 +12,8 @@ import Admin from './pages/Admin';
 import Artists from './pages/Artists';
 import Albums from './pages/Albums';
 import AlbumDetail from './pages/AlbumDetail';
+import SpotifyImport from './pages/SpotifyImport';
+import MusicBrainzImport from './pages/MusicBrainzImport';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {

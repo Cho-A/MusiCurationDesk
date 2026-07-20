@@ -1,0 +1,75 @@
+import requests
+from typing import List, Dict, Any
+
+MB_API_BASE = "https://musicbrainz.org/ws/2"
+USER_AGENT = "MusiCurationDesk/1.0 ( your-email@example.com )"
+
+def search_releases(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    MusicBrainz からアルバム(Release)を検索する
+    """
+    url = f"{MB_API_BASE}/release"
+    params = {
+        "query": query,
+        "fmt": "json",
+        "limit": limit
+    }
+    headers = {"User-Agent": USER_AGENT}
+    
+    response = requests.get(url, params=params, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+    
+    releases = []
+    for r in data.get("releases", []):
+        releases.append({
+            "id": r.get("id"),
+            "title": r.get("title"),
+            "date": r.get("date"),
+            "country": r.get("country"),
+            "barcode": r.get("barcode"),
+            "artist": r.get("artist-credit", [{"name": "Unknown"}])[0].get("name", "Unknown")
+        })
+    return releases
+
+def get_release_details(release_id: str) -> Dict[str, Any]:
+    """
+    ReleaseのIDから、ディスク(media)とトラックリストを取得する
+    """
+    url = f"{MB_API_BASE}/release/{release_id}"
+    params = {
+        "inc": "recordings+artist-credits",
+        "fmt": "json"
+    }
+    headers = {"User-Agent": USER_AGENT}
+    
+    response = requests.get(url, params=params, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+    
+    media = []
+    for m in data.get("media", []):
+        tracks = []
+        for t in m.get("tracks", []):
+            recording = t.get("recording", {})
+            tracks.append({
+                "position": t.get("position"),
+                "number": t.get("number"),
+                "title": recording.get("title"),
+                "length": recording.get("length") # milliseconds
+            })
+        
+        media.append({
+            "position": m.get("position"),
+            "format": m.get("format"),
+            "track_count": m.get("track-count"),
+            "tracks": tracks
+        })
+        
+    return {
+        "id": data.get("id"),
+        "title": data.get("title"),
+        "date": data.get("date"),
+        "barcode": data.get("barcode"),
+        "media": media
+    }

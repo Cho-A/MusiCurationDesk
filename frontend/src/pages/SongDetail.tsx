@@ -48,6 +48,7 @@ interface SongDetailData {
   tieup_links: TieupLink[];
   album_links?: AlbumTrackInfo[];
   tags?: TagData[];
+  other_versions?: { id: number; title: string }[];
 }
 
 const SongDetail = () => {
@@ -195,22 +196,33 @@ const SongDetail = () => {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {(song.album_links || []).map((albumLink, idx) => (
-              <div key={idx} style={{ 
-                background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px',
-                display: 'flex', alignItems: 'center', gap: '16px'
-              }}>
+              <Link key={idx} to={`/albums/${albumLink.album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
-                  width: '48px', height: '48px', backgroundColor: 'rgba(255,255,255,0.1)', 
-                  borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden'
-                }}>
-                  {albumLink.album.cover_image_url ? (
-                    <img src={albumLink.album.cover_image_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Disc3 size={24} color="var(--text-secondary)" />
-                  )}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{albumLink.album.main_title}</div>
+                  background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px',
+                  display: 'flex', alignItems: 'center', gap: '16px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                >
+                  <div style={{ 
+                    width: '48px', height: '48px', backgroundColor: 'rgba(255,255,255,0.1)', 
+                    borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+                    flexShrink: 0
+                  }}>
+                    {albumLink.album.cover_image_url ? (
+                      <img src={albumLink.album.cover_image_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Disc3 size={24} color="var(--text-secondary)" />
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ 
+                      fontWeight: 600, fontSize: '1.1rem', 
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' 
+                    }}>
+                      {albumLink.album.main_title}
+                    </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                     <span>Disc {albumLink.disc_number} - Track {albumLink.track_number}</span>
                     {albumLink.duration_ms && (
@@ -222,6 +234,7 @@ const SongDetail = () => {
                   </div>
                 </div>
               </div>
+            </Link>
             ))}
             {(!song.album_links || song.album_links.length === 0) && (
               <div style={{ color: 'var(--text-tertiary)' }}>収録アルバム情報はありません</div>
@@ -261,6 +274,32 @@ const SongDetail = () => {
             )}
           </div>
         </div>
+        {/* 別バージョン */}
+        {song.other_versions && song.other_versions.length > 0 && (
+          <div>
+            <h2 style={{ fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
+              別バージョン (同一作品)
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {song.other_versions.map(version => (
+                <Link key={version.id} to={`/songs/${version.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div style={{
+                    padding: '12px 16px', background: 'rgba(255,255,255,0.05)',
+                    borderRadius: '8px', display: 'flex', alignItems: 'center',
+                    gap: '12px', transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                  >
+                    <Disc3 size={18} color="var(--text-secondary)" />
+                    <span style={{ fontWeight: 500, fontSize: '1.05rem' }}>{version.title}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

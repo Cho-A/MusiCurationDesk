@@ -197,6 +197,17 @@ def read_song(song_id: int, db: Session = Depends(models.get_db)):
     
     if db_song is None:
         raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+
+    # 同じ MusicalWork に属する他のバージョンを取得
+    other_versions = []
+    if db_song.work_id:
+        other_versions = db.query(models.Song).filter(
+            models.Song.work_id == db_song.work_id,
+            models.Song.id != db_song.id
+        ).all()
+
+    # SQLAlchemyモデルに一時的に属性を追加して返すアプローチ（orm_mode=Trueで動作する）
+    db_song.other_versions = other_versions
         
     # 2. 応答
     # FastAPIが自動で response_model (SongDetail) に基づき、

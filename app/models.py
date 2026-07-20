@@ -221,6 +221,17 @@ class ArtistRelationship(Base):
     )
 
 
+class MusicalWork(Base):
+    __tablename__ = "musical_works"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False, index=True)
+    jasrac_code = Column(String(20), nullable=True, index=True, unique=True)
+    iswc_code = Column(String(20), nullable=True, unique=True) # 国際標準音楽作品コード
+    
+    # 録音物 (Song) への1対多
+    songs = relationship("Song", back_populates="work")
+
+
 class Song(Base):
     __tablename__ = "songs"
     id = Column(Integer, primary_key=True, index=True)
@@ -230,8 +241,10 @@ class Song(Base):
     jasrac_code = Column(String(20), nullable=True, index=True, unique=True)
     jasrac_title = Column(String(255), nullable=True)
     lyrics = Column(Text, nullable=True)
+    work_id = Column(Integer, ForeignKey("musical_works.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
+    work = relationship("MusicalWork", back_populates="songs")
     artist_links = relationship("SongArtistLink", back_populates="song")
     tieup_links = relationship("SongTieupLink", back_populates="song")
     setlist_entries = relationship("SetlistEntry", back_populates="song")

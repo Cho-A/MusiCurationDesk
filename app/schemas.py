@@ -223,6 +223,18 @@ class AlbumTrackInfo(BaseModel):
     disc_number: int
     duration_ms: int | None = None
     album: AlbumMini
+    class Config:
+        orm_mode = True
+
+
+# --- MusicalWork (作品マスター) ---
+class MusicalWorkBase(BaseModel):
+    title: str
+    jasrac_code: str | None = None
+    iswc_code: str | None = None
+
+class MusicalWork(MusicalWorkBase):
+    id: int
 
     class Config:
         orm_mode = True
@@ -232,7 +244,15 @@ class AlbumTrackInfo(BaseModel):
 class SongDetail(BaseModel):
     id: int
     title: str
-    spotify_song_id: str | None
+    spotify_song_id: str | None = None
+    spotify_song_title: str | None = None
+    jasrac_code: str | None = None
+    jasrac_title: str | None = None
+    lyrics: str | None = None
+    work_id: int | None = None
+    work: MusicalWork | None = None
+    
+    other_versions: List["SongDetailMini"] = []
 
     artists: List[ArtistLinkInfo] = Field(
         ...,
@@ -642,3 +662,17 @@ class Token(BaseModel):
 # --- TokenData (トークンの中身) ---
 class TokenData(BaseModel):
     username: str | None = None
+
+
+class SongDetailMini(BaseModel):
+    id: int
+    title: str
+    spotify_song_title: str | None = None
+
+    class Config:
+        orm_mode = True
+
+# 循環参照解決のため
+TourDetail.update_forward_refs()
+AlbumTrackForAlbum.update_forward_refs(Song=Song)
+SongDetail.update_forward_refs(SongDetailMini=SongDetailMini)

@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Home, Music, Disc, Disc3, Mic2, Settings, BarChart2, Library, User, LogOut, LogIn, UserPlus, LayoutDashboard, Users, CalendarDays, ShoppingBag, BarChart3, Database } from 'lucide-react';
+import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, Download, User, LogOut, LogIn, UserPlus, Database, Mic2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
@@ -14,10 +14,13 @@ const Sidebar = () => {
   const navItems = [
     { name: 'ホーム', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: '楽曲', icon: <Music size={20} />, path: '/songs' },
+    { name: 'アルバム', icon: <Disc3 size={20} />, path: '/albums' },
     { name: 'アーティスト', icon: <Users size={20} />, path: '/artists' },
     { name: 'ライブ・公演', icon: <CalendarDays size={20} />, path: '/concerts' },
     { name: 'グッズ', icon: <ShoppingBag size={20} />, path: '/merchandise' },
+    { name: 'MusicBrainz', icon: <Download size={20} />, path: '/musicbrainz' },
     { name: '分析', icon: <BarChart3 size={20} />, path: '/analytics' },
+    { name: '設定', icon: <Settings size={20} />, path: '/settings' },
   ];
 
   return (
