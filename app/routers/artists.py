@@ -72,6 +72,9 @@ def read_artist(artist_id: int, db: Session = Depends(models.get_db)):
             # 楽曲リンク (SongArtistLink) 情報とその先の楽曲タイトルをまとめて取得
             joinedload(models.Artist.song_links)\
                 .joinedload(models.SongArtistLink.song),
+            joinedload(models.Artist.albums),
+            joinedload(models.Artist.performances).joinedload(models.Performance.venue),
+            joinedload(models.Artist.performances).joinedload(models.Performance.tour),
         )\
         .filter(models.Artist.id == artist_id).first()
     

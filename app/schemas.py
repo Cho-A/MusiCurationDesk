@@ -53,6 +53,10 @@ class ArtistDetail(BaseModel):
     # ★ 関連情報をリストとして含める ★
     aliases: List[AliasInfo] = []
     songs_contributed: List[SongContribution] = []
+    
+    # 追加
+    albums: List["AlbumMini"] = []
+    performances: List["Performance"] = []
 
     class Config:
         from_attributes = True

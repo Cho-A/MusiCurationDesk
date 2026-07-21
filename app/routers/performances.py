@@ -73,6 +73,25 @@ def create_performance(
 
     return new_performance
 
+@performance_router.get("/", response_model=List[schemas.Performance], tags=["Performances"])
+def get_performances(
+    tour_id: int = Query(None, description="Filter by Tour ID"),
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(models.get_db)
+):
+    """登録されているすべての公演/単発ライブ一覧を取得します。"""
+    query = db.query(models.Performance).options(
+        joinedload(models.Performance.venue),
+        joinedload(models.Performance.main_artist),
+        joinedload(models.Performance.tour)
+    )
+    if tour_id is not None:
+        query = query.filter(models.Performance.tour_id == tour_id)
+    
+    performances = query.order_by(models.Performance.date.desc()).offset(skip).limit(limit).all()
+    return performances
+
 @performance_router.get("/{performance_id}", response_model=schemas.PerformanceDetail, tags=["Performances"])
 def get_performance(performance_id: int, db: Session = Depends(models.get_db)):
     """指定されたIDの公演詳細（セットリスト、参加メンバー等含む）を取得します。"""

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 
 from .. import models, schemas  # 先ほど作成したファイルをインポート
 
@@ -41,6 +42,12 @@ def create_tour(
     db.refresh(new_tour)
 
     return new_tour
+
+@router.get("/", response_model=List[schemas.Tour], tags=["Tours"])
+def get_tours(skip: int = 0, limit: int = 100, db: Session = Depends(models.get_db)):
+    """登録されているすべてのツアー/イベントシリーズ一覧を取得します。"""
+    tours = db.query(models.Tour).order_by(models.Tour.id.desc()).offset(skip).limit(limit).all()
+    return tours
 
 @router.get("/{tour_id}", response_model=schemas.TourDetail, tags=["Tours"])
 def get_tour(tour_id: int, db: Session = Depends(models.get_db)):
