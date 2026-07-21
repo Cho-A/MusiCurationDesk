@@ -188,7 +188,13 @@ class Artist(Base):
         members_list = []
         for rel in self.relationships_as_a:
             if rel.relationship_type == "member":
-                members_list.append(rel.artist_b)
+                members_list.append({
+                    "id": rel.artist_b.id,
+                    "name": rel.artist_b.name,
+                    "image_url": rel.artist_b.image_url,
+                    "start_date": rel.start_date,
+                    "end_date": rel.end_date
+                })
         return members_list
 
     @property
@@ -233,6 +239,8 @@ class ArtistRelationship(Base):
     artist_id_1 = Column(Integer, ForeignKey("artists.id"))
     artist_id_2 = Column(Integer, ForeignKey("artists.id"))
     relationship_type = Column(String(100))
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
 
     # 必須: 相手のArtistモデルへのリンク
     artist_a = relationship(

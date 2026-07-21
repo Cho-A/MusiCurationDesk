@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import List, Optional, Any
+from typing import List, Optional
+from datetime import date, time, Any
 from datetime import date, datetime, time
 
 from pydantic import BaseModel, EmailStr, Field
@@ -54,7 +55,8 @@ class ArtistDetail(BaseModel):
     # ★ 関連情報をリストとして含める ★
     aliases: List[AliasInfo] = []
     songs_contributed: List[SongContribution] = []
-    members: List["ArtistMini"] = []
+    members: List["ArtistRelationshipInfo"] = []
+    tags: List["TagInfo"] = []
     
     # 追加
     albums: List["AlbumMini"] = []
@@ -71,6 +73,24 @@ class ArtistMini(BaseModel):
     id: int
     name: str
     image_url: str | None = None
+
+    class Config:
+        from_attributes = True
+
+class ArtistRelationshipInfo(BaseModel):
+    id: int
+    name: str
+    image_url: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+
+    class Config:
+        from_attributes = True
+
+class TagInfo(BaseModel):
+    id: int
+    name: str
+    color: str | None = None
 
     class Config:
         from_attributes = True

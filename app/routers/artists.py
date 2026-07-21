@@ -75,6 +75,7 @@ def read_artist(artist_id: int, db: Session = Depends(models.get_db)):
             joinedload(models.Artist.albums),
             joinedload(models.Artist.performances).joinedload(models.Performance.venue),
             joinedload(models.Artist.performances).joinedload(models.Performance.tour),
+            joinedload(models.Artist.tags),
             joinedload(models.Artist.relationships_as_a).joinedload(models.ArtistRelationship.artist_b),
             joinedload(models.Artist.roster_participations).joinedload(models.PerformanceRoster.performance).joinedload(models.Performance.venue),
             joinedload(models.Artist.roster_participations).joinedload(models.PerformanceRoster.performance).joinedload(models.Performance.tour),

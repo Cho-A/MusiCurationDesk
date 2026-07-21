@@ -29,9 +29,18 @@ interface AliasInfo {
   context: string | null;
 }
 
-interface ArtistMini {
+interface ArtistRelationshipInfo {
   id: number;
   name: string;
+  image_url: string | null;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+interface TagInfo {
+  id: number;
+  name: string;
+  color: string | null;
 }
 
 interface ArtistDetail {
@@ -41,11 +50,12 @@ interface ArtistDetail {
   image_url: string | null;
   notes: string | null;
   aliases: AliasInfo[];
+  tags: TagInfo[];
   albums: AlbumMini[];
   performances: Performance[];
   performances_as_guest: Performance[];
   songs_contributed: SongContribution[];
-  members: ArtistMini[];
+  members: ArtistRelationshipInfo[];
 }
 
 const ArtistDetail = () => {
@@ -100,23 +110,51 @@ const ArtistDetail = () => {
 
       <div style={{ display: 'flex', gap: '32px', alignItems: 'center', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
         {artist.image_url ? (
-          <img src={artist.image_url} alt={artist.name} style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--border-color)', boxShadow: 'var(--shadow-md)' }} />
+          <img src={artist.image_url} alt={artist.name} style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--border-color)', boxShadow: 'var(--shadow-md)', flexShrink: 0 }} />
         ) : (
-           <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)' }}>
+           <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0 }}>
               <Users size={64} color="var(--text-tertiary)" />
            </div>
         )}
         <div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+            {artist.tags && artist.tags.map(tag => (
+              <span key={tag.id} style={{ background: tag.color || 'var(--primary-color)', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>
+                {tag.name}
+              </span>
+            ))}
+          </div>
           <h1 style={{ margin: '0 0 16px 0', fontSize: '2.5rem', fontWeight: 800 }}>{artist.name}</h1>
           
           {artist.members && artist.members.length > 0 && (
-            <div style={{ marginBottom: '12px', color: 'var(--text-secondary)', fontSize: '1.05rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <Users size={18} />
-              <strong>メンバー:</strong> {artist.members.map(m => (
-                <Link key={m.id} to={`/artists/${m.id}`} style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>
-                  {m.name}
-                </Link>
-              )).reduce((prev, curr) => [prev, ', ', curr] as any)}
+            <div style={{ marginBottom: '12px', color: 'var(--text-secondary)', fontSize: '1.05rem', display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Users size={18} />
+                <strong>メンバー:</strong>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '4px' }}>
+                {artist.members.map(m => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: m.end_date ? 0.7 : 1 }}>
+                    {m.image_url ? (
+                      <img src={m.image_url} alt={m.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         <Users size={16} color="var(--text-tertiary)" />
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <Link to={`/artists/${m.id}`} style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.95rem' }}>
+                        {m.name}
+                      </Link>
+                      {(m.start_date || m.end_date) && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {m.start_date ? m.start_date.split('-')[0] : ''} - {m.end_date ? m.end_date.split('-')[0] : '現在'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
