@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import sqlite3
 
 def migrate():
@@ -5,9 +9,9 @@ def migrate():
     cursor = conn.cursor()
     
     try:
-        cursor.execute("ALTER TABLE album_tracks ADD COLUMN media_format VARCHAR(50)")
+        cursor.execute("ALTER TABLE album_discs ADD COLUMN edition VARCHAR(100)")
         conn.commit()
-        print("Successfully added media_format column.")
+        print("Successfully added edition column to album_discs.")
     except Exception as e:
         conn.rollback()
         print("Error during migration:", e)

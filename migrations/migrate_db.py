@@ -1,7 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import sqlite3
 
 def migrate():
-    print("Migrating DB (is_unreleased)...")
+    print("Migrating DB...")
     conn = sqlite3.connect("music_curation_desk.db")
     cursor = conn.cursor()
     
@@ -10,13 +14,13 @@ def migrate():
         cursor.execute("PRAGMA table_info(album_tracks)")
         columns = [info[1] for info in cursor.fetchall()]
         
-        if "is_unreleased" not in columns:
-            print("Adding is_unreleased to album_tracks")
-            cursor.execute("ALTER TABLE album_tracks ADD COLUMN is_unreleased BOOLEAN NOT NULL DEFAULT 0")
+        if "display_title" not in columns:
+            print("Adding display_title to album_tracks")
+            cursor.execute("ALTER TABLE album_tracks ADD COLUMN display_title VARCHAR(255)")
             conn.commit()
             print("Migration successful.")
         else:
-            print("Column is_unreleased already exists.")
+            print("Column display_title already exists.")
             
     except Exception as e:
         print(f"Error during migration: {e}")
