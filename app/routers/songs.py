@@ -2,6 +2,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload, aliased
+from sqlalchemy import text
 from .. import models , schemas # 先ほど作成したファイルをインポート
 
 # --- 1. APIRouter のインスタンスを作成 ---
@@ -191,7 +192,12 @@ def read_song(song_id: int, db: Session = Depends(models.get_db)):
             
             # アルバム情報 (AlbumTrack -> Album)
             joinedload(models.Song.album_links)\
-                .joinedload(models.AlbumTrack.album)
+                .joinedload(models.AlbumTrack.album),
+                
+            # Workとそのクレジット情報
+            joinedload(models.Song.work)\
+                .joinedload(models.MusicalWork.artist_links)\
+                .joinedload(models.WorkArtistLink.artist)
         )\
         .filter(models.Song.id == song_id).first()
     
@@ -213,6 +219,8 @@ def read_song(song_id: int, db: Session = Depends(models.get_db)):
             for track in s.album_links:
                 # SQLAlchemyのオブジェクトに一時的な属性を付与
                 setattr(track, "song_title", s.title)
+                setattr(track, "song_id", s.id)
+                setattr(track, "is_video", s.is_video)
                 combined_albums.append(track)
             if s.id != db_song.id:
                 other_versions.append(s)
@@ -238,18 +246,9 @@ def patch_song(
     if db_song is None:
         raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
 
-    if song_update.title is not None:
-        db_song.title = song_update.title
-    if song_update.is_video is not None:
-        db_song.is_video = song_update.is_video
-    if song_update.work_id is not None:
-        db_song.work_id = song_update.work_id
-    if song_update.lyrics is not None:
-        db_song.lyrics = song_update.lyrics
-    if song_update.jasrac_code is not None:
-        db_song.jasrac_code = song_update.jasrac_code
-    if song_update.jasrac_title is not None:
-        db_song.jasrac_title = song_update.jasrac_title
+    update_data = song_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_song, key, value)
 
     try:
         db.commit()
@@ -538,3 +537,100 @@ def attach_song_to_work(song_id: int, target_work_id: int = Query(...), db: Sess
     db.refresh(song)
 
     return {"message": "Successfully attached to the specified MusicalWork.", "work_id": target_work_id}
+
+
+@router.post("/{song_id}/merge", tags=["Songs"])
+def merge_song(song_id: int, target_song_id: int = Query(...), db: Session = Depends(models.get_db)):
+    """
+    指定された Song を別の Song (target_song_id) に統合します。
+    元の Song は削除され、関連データは target_song_id に引き継がれます。
+    """
+    if song_id == target_song_id:
+        raise HTTPException(status_code=400, detail="Cannot merge a song into itself.")
+
+    source_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not source_song:
+        raise HTTPException(status_code=404, detail="Source song not found.")
+
+    target_song = db.query(models.Song).filter(models.Song.id == target_song_id).first()
+    if not target_song:
+        raise HTTPException(status_code=404, detail="Target song not found.")
+
+    # Move AlbumTrack
+    for album_link in list(source_song.album_links):
+        existing = db.query(models.AlbumTrack).filter(
+            models.AlbumTrack.album_id == album_link.album_id,
+            models.AlbumTrack.disc_number == album_link.disc_number,
+            models.AlbumTrack.track_number == album_link.track_number,
+            models.AlbumTrack.song_id == target_song_id
+        ).first()
+        if not existing:
+            album_link.song_id = target_song_id
+        else:
+            db.delete(album_link)
+
+    # Move SongArtistLink
+    for artist_link in list(source_song.artist_links):
+        existing = db.query(models.SongArtistLink).filter(
+            models.SongArtistLink.song_id == target_song_id,
+            models.SongArtistLink.artist_id == artist_link.artist_id,
+            models.SongArtistLink.role_category == artist_link.role_category,
+            models.SongArtistLink.role_detail == artist_link.role_detail
+        ).first()
+        if not existing:
+            artist_link.song_id = target_song_id
+        else:
+            db.delete(artist_link)
+
+    # Move SongTieupLink
+    for tieup_link in list(source_song.tieup_links):
+        existing = db.query(models.SongTieupLink).filter(
+            models.SongTieupLink.song_id == target_song_id,
+            models.SongTieupLink.tieup_id == tieup_link.tieup_id
+        ).first()
+        if not existing:
+            tieup_link.song_id = target_song_id
+        else:
+            db.delete(tieup_link)
+
+    # Move SetlistEntry
+    for entry in list(source_song.setlist_entries):
+        entry.song_id = target_song_id
+
+    # Move SongWorksLink
+    for work_link in list(source_song.works):
+        existing = db.query(models.SongWorksLink).filter(
+            models.SongWorksLink.song_id == target_song_id,
+            models.SongWorksLink.work_id == work_link.work_id
+        ).first()
+        if not existing:
+            work_link.song_id = target_song_id
+        else:
+            db.delete(work_link)
+
+    # Add tags
+    for tag in source_song.tags:
+        if tag not in target_song.tags:
+            target_song.tags.append(tag)
+
+    # Migrate identifiers
+    if not target_song.spotify_song_id and source_song.spotify_song_id:
+        target_song.spotify_song_id = source_song.spotify_song_id
+        target_song.spotify_song_title = source_song.spotify_song_title
+    
+    if not target_song.jasrac_code and source_song.jasrac_code:
+        target_song.jasrac_code = source_song.jasrac_code
+        target_song.jasrac_title = source_song.jasrac_title
+
+    if not target_song.lyrics and source_song.lyrics:
+        target_song.lyrics = source_song.lyrics
+
+    # 一度変更をコミットして、関連データの付け替えを確定させる
+    # (これをしないと db.delete(source_song) 時に SQLAlchemy が FK を NULL にしてしまう)
+    db.commit()
+
+    # Delete source song
+    db.delete(source_song)
+    db.commit()
+
+    return {"message": "Successfully merged song.", "target_song_id": target_song_id}
