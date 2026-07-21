@@ -48,15 +48,18 @@ class ArtistDetail(BaseModel):
     id: int
     name: str
     spotify_artist_id: str | None
+    image_url: str | None
     notes: str | None
 
     # ★ 関連情報をリストとして含める ★
     aliases: List[AliasInfo] = []
     songs_contributed: List[SongContribution] = []
+    members: List["ArtistMini"] = []
     
     # 追加
     albums: List["AlbumMini"] = []
     performances: List["Performance"] = []
+    performances_as_guest: List["Performance"] = []
 
     class Config:
         from_attributes = True
@@ -67,6 +70,7 @@ class ArtistDetail(BaseModel):
 class ArtistMini(BaseModel):
     id: int
     name: str
+    image_url: str | None = None
 
     class Config:
         from_attributes = True

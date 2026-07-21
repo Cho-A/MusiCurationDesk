@@ -117,6 +117,7 @@ class Artist(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, unique=True)
     spotify_artist_id = Column(String(100), nullable=True)
+    image_url = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
@@ -181,6 +182,18 @@ class Artist(Base):
         secondary=artist_tags,  # 👈 artist_tags 中間テーブルを指定
         back_populates="artists",
     )
+
+    @property
+    def members(self):
+        members_list = []
+        for rel in self.relationships_as_a:
+            if rel.relationship_type == "member":
+                members_list.append(rel.artist_b)
+        return members_list
+
+    @property
+    def performances_as_guest(self):
+        return [r.performance for r in self.roster_participations]
 
     @property
     def songs_contributed(self):

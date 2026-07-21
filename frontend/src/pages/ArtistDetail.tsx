@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Disc3, Music, Calendar, MapPin, ArrowLeft } from 'lucide-react';
-import PageHeader from '../components/PageHeader';
+import { Disc3, Music, Calendar, MapPin, ArrowLeft, Users } from 'lucide-react';
 
 interface AlbumMini {
   id: number;
@@ -16,6 +15,7 @@ interface Performance {
   event_type: string;
   venue?: { name: string; prefecture?: string };
   tour?: { id: number; name: string };
+  isGuest?: boolean;
 }
 
 interface SongContribution {
@@ -29,15 +29,23 @@ interface AliasInfo {
   context: string | null;
 }
 
+interface ArtistMini {
+  id: number;
+  name: string;
+}
+
 interface ArtistDetail {
   id: number;
   name: string;
   spotify_artist_id: string | null;
+  image_url: string | null;
   notes: string | null;
   aliases: AliasInfo[];
   albums: AlbumMini[];
   performances: Performance[];
+  performances_as_guest: Performance[];
   songs_contributed: SongContribution[];
+  members: ArtistMini[];
 }
 
 const ArtistDetail = () => {
@@ -61,9 +69,23 @@ const ArtistDetail = () => {
   if (loading) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Artist...</div>;
   if (!artist) return <div style={{ padding: '64px', textAlign: 'center', color: '#ff4444' }}>Artist not found.</div>;
 
+  // Combine and sort performances
+  const allPerformances = [
+    ...(artist.performances || []).map(p => ({ ...p, isGuest: false })),
+    ...(artist.performances_as_guest || []).map(p => ({ ...p, isGuest: true }))
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Group songs by role
+  const songsByRole: Record<string, SongContribution[]> = {};
+  (artist.songs_contributed || []).forEach(song => {
+    song.roles.forEach(role => {
+      if (!songsByRole[role]) songsByRole[role] = [];
+      songsByRole[role].push(song);
+    });
+  });
+
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 16px', paddingBottom: '60px' }}>
-      {/* 戻るボタン */}
       <button 
         onClick={() => navigate(-1)}
         style={{
@@ -76,20 +98,39 @@ const ArtistDetail = () => {
         戻る
       </button>
 
-      <PageHeader
-        title={artist.name}
-        subtitle="アーティスト詳細"
-      />
+      <div style={{ display: 'flex', gap: '32px', alignItems: 'center', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
+        {artist.image_url ? (
+          <img src={artist.image_url} alt={artist.name} style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--border-color)', boxShadow: 'var(--shadow-md)' }} />
+        ) : (
+           <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)' }}>
+              <Users size={64} color="var(--text-tertiary)" />
+           </div>
+        )}
+        <div>
+          <h1 style={{ margin: '0 0 16px 0', fontSize: '2.5rem', fontWeight: 800 }}>{artist.name}</h1>
+          
+          {artist.members && artist.members.length > 0 && (
+            <div style={{ marginBottom: '12px', color: 'var(--text-secondary)', fontSize: '1.05rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <Users size={18} />
+              <strong>メンバー:</strong> {artist.members.map(m => (
+                <Link key={m.id} to={`/artists/${m.id}`} style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>
+                  {m.name}
+                </Link>
+              )).reduce((prev, curr) => [prev, ', ', curr] as any)}
+            </div>
+          )}
 
-      {artist.aliases.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
-          {artist.aliases.map((alias, idx) => (
-            <span key={idx} style={{ background: 'var(--bg-secondary)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem', border: '1px solid var(--border-color)' }}>
-              別名義: {alias.alias_name} {alias.context && `(${alias.context})`}
-            </span>
-          ))}
+          {artist.aliases && artist.aliases.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+              {artist.aliases.map((alias, idx) => (
+                <span key={idx} style={{ background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem', border: '1px solid var(--border-color)' }}>
+                  別名義: {alias.alias_name} {alias.context && `(${alias.context})`}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', borderBottom: '1px solid var(--border-color)' }}>
@@ -102,7 +143,7 @@ const ArtistDetail = () => {
             fontWeight: activeTab === 'albums' ? 700 : 500, cursor: 'pointer', fontSize: '1rem', transition: 'all 0.2s'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Disc3 size={18} /> 主催アルバム ({artist.albums.length})</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Disc3 size={18} /> リリース作品 ({(artist.albums || []).length})</div>
         </button>
         <button
           onClick={() => setActiveTab('performances')}
@@ -113,7 +154,7 @@ const ArtistDetail = () => {
             fontWeight: activeTab === 'performances' ? 700 : 500, cursor: 'pointer', fontSize: '1rem', transition: 'all 0.2s'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={18} /> 主催ライブ ({artist.performances.length})</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={18} /> ライブ・イベント ({allPerformances.length})</div>
         </button>
         <button
           onClick={() => setActiveTab('songs')}
@@ -124,14 +165,14 @@ const ArtistDetail = () => {
             fontWeight: activeTab === 'songs' ? 700 : 500, cursor: 'pointer', fontSize: '1rem', transition: 'all 0.2s'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Music size={18} /> 参加楽曲 ({artist.songs_contributed.length})</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Music size={18} /> 楽曲 ({(artist.songs_contributed || []).length})</div>
         </button>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'albums' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-          {artist.albums.map(album => (
+          {(artist.albums || []).map(album => (
             <Link key={album.id} to={`/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
               <div style={{
                 background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
@@ -142,7 +183,7 @@ const ArtistDetail = () => {
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 {album.cover_image_url ? (
-                  <img src={album.cover_image_url} alt={album.main_title} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }} />
+                  <img src={album.cover_image_url} alt={album.main_title} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px', boxShadow: 'var(--shadow-sm)' }} />
                 ) : (
                   <div style={{ width: '120px', height: '120px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
                     <Disc3 size={40} color="var(--text-tertiary)" />
@@ -154,14 +195,14 @@ const ArtistDetail = () => {
               </div>
             </Link>
           ))}
-          {artist.albums.length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>アルバム情報がありません</div>}
+          {(artist.albums || []).length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>リリース作品がありません</div>}
         </div>
       )}
 
       {activeTab === 'performances' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {artist.performances.map(perf => (
-            <Link key={perf.id} to={`/performances/${perf.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          {allPerformances.map((perf, idx) => (
+            <Link key={`${perf.id}-${idx}`} to={`/performances/${perf.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
                 background: 'var(--bg-secondary)', padding: '20px', borderRadius: '12px',
                 border: '1px solid var(--border-color)', transition: 'transform 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
@@ -170,7 +211,14 @@ const ArtistDetail = () => {
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
               >
                 <div>
-                  <div style={{ color: 'var(--primary-color)', fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px' }}>{perf.date}</div>
+                  <div style={{ color: 'var(--primary-color)', fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {perf.date}
+                    {perf.isGuest ? (
+                      <span style={{ background: 'rgba(255, 152, 0, 0.1)', color: '#ff9800', padding: '2px 8px', borderRadius: '8px', fontSize: '0.75rem' }}>Guest / Festival</span>
+                    ) : (
+                      <span style={{ background: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', padding: '2px 8px', borderRadius: '8px', fontSize: '0.75rem' }}>Main Act</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '8px' }}>{perf.name}</div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', gap: '16px' }}>
                     {perf.tour && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>🎤 {perf.tour.name}</span>}
@@ -180,38 +228,41 @@ const ArtistDetail = () => {
               </div>
             </Link>
           ))}
-          {artist.performances.length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>ライブ情報がありません</div>}
+          {allPerformances.length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>ライブ情報がありません</div>}
         </div>
       )}
 
       {activeTab === 'songs' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {artist.songs_contributed.map((contribution, idx) => (
-            <Link key={`${contribution.song_id}-${idx}`} to={`/songs/${contribution.song_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
-                border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Music size={20} color="var(--primary-color)" />
-                  </div>
-                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{contribution.title}</div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {contribution.roles.map(role => (
-                    <span key={role} style={{ background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', border: '1px solid var(--border-color)' }}>
-                      {role}
-                    </span>
-                  ))}
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          {Object.entries(songsByRole).map(([role, songs]) => (
+            <div key={role}>
+              <h3 style={{ fontSize: '1.2rem', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '4px', height: '16px', background: 'var(--primary-color)', borderRadius: '2px' }}></span>
+                {role} <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', fontWeight: 'normal' }}>({songs.length})</span>
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {songs.map((contribution, idx) => (
+                  <Link key={`${contribution.song_id}-${idx}`} to={`/songs/${contribution.song_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{
+                      background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
+                      border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Music size={20} color="var(--primary-color)" />
+                        </div>
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{contribution.title}</div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
-            </Link>
+            </div>
           ))}
-          {artist.songs_contributed.length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>参加楽曲情報がありません</div>}
+          {Object.keys(songsByRole).length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>楽曲情報がありません</div>}
         </div>
       )}
 
