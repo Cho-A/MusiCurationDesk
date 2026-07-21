@@ -35,10 +35,10 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
 
   return (
     <div style={{
-      background: 'rgba(255, 255, 255, 0.03)',
+      background: 'var(--bg-secondary)',
       borderRadius: '12px',
       padding: '24px',
-      border: '1px solid rgba(255, 255, 255, 0.05)',
+      border: '1px solid var(--border-color)',
       marginTop: '24px'
     }}>
       <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -51,7 +51,8 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
         {existingCredits.map((credit, idx) => (
           <div key={idx} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '12px', background: 'rgba(0, 0, 0, 0.2)', borderRadius: '8px'
+            padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px',
+            border: '1px solid var(--border-color)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ fontWeight: 600, minWidth: '150px' }}>{credit.artist_name}</span>
@@ -84,8 +85,9 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
 
       {/* 新規クレジット追加フォーム */}
       <div style={{
-        display: 'flex', gap: '12px', alignItems: 'center',
-        padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px'
+        display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap',
+        padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '8px',
+        border: '1px solid var(--border-color)'
       }}>
         <input
           type="text"
@@ -93,9 +95,9 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
           value={newArtistName}
           onChange={(e) => setNewArtistName(e.target.value)}
           style={{
-            flex: 2, padding: '10px 14px', borderRadius: '6px',
-            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-            color: 'white'
+            flex: 2, minWidth: '150px', padding: '10px 14px', borderRadius: '6px',
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+            color: 'var(--text-primary)', outline: 'none'
           }}
         />
         
@@ -103,9 +105,9 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           style={{
-            flex: 1, padding: '10px 14px', borderRadius: '6px',
-            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-            color: 'white'
+            flex: 1, minWidth: '120px', padding: '10px 14px', borderRadius: '6px',
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+            color: 'var(--text-primary)', outline: 'none'
           }}
         >
           {CATEGORIES.map(cat => (
@@ -119,9 +121,9 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
           value={newDetail}
           onChange={(e) => setNewDetail(e.target.value)}
           style={{
-            flex: 2, padding: '10px 14px', borderRadius: '6px',
-            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-            color: 'white'
+            flex: 2, minWidth: '150px', padding: '10px 14px', borderRadius: '6px',
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+            color: 'var(--text-primary)', outline: 'none'
           }}
         />
 

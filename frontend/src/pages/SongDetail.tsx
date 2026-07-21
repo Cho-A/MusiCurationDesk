@@ -575,11 +575,18 @@ const SongDetail = () => {
             {displayAlbums.map((albumLink, idx) => (
               <Link key={`${albumLink.album.id}-${idx}`} to={`/albums/${albumLink.album.id}#disc-${albumLink.disc_number || 1}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
-                  background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px',
-                  display: 'flex', alignItems: 'center', gap: '16px', transition: 'background-color 0.2s'
+                  backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
+                  border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)',
+                  display: 'flex', alignItems: 'center', gap: '16px', transition: 'transform 0.2s, box-shadow 0.2s'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                }}
                 >
                   <div style={{ 
                     width: '48px', height: '48px', backgroundColor: 'var(--bg-secondary)', 
