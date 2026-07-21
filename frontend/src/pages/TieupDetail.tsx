@@ -63,7 +63,7 @@ const TieupDetail = () => {
 
   if (loading) return <div style={{ padding: '32px' }}>読み込み中...</div>;
   if (error) return <div style={{ padding: '32px', color: 'red' }}>{error}</div>;
-  if (!tieup) return <div style={{ padding: '32px' }}>タイアップが見つかりません</div>;
+  if (!tieup) return <div style={{ padding: '32px' }}>タイアップが見つかりません。</div>;
 
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' }}>
@@ -169,7 +169,7 @@ const TieupDetail = () => {
               ))}
             </div>
           ) : (
-            <div style={{ color: 'var(--text-tertiary)' }}>関連楽曲は登録されていません</div>
+            <div style={{ color: 'var(--text-tertiary)' }}>関連楽曲は登録されていません。</div>
           )}
         </div>
 

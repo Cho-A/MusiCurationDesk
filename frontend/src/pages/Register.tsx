@@ -47,7 +47,7 @@ const Register = () => {
               <UserPlus size={28} color="#fff" />
             </div>
           </div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 8px 0' }}>Create Account</h2>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: '0 0 8px 0' }}>アカウント作成</h2>
           <p style={{ color: 'var(--text-secondary)', margin: 0 }}>MusiCurationDeskへの登録</p>
         </div>
 
@@ -59,35 +59,35 @@ const Register = () => {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Username</label>
+            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>ユーザー名</label>
             <input 
               type="text" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white', fontSize: '1rem', outline: 'none' }}
+              style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '1rem', outline: 'none' }}
             />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Email</label>
+            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>メールアドレス</label>
             <input 
               type="email" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white', fontSize: '1rem', outline: 'none' }}
+              style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '1rem', outline: 'none' }}
             />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Password</label>
+            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>パスワード</label>
             <input 
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white', fontSize: '1rem', outline: 'none' }}
+              style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '1rem', outline: 'none' }}
             />
           </div>
 
@@ -98,12 +98,12 @@ const Register = () => {
             onMouseEnter={(e) => { if(!loading) e.currentTarget.style.transform = 'scale(1.02)' }}
             onMouseLeave={(e) => { if(!loading) e.currentTarget.style.transform = 'scale(1)' }}
           >
-            {loading ? 'Creating account...' : 'Sign Up'}
+            {loading ? '作成中...' : '新規登録'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Already have an account? <Link to="/login" style={{ color: '#1DB954', textDecoration: 'none', fontWeight: 600 }}>Log in</Link>
+          すでにアカウントをお持ちですか？ <Link to="/login" style={{ color: '#1DB954', textDecoration: 'none', fontWeight: 600 }}>ログイン</Link>
         </div>
         
         <div style={{ textAlign: 'center', marginTop: '-8px' }}>

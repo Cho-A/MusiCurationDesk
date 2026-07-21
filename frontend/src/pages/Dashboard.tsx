@@ -43,6 +43,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     const fetchDashboardData = async () => {
       try {
         const headers: Record<string, string> = isAuthenticated && token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -55,26 +56,36 @@ const Dashboard = () => {
           fetch('http://127.0.0.1:8000/dashboard/discovery')
         ]);
 
-        const statsData = await statsRes.json();
-        const recentData = await recentRes.json();
-        const discoveryData = await discoveryRes.json();
-
-        setStats(statsData);
-        setRecentAlbums(recentData?.recent_albums || []);
-        setRecentSongs(recentData?.recent_songs || []);
-        setDiscovery(discoveryData);
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          if (mounted) setStats(statsData);
+        }
+        
+        if (recentRes.ok) {
+          const recentData = await recentRes.json();
+          if (mounted) {
+            setRecentAlbums(recentData.recent_albums || []);
+            setRecentSongs(recentData.recent_songs || []);
+          }
+        }
+        
+        if (discoveryRes.ok) {
+          const discoveryData = await discoveryRes.json();
+          if (mounted) setDiscovery(discoveryData);
+        }
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     fetchDashboardData();
+    return () => { mounted = false; };
   }, [isAuthenticated, token]);
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>Loading Dashboard...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>ダッシュボードを読み込み中...</div>;
   }
 
   return (
@@ -86,19 +97,19 @@ const Dashboard = () => {
         {/* KPI Stats Header */}
         <div style={{ marginBottom: '-16px' }}>
           <h1 style={{ fontSize: '1.8rem', margin: 0, fontWeight: 700 }}>
-            {isAuthenticated ? `Welcome back, ${user?.username}` : 'Global Music Database'}
+            {isAuthenticated ? `おかえりなさい、${user?.username}` : 'グローバル音楽データベース'}
           </h1>
           <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-            {isAuthenticated ? 'Your personal music stats and recent updates' : 'Explore the latest additions to the database'}
+            {isAuthenticated ? 'あなた個人の音楽統計と最近の更新' : 'データベースへの最新の追加情報を探る'}
           </p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
           {isAuthenticated ? [
-            { label: 'Owned Albums', value: stats?.total_albums, icon: <Disc size={24} color="#1DB954" /> },
-            { label: 'Live Concerts', value: stats?.total_performances, icon: <Calendar size={24} color="#1DB954" /> },
-            { label: 'Songs Experienced', value: stats?.total_songs_experienced, icon: <Headphones size={24} color="#1DB954" /> },
-            { label: 'Unique Songs', value: stats?.unique_songs_experienced, icon: <Music size={24} color="#1DB954" /> },
+            { label: '所有アルバム', value: stats?.total_albums, icon: <Disc size={24} color="#1DB954" /> },
+            { label: 'ライブ公演', value: stats?.total_performances, icon: <Calendar size={24} color="#1DB954" /> },
+            { label: '経験した楽曲', value: stats?.total_songs_experienced, icon: <Headphones size={24} color="#1DB954" /> },
+            { label: 'ユニークな楽曲', value: stats?.unique_songs_experienced, icon: <Music size={24} color="#1DB954" /> },
           ].map((stat, idx) => (
             <div key={idx} style={{
               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
@@ -116,10 +127,10 @@ const Dashboard = () => {
               </div>
             </div>
           )) : [
-            { label: 'Total Songs', value: stats?.total_songs, icon: <Music size={24} color="#1DB954" /> },
-            { label: 'Albums', value: stats?.total_albums, icon: <Disc size={24} color="#1DB954" /> },
-            { label: 'Artists', value: stats?.total_artists, icon: <Mic2 size={24} color="#1DB954" /> },
-            { label: 'Live Performances', value: stats?.total_performances, icon: <Calendar size={24} color="#1DB954" /> },
+            { label: '合計楽曲数', value: stats?.total_songs, icon: <Music size={24} color="#1DB954" /> },
+            { label: 'アルバム数', value: stats?.total_albums, icon: <Disc size={24} color="#1DB954" /> },
+            { label: 'アーティスト数', value: stats?.total_artists, icon: <Mic2 size={24} color="#1DB954" /> },
+            { label: 'ライブ公演数', value: stats?.total_performances, icon: <Calendar size={24} color="#1DB954" /> },
           ].map((stat, idx) => (
             <div key={idx} style={{
               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
@@ -143,7 +154,7 @@ const Dashboard = () => {
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
-              {isAuthenticated ? 'For You: Recent Albums' : 'Recently Added Albums'}
+              {isAuthenticated ? 'おすすめ: 最近のアルバム' : '最近追加されたアルバム'}
             </h2>
           </div>
           
@@ -161,13 +172,13 @@ const Dashboard = () => {
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                 >
                   <div style={{ 
-                    width: '200px', height: '200px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center'
+                    width: '200px', height: '200px', borderRadius: '12px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center'
                   }}>
                     {album.cover_image_url ? (
                       <img src={album.cover_image_url} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <Disc size={48} color="rgba(255,255,255,0.1)" />
+                      <Disc size={48} color="var(--text-tertiary)" />
                     )}
                   </div>
                   <div>
@@ -175,13 +186,13 @@ const Dashboard = () => {
                       {album.title}
                     </div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                      {album.release_date || 'Unknown Date'}
+                      {album.release_date || '不明な日付'}
                     </div>
                   </div>
                 </div>
               </Link>
             )) : (
-              <div style={{ color: '#666' }}>No albums added yet.</div>
+              <div style={{ color: '#666' }}>まだアルバムが追加されていません。</div>
             )}
           </div>
         </section>
@@ -189,20 +200,26 @@ const Dashboard = () => {
         {/* Recently Added Songs (List format) */}
         <section>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '20px' }}>
-            {isAuthenticated ? 'For You: Recent Songs' : 'Recently Added Songs'}
+            {isAuthenticated ? 'あなたへのおすすめ' : '最近追加された楽曲'}
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {recentSongs.length > 0 ? recentSongs.map(song => (
               <Link to={`/songs/${song.id}`} key={song.id} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
-                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+                  backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
                   borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px',
-                  transition: 'background 0.2s', cursor: 'pointer'
+                  transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+                }}
                 >
-                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '50%' }}>
+                  <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '10px', borderRadius: '50%' }}>
                     <Play size={16} fill="currentColor" />
                   </div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -216,7 +233,7 @@ const Dashboard = () => {
                 </div>
               </Link>
             )) : (
-              <div style={{ color: '#666' }}>No songs added yet.</div>
+              <div style={{ color: '#666' }}>まだ楽曲が追加されていません。</div>
             )}
           </div>
         </section>

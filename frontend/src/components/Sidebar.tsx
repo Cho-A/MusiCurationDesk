@@ -127,11 +127,11 @@ const Sidebar = () => {
             <Link to="/login" style={{ textDecoration: 'none' }}>
               <div style={{ 
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
-                background: 'rgba(255,255,255,0.05)', borderRadius: '8px', color: 'white',
+                background: 'var(--bg-tertiary)', borderRadius: '8px', color: 'var(--text-primary)',
                 transition: 'background 0.2s'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
               >
                 <LogIn size={20} />
                 <span style={{ fontWeight: 500 }}>ログイン</span>
@@ -140,11 +140,11 @@ const Sidebar = () => {
             <Link to="/register" style={{ textDecoration: 'none' }}>
               <div style={{ 
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
-                background: 'rgba(255,255,255,0.05)', borderRadius: '8px', color: 'white',
+                background: 'var(--bg-tertiary)', borderRadius: '8px', color: 'var(--text-primary)',
                 transition: 'background 0.2s'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
               >
                 <UserPlus size={20} />
                 <span style={{ fontWeight: 500 }}>新規登録</span>

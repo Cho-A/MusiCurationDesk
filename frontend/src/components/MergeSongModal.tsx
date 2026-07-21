@@ -148,7 +148,7 @@ const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, curren
                       {song.artist_links && song.artist_links.length > 0 ? song.artist_links.map(a => a.artist_name).join(', ') : 'Unknown Artist'}
                       <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.2)' }}>|</span>
                       Song ID: {song.id}
-                      {song.is_video && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'rgba(255,165,0,0.1)', color: '#ffa500', borderRadius: '4px', fontSize: '0.75rem' }}>映像</span>}
+                      {song.is_video && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'rgba(255,165,0,0.1)', color: '#ffa500', borderRadius: '4px', fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}>映像</span>}
                     </div>
                   </div>
                   <button 

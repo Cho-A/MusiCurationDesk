@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark'); // 初期テーマ
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
+  });
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -71,7 +75,7 @@ const Header = () => {
             <div style={{
               width: '36px', height: '36px', borderRadius: '50%',
               backgroundColor: 'var(--accent-primary)',
-              color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center',
+              color: 'var(--text-primary)', display: 'flex', justifyContent: 'center', alignItems: 'center',
               fontWeight: 'bold'
             }}>
               {user.username.charAt(0).toUpperCase()}
@@ -93,7 +97,10 @@ const Header = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ゲスト</span>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>未ログイン</strong>
+              <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                <Link to="/login" style={{ color: 'inherit', textDecoration: 'none' }}>ログイン</Link> / 
+                <Link to="/register" style={{ color: 'inherit', textDecoration: 'none' }}>新規登録</Link>
+              </strong>
             </div>
           </div>
         )}

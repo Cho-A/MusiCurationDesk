@@ -253,7 +253,7 @@ const PerformanceDetail = () => {
                           <div style={{ flex: 1, fontSize: '1.1rem', fontWeight: 400, color: '#aaa', fontStyle: 'italic' }}>
                             {entry.unresolved_song_name || entry.entry_type}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#666', border: '1px solid #444', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#666', border: '1px solid #444', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', flexShrink: 0, whiteSpace: 'nowrap' }}>
                             {entry.entry_type}
                           </div>
                         </div>

@@ -2,11 +2,20 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Music, PlusCircle, Headphones, Clock } from 'lucide-react';
 
+interface AlbumMini {
+  id: number;
+  main_title: string;
+  cover_image_url?: string;
+}
+
 interface Song {
   id: number;
   title: string;
   release_date?: string;
   jasrac_code?: string;
+  is_video?: boolean;
+  version_name?: string;
+  primary_album?: AlbumMini | null;
 }
 
 interface SpotifyTrack {
@@ -109,32 +118,65 @@ const Songs = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, searchMode]);
 
-  // 楽曲カードコンポーネント (画像を無くし、よりシンプルなリスト風に)
+  // 楽曲カードコンポーネント
   const SongCard = ({ song }: { song: Song }) => (
     <Link to={`/songs/${song.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div style={{
-        background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px',
+        backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', padding: '16px',
         display: 'flex', alignItems: 'center', gap: '16px',
         transition: 'all 0.2s ease', cursor: 'pointer',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        border: '1px solid rgba(255,255,255,0.05)'
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        border: '1px solid var(--border-color)'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-        e.currentTarget.style.transform = 'translateX(4px)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-        e.currentTarget.style.transform = 'translateX(0)';
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
       }}
       >
-        <Music size={20} color="#1DB954" style={{ flexShrink: 0 }} />
-        <div style={{ overflow: 'hidden' }}>
-          <div style={{ fontWeight: 600, fontSize: '1.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {song.title}
+        {song.primary_album?.cover_image_url ? (
+          <img src={song.primary_album.cover_image_url} alt="Cover" style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Music size={20} color={song.is_video ? "#ff4d4d" : "#1DB954"} />
           </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-            {song.jasrac_code ? `JASRAC: ${song.jasrac_code}` : '楽曲情報'}
+        )}
+        
+        <div style={{ overflow: 'hidden', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{
+              fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
+              background: song.is_video ? 'rgba(255, 77, 77, 0.15)' : 'rgba(29, 185, 84, 0.15)',
+              color: song.is_video ? '#ff4d4d' : '#1DB954',
+              border: `1px solid ${song.is_video ? 'rgba(255, 77, 77, 0.3)' : 'rgba(29, 185, 84, 0.3)'}`,
+              flexShrink: 0, whiteSpace: 'nowrap'
+            }}>
+              {song.is_video ? '映像' : '音源'}
+            </span>
+            <div style={{ fontWeight: 600, fontSize: '1.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {song.title}
+            </div>
+          </div>
+          
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {song.version_name && (
+              <span style={{ 
+                color: 'var(--text-primary)',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }} title={song.version_name}>
+                {song.version_name}
+              </span>
+            )}
+            <span style={{ fontSize: '0.8rem' }}>
+              {song.primary_album ? `収録: ${song.primary_album.main_title}` : 'アルバム未収録'}
+            </span>
           </div>
         </div>
       </div>
@@ -157,8 +199,8 @@ const Songs = () => {
           onClick={() => setSearchMode('local')}
           style={{
             padding: '8px 16px',
-            background: searchMode === 'local' ? '#4CAF50' : 'rgba(255,255,255,0.1)',
-            color: '#fff',
+            background: searchMode === 'local' ? '#1DB954' : 'var(--bg-tertiary)',
+            color: searchMode === 'local' ? '#fff' : 'var(--text-primary)',
             border: 'none',
             borderRadius: '20px',
             cursor: 'pointer',
@@ -172,8 +214,8 @@ const Songs = () => {
           onClick={() => setSearchMode('spotify')}
           style={{
             padding: '8px 16px',
-            background: searchMode === 'spotify' ? '#1DB954' : 'rgba(255,255,255,0.1)',
-            color: '#fff',
+            background: searchMode === 'spotify' ? '#1DB954' : 'var(--bg-tertiary)',
+            color: searchMode === 'spotify' ? '#fff' : 'var(--text-primary)',
             border: 'none',
             borderRadius: '20px',
             cursor: 'pointer',
@@ -197,9 +239,9 @@ const Songs = () => {
               flex: 1,
               padding: '16px 24px',
               borderRadius: '30px',
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(255,255,255,0.05)',
-              color: '#fff',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
               fontSize: '1.1rem',
               outline: 'none'
             }}
@@ -223,7 +265,7 @@ const Songs = () => {
       {/* Spotify 検索結果表示 */}
       {searchMode === 'spotify' && spotifyResults.length > 0 && (
         <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '1.4rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '1.4rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '24px' }}>
             Spotify 検索結果
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -233,19 +275,19 @@ const Songs = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '16px',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--bg-secondary)',
                 borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.05)'
+                border: '1px solid var(--border-color)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   {track.image_url ? (
                     <img src={track.image_url} alt={track.album_name} style={{ width: '64px', height: '64px', borderRadius: '8px' }} />
                   ) : (
-                    <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: '#333' }} />
+                    <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: 'var(--bg-tertiary)' }} />
                   )}
                   <div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{track.title}</div>
-                    <div style={{ color: '#aaa', fontSize: '0.9rem', marginTop: '4px' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
                       {track.artist_name} • {track.album_name}
                     </div>
                   </div>
@@ -284,9 +326,9 @@ const Songs = () => {
                 flex: 1,
                 padding: '16px 24px',
                 borderRadius: '30px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.05)',
-                color: '#fff',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
                 fontSize: '1.1rem',
                 outline: 'none'
               }}
@@ -317,7 +359,7 @@ const Songs = () => {
                   {songs.map((song: Song) => <SongCard key={song.id} song={song} />)}
                 </div>
               ) : (
-                <div style={{ color: 'var(--text-tertiary)', padding: '24px' }}>まだ楽曲が登録されていません</div>
+                <div style={{ color: 'var(--text-tertiary)', padding: '24px' }}>まだ楽曲が登録されていません。</div>
               )}
             </div>
           )}

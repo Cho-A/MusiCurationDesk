@@ -68,7 +68,7 @@ const Albums = () => {
       {filteredAlbums.length === 0 ? (
         <div style={{ padding: '48px', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: '16px' }}>
           <Disc3 size={48} color="var(--text-tertiary)" style={{ marginBottom: '16px' }} />
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>まだアルバムが登録されていません</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>まだアルバムが登録されていません。</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px' }}>

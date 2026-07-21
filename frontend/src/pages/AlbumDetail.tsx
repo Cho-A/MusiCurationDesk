@@ -379,7 +379,7 @@ const AlbumDetail = () => {
                                 <span style={{ 
                                   display: 'inline-flex', alignItems: 'center', gap: '4px',
                                   fontSize: '0.75rem', backgroundColor: 'rgba(29, 185, 84, 0.1)', color: '#1DB954',
-                                  padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(29, 185, 84, 0.3)'
+                                  padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(29, 185, 84, 0.3)', flexShrink: 0, whiteSpace: 'nowrap'
                                 }}>
                                   📺 {track.media_format}
                                 </span>

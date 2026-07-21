@@ -243,7 +243,7 @@ const SongDetail = () => {
   };
 
   if (loading) return <div style={{ padding: '32px' }}>読み込み中...</div>;
-  if (!baseSong) return <div style={{ padding: '32px' }}>楽曲が見つかりません</div>;
+  if (!baseSong) return <div style={{ padding: '32px' }}>楽曲が見つかりません。</div>;
 
   // バージョンの整理
   const allVersions = [baseSong, ...(baseSong.other_versions || [])].sort((a, b) => a.id - b.id);
@@ -306,8 +306,8 @@ const SongDetail = () => {
 
       {/* 楽曲 (Work) 固定ヘッダー */}
       <div style={{ 
-        background: 'linear-gradient(145deg, rgba(29, 185, 84, 0.15) 0%, rgba(0,0,0,0) 100%)',
-        padding: '32px', borderRadius: '16px', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)'
+        background: 'var(--bg-secondary)',
+        padding: '32px', borderRadius: '16px', marginBottom: '32px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-md)'
       }}>
         <div style={{ fontSize: '0.9rem', color: '#1DB954', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.1em' }}>
           楽曲 (WORK)
@@ -321,13 +321,13 @@ const SongDetail = () => {
           {lyricists.length > 0 && (
             <div>
               <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>作詞:</span>{' '}
-              <span style={{ color: '#fff' }}>{lyricists.join(', ')}</span>
+              <span style={{ color: 'var(--text-primary)' }}>{lyricists.join(', ')}</span>
             </div>
           )}
           {composers.length > 0 && (
             <div>
               <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>作曲:</span>{' '}
-              <span style={{ color: '#fff' }}>{composers.join(', ')}</span>
+              <span style={{ color: 'var(--text-primary)' }}>{composers.join(', ')}</span>
             </div>
           )}
         </div>
@@ -335,8 +335,9 @@ const SongDetail = () => {
 
       {/* バージョン選択 (音源 / 映像 大タブ) */}
       <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
           <button 
+            disabled={audioVersions.length === 0}
             onClick={() => handleCategorySwitch('audio')}
             style={{
               padding: '12px 24px', background: 'none', border: 'none',
@@ -351,6 +352,7 @@ const SongDetail = () => {
             音源 ({audioVersions.length})
           </button>
           <button 
+            disabled={videoVersions.length === 0}
             onClick={() => handleCategorySwitch('video')}
             style={{
               padding: '12px 24px', background: 'none', border: 'none',
@@ -375,10 +377,10 @@ const SongDetail = () => {
               style={{
                 padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer',
                 background: v.id === selectedVersionId 
-                  ? (activeCategory === 'audio' ? '#1DB954' : '#ff4d4d') 
-                  : 'rgba(255,255,255,0.05)',
-                color: v.id === selectedVersionId ? '#000' : 'var(--text-primary)',
-                border: v.id === selectedVersionId ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  ? 'var(--accent-primary)' 
+                  : 'var(--bg-tertiary)',
+                color: v.id === selectedVersionId ? '#fff' : 'var(--text-secondary)',
+                border: v.id === selectedVersionId ? 'none' : '1px solid var(--border-color)',
                 transition: 'all 0.2s'
               }}
             >
@@ -395,9 +397,9 @@ const SongDetail = () => {
 
       {/* 以下、選択中のバージョンの詳細 (再レンダリング) */}
       <div style={{ 
-        background: 'rgba(255,255,255,0.02)', padding: '32px', borderRadius: '16px', 
-        border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '48px',
-        animation: 'fadeIn 0.3s ease'
+        backgroundColor: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px', 
+        border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '48px',
+        boxShadow: 'var(--shadow-md)', animation: 'fadeIn 0.3s ease'
       }}>
         
         {/* バージョン基本情報 (編集など) */}
@@ -408,7 +410,7 @@ const SongDetail = () => {
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {baseSong.title}
                   {!baseSong.is_video && baseSong.is_streaming_available === false && (
-                    <span style={{color: '#ff4d4d', fontSize: '0.9rem', border: '1px solid #ff4d4d', padding: '2px 6px', borderRadius: '4px'}}>
+                    <span style={{color: '#ff4d4d', fontSize: '0.9rem', border: '1px solid #ff4d4d', padding: '2px 6px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
                       サブスク未解禁
                     </span>
                   )}
@@ -421,7 +423,7 @@ const SongDetail = () => {
                     setIsEditingTitle(true); 
                   }}
                   style={{
-                    background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px',
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '32px', height: '32px',
                     display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)', cursor: 'pointer',
                     marginTop: '4px'
                   }}
@@ -443,8 +445,8 @@ const SongDetail = () => {
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '6px 12px', borderRadius: '8px', border: '1px solid',
-                borderColor: baseSong.is_video ? 'rgba(255, 77, 77, 0.4)' : 'rgba(29, 185, 84, 0.4)',
-                background: baseSong.is_video ? 'rgba(255, 77, 77, 0.1)' : 'rgba(29, 185, 84, 0.1)',
+                borderColor: baseSong.is_video ? 'var(--accent-primary)' : 'var(--accent-primary)',
+                background: 'var(--bg-tertiary)',
                 color: baseSong.is_video ? '#ff4d4d' : '#1DB954',
                 fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginLeft: 'auto'
               }}
@@ -464,7 +466,7 @@ const SongDetail = () => {
                 onChange={(e) => setEditTitleValue(e.target.value)}
                 style={{
                   fontSize: '1rem', color: 'var(--text-primary)',
-                  background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
                   borderRadius: '4px', padding: '8px 12px', width: '250px', outline: 'none'
                 }}
               />
@@ -475,7 +477,7 @@ const SongDetail = () => {
                 onChange={(e) => setEditVersionNameValue(e.target.value)}
                 style={{
                   fontSize: '1rem', color: 'var(--text-primary)',
-                  background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
                   borderRadius: '4px', padding: '8px 12px', width: '250px', outline: 'none'
                 }}
               />
@@ -508,7 +510,7 @@ const SongDetail = () => {
               }} style={{ background: '#1DB954', color: '#000', border: 'none', borderRadius: '4px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600 }}>
                 保存
               </button>
-              <button onClick={() => setIsEditingTitle(false)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '4px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600 }}>
+              <button onClick={() => setIsEditingTitle(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600 }}>
                 キャンセル
               </button>
             </div>
@@ -523,7 +525,7 @@ const SongDetail = () => {
 
         {/* クレジット (バージョンごと) */}
         <div>
-          <h3 style={{ fontSize: '1.2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
             バージョンごとのクレジット (編曲・演奏)
           </h3>
           <SongCreditEditor 
@@ -536,14 +538,14 @@ const SongDetail = () => {
 
         {/* 収録アルバム */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ListMusic size={18} />
               収録アルバム
             </h3>
             
             {/* アルバム表示トグル */}
-            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', padding: '4px' }}>
+            <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: '20px', padding: '4px' }}>
               <button
                 onClick={() => setShowAllAlbums(false)}
                 style={{
@@ -573,14 +575,14 @@ const SongDetail = () => {
             {displayAlbums.map((albumLink, idx) => (
               <Link key={`${albumLink.album.id}-${idx}`} to={`/albums/${albumLink.album.id}#disc-${albumLink.disc_number || 1}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
-                  background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px',
+                  background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px',
                   display: 'flex', alignItems: 'center', gap: '16px', transition: 'background-color 0.2s'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
                 >
                   <div style={{ 
-                    width: '48px', height: '48px', backgroundColor: 'rgba(255,255,255,0.1)', 
+                    width: '48px', height: '48px', backgroundColor: 'var(--bg-secondary)', 
                     borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0
                   }}>
                     {albumLink.album.cover_image_url ? (
@@ -607,21 +609,21 @@ const SongDetail = () => {
               </Link>
             ))}
             {displayAlbums.length === 0 && (
-              <div style={{ color: 'var(--text-tertiary)' }}>収録アルバム情報はありません</div>
+              <div style={{ color: 'var(--text-tertiary)' }}>収録アルバム情報はありません。</div>
             )}
           </div>
         </div>
 
         {/* タイアップ */}
         <div>
-          <h3 style={{ fontSize: '1.2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
             タイアップ
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {(baseSong.tieup_links || []).map((tieup, idx) => (
               <Link key={idx} to={`/tieups/${tieup.tieup_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
-                  background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px',
+                  background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px',
                   transition: 'background 0.2s ease', cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
@@ -634,13 +636,13 @@ const SongDetail = () => {
               </Link>
             ))}
             {(!baseSong.tieup_links || baseSong.tieup_links.length === 0) && (
-              <div style={{ color: 'var(--text-tertiary)' }}>タイアップ情報はありません</div>
+              <p style={{ color: 'var(--text-secondary)' }}>タイアップ情報はありません。</p>
             )}
           </div>
         </div>
 
         {/* 高級管理（原曲との紐付け管理） */}
-        <div style={{ marginTop: '24px', padding: '24px', background: 'rgba(255,0,0,0.03)', border: '1px solid rgba(255,0,0,0.1)', borderRadius: '12px' }}>
+        <div style={{ marginTop: '24px', padding: '24px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--accent-primary)', borderRadius: '12px' }}>
           <h3 style={{ fontSize: '1rem', color: '#ff6b6b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             楽曲・原曲との紐付け管理
           </h3>
@@ -655,8 +657,8 @@ const SongDetail = () => {
               onClick={handleDetachWork}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,107,107,0.1)', color: '#ff6b6b',
-                border: '1px solid rgba(255,107,107,0.2)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
+                padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)', color: '#ff6b6b',
+                border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
               }}
             >
               <Unlink size={14} />
@@ -666,8 +668,8 @@ const SongDetail = () => {
               onClick={() => setIsAttachModalOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)',
-                border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
+                padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
               }}
             >
               <LinkIcon size={14} />
@@ -677,8 +679,8 @@ const SongDetail = () => {
               onClick={() => setIsMergeModalOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,165,0,0.1)', color: '#ffa500',
-                border: '1px solid rgba(255,165,0,0.3)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+                padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)', color: '#ffa500',
+                border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
                 marginLeft: 'auto'
               }}
               title="このバージョンを別のバージョンにマージして1つにまとめます"
