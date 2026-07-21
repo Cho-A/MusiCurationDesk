@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
 from typing import List, Dict, Any
+from sqlalchemy.orm import joinedload
 from .. import models, schemas, dependencies
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -29,7 +30,10 @@ def get_recent_additions(db: Session = Depends(models.get_db)):
     recent_albums = db.query(models.Album).order_by(models.Album.id.desc()).limit(10).all()
     
     # 最近追加された楽曲 (10件)
-    recent_songs = db.query(models.Song).order_by(models.Song.id.desc()).limit(10).all()
+    recent_songs = db.query(models.Song).options(
+        joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
+        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist)
+    ).order_by(models.Song.id.desc()).limit(10).all()
     
     # 返却用に整形
     albums_data = []
@@ -46,6 +50,8 @@ def get_recent_additions(db: Session = Depends(models.get_db)):
         artist_name = "Unknown Artist"
         if song.artist_links:
             artist_name = song.artist_links[0].artist.name
+        elif song.work and song.work.artist_links:
+            artist_name = song.work.artist_links[0].artist.name
             
         songs_data.append({
             "id": song.id,

@@ -104,12 +104,15 @@ class Song(BaseModel):
     jasrac_code: str | None = None
     jasrac_title: str | None = None
     work_id: int | None = None
+    is_video: bool = False
+    version_name: str | None = None
     
     # 検索一覧などでアーティスト情報を表示できるように追加
     artists: List["ArtistLinkInfo"] = Field(
         default=[],
         alias="artist_links",
     )
+    primary_album: Optional["AlbumMini"] = None
 
     class Config:
         from_attributes = True  # SQLAlchemyモデルをPydanticモデルに変換

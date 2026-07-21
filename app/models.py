@@ -302,6 +302,13 @@ class Song(Base):
     album_links = relationship("AlbumTrack", back_populates="song")
     works = relationship("SongWorksLink", back_populates="song", cascade="all, delete-orphan", order_by="SongWorksLink.order_index")
 
+    @property
+    def primary_album(self):
+        # 紐づいているアルバムがあれば最初の一つを返す
+        if self.album_links and len(self.album_links) > 0:
+            return self.album_links[0].album
+        return None
+
     # 楽曲タグへのリレーション (中間テーブル song_tags を使用)
     tags = relationship(
         "Tag",

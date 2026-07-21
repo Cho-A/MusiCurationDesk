@@ -78,8 +78,11 @@ def read_songs(
     データベースに登録されている楽曲の一覧を、検索・ソート・フィルタリングして取得します。
     """
     
-    # 1. クエリの組み立て開始
-    query = db.query(models.Song)
+    # 1. クエリの組み立て開始 (検索結果用のAlbum情報とArtist情報を結合しておく)
+    query = db.query(models.Song).options(
+        joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album),
+        joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist)
+    )
 
     # 2. フィルタリング (ArtistとRoleの絞り込みを統合)
     if role_filter or artist_id_filter:
