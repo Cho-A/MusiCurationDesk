@@ -37,7 +37,7 @@ const Artists = () => {
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
       <PageHeader
         title="Artists"
-        subtitle="アーティスト一覧"
+        subtitle="アーティスト情報の閲覧と管理を行います"
       />
 
       <SearchBar

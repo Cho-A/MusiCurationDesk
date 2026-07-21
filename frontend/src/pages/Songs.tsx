@@ -191,8 +191,8 @@ const Songs = () => {
     <div style={{ padding: '48px 32px', maxWidth: '1200px', margin: '0 auto' }}>
       
       <PageHeader
-        title="楽曲情報を調べる"
-        subtitle="ローカルデータベースやSpotifyから楽曲を検索して追加します"
+        title="Songs"
+        subtitle="楽曲の検索・追加・管理を行います"
       />
 
       {/* 検索タブ切り替え */}

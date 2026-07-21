@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Plus, MapPin, Users } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Plus, MapPin, Users, ArrowLeft } from 'lucide-react';
 
 interface Venue {
   id: number;
@@ -30,6 +30,7 @@ interface TourDetail {
 
 const TourDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -89,6 +90,19 @@ const TourDetail = () => {
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 16px', paddingBottom: '60px' }}>
+      {/* 戻るボタン */}
+      <button 
+        onClick={() => navigate(-1)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '8px', 
+          background: 'none', border: 'none', color: 'var(--text-secondary)',
+          cursor: 'pointer', marginBottom: '24px', fontSize: '1rem'
+        }}
+      >
+        <ArrowLeft size={20} />
+        戻る
+      </button>
+
       <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tour / Event Series</span>

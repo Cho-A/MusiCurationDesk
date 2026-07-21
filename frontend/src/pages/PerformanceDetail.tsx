@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 interface Artist {
   id: number;
@@ -50,6 +51,7 @@ interface PerformanceDetail {
 
 const PerformanceDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [performance, setPerformance] = useState<PerformanceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'setlist' | 'roster'>('setlist');
@@ -76,6 +78,19 @@ const PerformanceDetail = () => {
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 16px' }}>
+
+      {/* 戻るボタン */}
+      <button 
+        onClick={() => navigate(-1)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '8px', 
+          background: 'none', border: 'none', color: '#aaa',
+          cursor: 'pointer', marginBottom: '24px', fontSize: '1rem'
+        }}
+      >
+        <ArrowLeft size={20} />
+        戻る
+      </button>
       
       {/* ライブヘッダー領域 */}
       <div style={{ 

@@ -85,7 +85,7 @@ const Concerts = () => {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
       <PageHeader
-        title="ライブ・イベント管理"
+        title="Concerts"
         subtitle="ツアーや単発のライブ、セットリストを管理します"
       />
 

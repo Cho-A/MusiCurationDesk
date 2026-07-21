@@ -43,7 +43,7 @@ const Albums = () => {
     <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
       <PageHeader 
         title="Albums" 
-        subtitle="データベースに登録されているアルバム" 
+        subtitle="データベースに登録されているアルバムを管理します" 
         actions={
           <div style={{ color: 'var(--text-tertiary)', fontWeight: 500, paddingBottom: '8px' }}>
             {filteredAlbums.length} Albums

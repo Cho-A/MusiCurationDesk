@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Disc3, Music, Calendar, MapPin } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Disc3, Music, Calendar, MapPin, ArrowLeft } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 
 interface AlbumMini {
@@ -45,6 +45,7 @@ const ArtistDetail = () => {
   const [artist, setArtist] = useState<ArtistDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'albums' | 'performances' | 'songs'>('albums');
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/artists/${id}`)
@@ -62,6 +63,19 @@ const ArtistDetail = () => {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 16px', paddingBottom: '60px' }}>
+      {/* 戻るボタン */}
+      <button 
+        onClick={() => navigate(-1)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '8px', 
+          background: 'none', border: 'none', color: 'var(--text-secondary)',
+          cursor: 'pointer', marginBottom: '24px', fontSize: '1rem'
+        }}
+      >
+        <ArrowLeft size={20} />
+        戻る
+      </button>
+
       <PageHeader
         title={artist.name}
         subtitle="アーティスト詳細"
