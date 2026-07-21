@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, X, Film } from 'lucide-react';
+import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film } from 'lucide-react';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
 import AttachWorkModal from '../components/AttachWorkModal';

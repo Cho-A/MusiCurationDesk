@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Plus, Save, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Search, Save, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface MBTrack {
   position: number;

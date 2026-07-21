@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Music, PlusCircle, Headphones, Clock } from 'lucide-react';
+import { Music, Clock } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
+import SearchBar from '../components/SearchBar';
 
 interface AlbumMini {
   id: number;
@@ -28,14 +30,14 @@ interface SpotifyTrack {
 
 const Songs = () => {
   const [songs, setSongs] = useState<Song[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [searchMode, setSearchMode] = useState<'local' | 'spotify'>('local');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Song[]>([]);
   const [spotifyResults, setSpotifyResults] = useState<SpotifyTrack[]>([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [importingTrackId, setImportingTrackId] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [, setHasSearched] = useState(false);
   
   // 初期ロード時：最近追加された楽曲を取得
   const fetchLocalSongs = () => {
@@ -186,12 +188,10 @@ const Songs = () => {
   return (
     <div style={{ padding: '48px 32px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      {/* 検索ヘッダー領域 */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '3.5rem', fontWeight: 900, marginBottom: '24px', letterSpacing: '-0.02em', textAlign: 'center' }}>
-          楽曲情報を調べる
-        </h1>
-      </div>
+      <PageHeader
+        title="楽曲情報を調べる"
+        subtitle="ローカルデータベースやSpotifyから楽曲を検索して追加します"
+      />
 
       {/* 検索タブ切り替え */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', justifyContent: 'center' }}>
@@ -227,39 +227,16 @@ const Songs = () => {
         </button>
       </div>
 
-      {/* Spotify検索バー */}
       {searchMode === 'spotify' && (
-        <form onSubmit={handleSpotifySearch} style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
-          <input 
-            type="text" 
-            placeholder="Spotifyで楽曲やアーティストを検索..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '16px 24px',
-              borderRadius: '30px',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              fontSize: '1.1rem',
-              outline: 'none'
-            }}
-          />
-          <button type="submit" disabled={isSearchingSpotify} style={{
-            background: '#1DB954',
-            color: 'white',
-            border: 'none',
-            borderRadius: '30px',
-            padding: '0 32px',
-            fontSize: '1.1rem',
-            fontWeight: 600,
-            cursor: isSearchingSpotify ? 'wait' : 'pointer',
-            transition: 'transform 0.1s',
-          }}>
-            {isSearchingSpotify ? '検索中...' : '検索'}
-          </button>
-        </form>
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Spotifyで楽曲やアーティストを検索..."
+          onSubmit={handleSpotifySearch}
+          disabled={isSearchingSpotify}
+          buttonText={isSearchingSpotify ? '検索中...' : '検索'}
+          showIcon={false}
+        />
       )}
 
       {/* Spotify 検索結果表示 */}
@@ -313,27 +290,13 @@ const Songs = () => {
         </div>
       )}
 
-      {/* ローカル検索バーと結果 */}
       {searchMode === 'local' && (
         <>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
-            <input 
-              type="text" 
-              placeholder="ローカルデータベースから楽曲を検索..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                flex: 1,
-                padding: '16px 24px',
-                borderRadius: '30px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-                fontSize: '1.1rem',
-                outline: 'none'
-              }}
-            />
-          </div>
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="ローカルデータベースから楽曲を検索..."
+          />
 
           {searchQuery ? (
             <div>

@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Users, Search, Disc, Music } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, Disc, Music } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
+import SearchBar from '../components/SearchBar';
 
 interface Artist {
   id: number;
@@ -33,28 +35,16 @@ const Artists = () => {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Users size={32} color="#1DB954" />
-          アーティスト一覧
-        </h1>
-      </div>
+      <PageHeader
+        title="Artists"
+        subtitle="アーティスト一覧"
+      />
 
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)',
-        borderRadius: '24px', padding: '12px 24px', marginBottom: '32px',
-        maxWidth: '500px'
-      }}>
-        <Search size={20} color="var(--text-tertiary)" />
-        <input
-          type="text"
-          placeholder="登録済みアーティストを検索..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ border: 'none', background: 'transparent', outline: 'none', color: 'white', width: '100%' }}
-        />
-      </div>
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="登録済みアーティストを検索..."
+      />
 
       {loading ? (
         <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>

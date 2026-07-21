@@ -82,7 +82,7 @@ const TieupDetail = () => {
 
       {/* パンくずリスト */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-        {tieup.parents.map((parent, idx) => (
+        {tieup.parents.map((parent) => (
           <div key={parent.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Link to={`/tieups/${parent.id}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
               <span style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>

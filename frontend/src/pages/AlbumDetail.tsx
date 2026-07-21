@@ -52,7 +52,7 @@ const AlbumDetail = () => {
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, is_unreleased: boolean}>({ display_title: '', notes: '', song_id: null, song_title: '', is_unreleased: false });
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
-  const [isSearchingSong, setIsSearchingSong] = useState(false);
+  const [, setIsSearchingSong] = useState(false);
 
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;

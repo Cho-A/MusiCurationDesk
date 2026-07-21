@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Music, Disc, Mic2, Calendar, Play, Sparkles, Headphones } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import PageHeader from '../components/PageHeader';
+import AlbumCard, { type Album } from '../components/AlbumCard';
 
 interface DashboardStats {
   total_songs?: number;
@@ -95,14 +97,10 @@ const Dashboard = () => {
       <div style={{ flex: '1 1 min(75%, 1000px)', display: 'flex', flexDirection: 'column', gap: '40px', minWidth: '300px' }}>
         
         {/* KPI Stats Header */}
-        <div style={{ marginBottom: '-16px' }}>
-          <h1 style={{ fontSize: '1.8rem', margin: 0, fontWeight: 700 }}>
-            {isAuthenticated ? `おかえりなさい、${user?.username}` : 'グローバル音楽データベース'}
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-            {isAuthenticated ? 'あなた個人の音楽統計と最近の更新' : 'データベースへの最新の追加情報を探る'}
-          </p>
-        </div>
+        <PageHeader 
+          title={isAuthenticated ? `おかえりなさい、${user?.username}` : 'グローバル音楽データベース'}
+          subtitle={isAuthenticated ? 'あなた個人の音楽統計と最近の更新' : 'データベースへの最新の追加情報を探る'}
+        />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
           {isAuthenticated ? [
@@ -163,34 +161,9 @@ const Dashboard = () => {
             scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent'
           }}>
             {recentAlbums.length > 0 ? recentAlbums.map(album => (
-              <Link to={`/albums/${album.id}`} key={album.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ 
-                  minWidth: '200px', maxWidth: '200px', display: 'flex', flexDirection: 'column', gap: '12px',
-                  cursor: 'pointer', transition: 'transform 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                  <div style={{ 
-                    width: '200px', height: '200px', borderRadius: '12px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center'
-                  }}>
-                    {album.cover_image_url ? (
-                      <img src={album.cover_image_url} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Disc size={48} color="var(--text-tertiary)" />
-                    )}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {album.title}
-                    </div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                      {album.release_date || '不明な日付'}
-                    </div>
-                  </div>
-                </div>
-              </Link>
+              <div key={album.id} style={{ minWidth: '200px', maxWidth: '200px' }}>
+                <AlbumCard album={album as unknown as Album} layout="vertical" />
+              </div>
             )) : (
               <div style={{ color: '#666' }}>まだアルバムが追加されていません。</div>
             )}
