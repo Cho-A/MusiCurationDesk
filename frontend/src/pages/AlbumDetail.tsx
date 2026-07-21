@@ -6,6 +6,7 @@ interface SongMini {
   id: number;
   title: string;
   spotify_song_id?: string | null;
+  is_video?: boolean;
 }
 
 interface AlbumDisc {
@@ -75,7 +76,16 @@ const AlbumDetail = () => {
 
   useEffect(() => {
     fetchAlbum();
-  }, [fetchAlbum]);
+  }, [id]);
+
+  useEffect(() => {
+    if (!loading && album && window.location.hash) {
+      const element = document.getElementById(window.location.hash.slice(1));
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [loading, album]);
 
   const handleEditClick = (e: React.MouseEvent, track: any) => {
     e.preventDefault();
@@ -235,7 +245,7 @@ const AlbumDetail = () => {
           const tracks = groupedTracks[discNum];
           
           return (
-            <div key={discNum} style={{ marginBottom: '32px' }}>
+            <div key={discNum} id={`disc-${discNum}`} style={{ marginBottom: '32px', scrollMarginTop: '80px' }}>
               {!isSingleDiscNoTitle && (
                 <h3 style={{ 
                   margin: '0 0 16px 0', fontSize: '1.2rem', color: 'var(--text-secondary)',
@@ -267,7 +277,9 @@ const AlbumDetail = () => {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {tracks.sort((a, b) => a.track_number - b.track_number).map((track) => {
-                  const isUnreleased = track.song.spotify_song_id === null;
+                  // 映像フォーマット（Blu-ray/DVD）か、曲自体が映像フラグを持っている場合はサブスク未解禁フラグを出さない
+                  const isVideoTrack = track.song.is_video || (track.media_format && ['Blu-ray', 'DVD'].includes(track.media_format));
+                  const isUnreleased = !isVideoTrack && track.song.spotify_song_id === null;
                   
                   return (
                     <Link key={track.id} to={`/songs/${track.song_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>

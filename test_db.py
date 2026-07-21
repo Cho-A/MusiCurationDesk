@@ -1,22 +1,11 @@
-from app import models, schemas
-
-def test():
-    db = models.SessionLocal()
-    try:
-        # GET /albums/ と同じロジック
-        albums = db.query(models.Album).order_by(models.Album.id.desc()).all()
-        print("Total albums:", len(albums))
-        for album in albums:
-            try:
-                # FastAPIが内部で行うのと同じようにPydanticでバリデーション
-                schema_album = schemas.Album.model_validate(album)
-            except Exception as e:
-                print(f"Error on album ID {album.id} ({album.main_title}):", e)
-                break
-    except Exception as e:
-        print("DB Error:", e)
-    finally:
-        db.close()
-
-if __name__ == "__main__":
-    test()
+import traceback
+from app.models import SessionLocal
+from app import models
+db = SessionLocal()
+try:
+    album = db.query(models.Album).filter(models.Album.id == 53).first()
+    print("Album:", album.main_title)
+    for track in album.album_tracks:
+        print(track.track_number, track.song.title)
+except Exception as e:
+    traceback.print_exc()
