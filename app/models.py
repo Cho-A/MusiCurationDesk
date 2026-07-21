@@ -2,6 +2,7 @@ from __future__ import annotations
 import datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Date,
     DateTime,
@@ -395,7 +396,8 @@ class Album(Base):
     cover_image_url = Column(String(500), nullable=True)
     album_type = Column(String(50), nullable=True)  # "album", "single", "compilation", "dvd", etc.
 
-    album_tracks = relationship("AlbumTrack", back_populates="album")
+    album_tracks = relationship("AlbumTrack", back_populates="album", cascade="all, delete-orphan")
+    discs = relationship("AlbumDisc", back_populates="album", cascade="all, delete-orphan")
     store_bonuses = relationship(
         "AlbumStoreBonus",
         back_populates="album",
@@ -416,18 +418,36 @@ class Album(Base):
         cascade="all, delete-orphan",
     )
 
+class AlbumDisc(Base):
+    __tablename__ = "album_discs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    album_id = Column(Integer, ForeignKey("albums.id"), nullable=False)
+    disc_number = Column(Integer, nullable=False)
+    title = Column(String(255), nullable=True)
+    media_format = Column(String(50), nullable=True)
+    edition = Column(String(100), nullable=True)
+
+    album = relationship("Album", back_populates="discs")
+
 
 class AlbumTrack(Base):
     __tablename__ = "album_tracks"
+
     id = Column(Integer, primary_key=True, index=True)
-    album_id = Column(Integer, ForeignKey("albums.id"))
-    song_id = Column(Integer, ForeignKey("songs.id"))
-    track_number = Column(Integer)
-    disc_number = Column(Integer, default=1)
+    album_id = Column(Integer, ForeignKey("albums.id"), nullable=False)
+    song_id = Column(Integer, ForeignKey("songs.id"), nullable=False)
+    track_number = Column(Integer, nullable=False)
+    disc_number = Column(Integer, nullable=False, default=1)
     duration_ms = Column(Integer, nullable=True)
+    media_format = Column(String(50), nullable=True)
+    notes = Column(String(255), nullable=True)
+    display_title = Column(String(255), nullable=True)
+    is_unreleased = Column(Boolean, default=False, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("album_id", "song_id", name="_album_song_uc"),
+        # CD/DVD特典等で同一アルバム内に同じ曲が複数回収録されることがあるため、
+        # "album_id", "song_id" の一意制約 (_album_song_uc) は削除。
         UniqueConstraint(
             "album_id",
             "disc_number",

@@ -22,7 +22,7 @@ class Artist(BaseModel):
     notes: str | None = None
 
     class Config:
-        orm_mode = True  # SQLAlchemyモデルをPydanticモデルに変換できるようにする
+        from_attributes = True  # SQLAlchemyモデルをPydanticモデルに変換できるようにする
 
 
 class AliasInfo(BaseModel):
@@ -30,7 +30,7 @@ class AliasInfo(BaseModel):
     context: str | None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Song Contribution (楽曲貢献情報) ---
@@ -40,7 +40,7 @@ class SongContribution(BaseModel):
     roles: List[str]  # 役割 (Composer, Vocalist, etc.)
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Artist Detail (最終応答スキーマ) ---
@@ -55,7 +55,7 @@ class ArtistDetail(BaseModel):
     songs_contributed: List[SongContribution] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         allow_population_by_field_name = True
 
 
@@ -65,7 +65,7 @@ class ArtistMini(BaseModel):
     name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Tag (タグ・マスター) ---
@@ -81,7 +81,7 @@ class Tag(BaseModel):
     parent_id: int | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Song (楽曲) ---
@@ -112,7 +112,7 @@ class Song(BaseModel):
     )
 
     class Config:
-        orm_mode = True  # SQLAlchemyモデルをPydanticモデルに変換
+        from_attributes = True  # SQLAlchemyモデルをPydanticモデルに変換
         allow_population_by_field_name = True
 
 
@@ -132,7 +132,7 @@ class SongArtistLink(BaseModel):
     role_detail: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- SongTieupLink (タイアップ紐付け) ---
@@ -151,7 +151,7 @@ class SongTieupLink(BaseModel):
     sort_index: int | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Tieup (タイアップ先) ---
@@ -168,7 +168,7 @@ class Tieup(BaseModel):
     parent_id: int | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TieupHierarchyNode(BaseModel):
@@ -177,7 +177,7 @@ class TieupHierarchyNode(BaseModel):
     category: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TieupDetail(Tieup):
@@ -185,7 +185,7 @@ class TieupDetail(Tieup):
     parents: List[TieupHierarchyNode] = []  # ルートからのパンくずリスト
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # SongArtistLinkの情報を簡略化して返すためのスキーマ
@@ -198,7 +198,7 @@ class ArtistLinkInfo(BaseModel):
     artist_name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # SongTieupLinkの情報を簡略化して返すためのスキーマ
@@ -212,7 +212,7 @@ class TieupLinkInfo(BaseModel):
     tieup_category: str | None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AlbumMini(BaseModel):
     id: int
@@ -222,7 +222,7 @@ class AlbumMini(BaseModel):
     album_type: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AlbumTrackInfo(BaseModel):
     album_id: int
@@ -232,7 +232,7 @@ class AlbumTrackInfo(BaseModel):
     album: AlbumMini
     song_title: str | None = None
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- MusicalWork (作品マスター) ---
@@ -245,7 +245,7 @@ class MusicalWork(MusicalWorkBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # 既存のSongスキーマを拡張し、関連情報を含める
@@ -279,7 +279,7 @@ class SongDetail(BaseModel):
     tags: List[Tag] = []  # 👈 この曲に紐づくタグのリスト
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         allow_population_by_field_name = True  # エイリアスが機能するために必要
 
 
@@ -292,7 +292,7 @@ class SongSearchResult(BaseModel):
     role_detail: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Venue (会場) ---
@@ -310,7 +310,7 @@ class Venue(BaseModel):
     notes: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- PerformanceCreate (公演の基本情報) ---
@@ -344,14 +344,14 @@ class PerformanceRoster(BaseModel):
     context: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class SongMini(BaseModel):
     id: int
     title: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- SetlistEntry (セットリストのエントリ) ---
@@ -375,7 +375,7 @@ class SetlistEntry(BaseModel):
     song: SongMini | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Tour(BaseModel):
@@ -383,7 +383,7 @@ class Tour(BaseModel):
     name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Tour (ツアー) ---
@@ -412,7 +412,7 @@ class Performance(BaseModel):
     roster_entries: List[PerformanceRoster] = []  # PerformanceRoster のリスト
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- PerformanceSummary (一覧表示用) ---
@@ -435,7 +435,7 @@ class PerformanceSummary(BaseModel):
     stage_name: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- PerformanceDetail (詳細表示用) ---
 class PerformanceDetail(Performance):
@@ -443,7 +443,7 @@ class PerformanceDetail(Performance):
     roster_entries: List[PerformanceRoster] = []
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- TourDetail (ツアー詳細・公演一覧用) ---
@@ -451,7 +451,7 @@ class TourDetail(Tour):
     performances: List[Performance] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Album (アルバム・マスター) ---
@@ -478,7 +478,17 @@ class Album(BaseModel):
     album_type: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class AlbumDiscBase(BaseModel):
+    id: int
+    disc_number: int
+    title: str | None = None
+    media_format: str | None = None
+    edition: str | None = None
+
+    class Config:
+        from_attributes = True
 
 class AlbumTrackForAlbum(BaseModel):
     id: int
@@ -486,16 +496,21 @@ class AlbumTrackForAlbum(BaseModel):
     track_number: int
     disc_number: int
     duration_ms: int | None = None
+    display_title: str | None = None
+    notes: str | None = None
+    media_format: str | None = None
+    is_unreleased: bool = False
     song: "Song"  # Songスキーマを参照
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AlbumDetail(Album):
+    discs: List[AlbumDiscBase] = []
     album_tracks: List[AlbumTrackForAlbum] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- AlbumRelationship (アルバム関連) ---
@@ -512,27 +527,38 @@ class AlbumRelationship(BaseModel):
     relationship_type: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
-class AlbumTrackCreate(BaseModel):
+class AlbumTrackBase(BaseModel):
     album_id: int
     song_id: int
     track_number: int
     disc_number: int | None = 1
     duration_ms: int | None = None
+    display_title: str | None = None
+    notes: str | None = None
+    is_unreleased: bool = False
 
+class AlbumTrackCreate(AlbumTrackBase):
+    pass
 
-class AlbumTrack(BaseModel):
-    id: int
-    album_id: int
-    song_id: int
-    track_number: int
-    disc_number: int
+class AlbumTrackUpdate(BaseModel):
+    track_number: int | None = None
+    disc_number: int | None = None
+    song_id: int | None = None
     duration_ms: int | None = None
+    media_format: str | None = None
+    display_title: str | None = None
+    notes: str | None = None
+    is_unreleased: bool | None = None
+
+
+class AlbumTrack(AlbumTrackBase):
+    id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Merchandise (グッズ・マスター) ---
@@ -547,7 +573,7 @@ class Merchandise(BaseModel):
     merch_type: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Store (店舗マスター) ---
@@ -560,7 +586,7 @@ class Store(BaseModel):
     name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- MerchandiseRelationship (グッズ関連) ---
@@ -577,7 +603,7 @@ class MerchandiseRelationship(BaseModel):
     relationship_type: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- User (ユーザー) ---
@@ -594,7 +620,7 @@ class User(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- UserPossession (ユーザーの所有物) ---
@@ -615,7 +641,7 @@ class UserPossession(BaseModel):
     notes: str | None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserAttendanceCreate(BaseModel):
@@ -633,7 +659,7 @@ class UserAttendance(BaseModel):
     notes: str | None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- UserPossession (入力用: user_id なし) ---
@@ -678,7 +704,32 @@ class SongDetailMini(BaseModel):
     spotify_song_title: str | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+# --- CD Import (手動アルバムビルダー用) ---
+class CDImportDisc(BaseModel):
+    disc_number: int
+    title: str | None = None
+    media_format: str | None = None
+    edition: str | None = None
+
+class CDImportTrack(BaseModel):
+    disc_number: int
+    track_number: int
+    title: str
+    display_title: str | None = None
+    media_format: str | None = None
+    notes: str | None = None
+    song_id: int | None = None  # Noneの場合は新規楽曲として登録
+
+class CDImportRequest(BaseModel):
+    target_album_id: int | None = None  # Noneの場合は新規アルバムとして作成
+    title: str
+    release_date: date | None = None
+    album_type: str | None = "physical"
+    discs: list[CDImportDisc] = []
+    tracks: list[CDImportTrack]
+
 
 # 循環参照解決のため
 TourDetail.update_forward_refs()

@@ -170,3 +170,139 @@ def create_album_relationship(
     db.refresh(new_link)
     
     return new_link
+
+
+# [POST] /albums/import-cd
+# ----------------------------------------------------
+@album_router.post("/import-cd", response_model=schemas.Album, tags=["Albums"])
+def import_cd_album(
+    request: schemas.CDImportRequest,
+    db: Session = Depends(models.get_db)
+):
+    """
+    手動アルバムビルダー (MusicBrainz連携) 用エンドポイント。
+    CDの構成 (ディスク番号、トラック番号) を正としてアルバムを新規作成、または上書き更新します。
+    """
+    try:
+        album = None
+        
+        if not request.target_album_id:
+            # 新規作成の場合
+            album = models.Album(
+                main_title=request.title,
+                physical_release_date=request.release_date,
+                album_type=request.album_type,
+                total_tracks=len(request.tracks),
+                is_saved=True
+            )
+            db.add(album)
+            db.commit()
+            db.refresh(album)
+        else:
+            # 上書きの場合
+            album = db.query(models.Album).filter(models.Album.id == request.target_album_id).first()
+            if not album:
+                raise HTTPException(status_code=404, detail="対象のアルバムが見つかりません。")
+            
+            # 既存のトラックとディスクをすべて削除して上書き
+            db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == album.id).delete()
+            db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album.id).delete()
+            
+            # アルバムメタデータを更新
+            album.main_title = request.title
+            if request.release_date:
+                album.physical_release_date = request.release_date
+            if request.album_type:
+                album.album_type = request.album_type
+            album.total_tracks = len(request.tracks)
+            db.commit()
+
+        # ディスク情報の保存
+        for disc_req in request.discs:
+            album_disc = models.AlbumDisc(
+                album_id=album.id,
+                disc_number=disc_req.disc_number,
+                title=disc_req.title,
+                media_format=disc_req.media_format,
+                edition=disc_req.edition
+            )
+            db.add(album_disc)
+        
+        # トラックリストを登録
+        for track_req in request.tracks:
+            song_id = track_req.song_id
+            
+            # サブスク未解禁曲（song_idがnull）の場合は新規にSongレコードを作成
+            if not song_id:
+                new_song = models.Song(
+                    title=track_req.title,
+                    spotify_song_id=None
+                )
+                db.add(new_song)
+                db.flush()
+                song_id = new_song.id
+                
+            # AlbumTrackを作成
+            album_track = models.AlbumTrack(
+                album_id=album.id,
+                song_id=song_id,
+                disc_number=track_req.disc_number,
+                track_number=track_req.track_number,
+                media_format=track_req.media_format,
+                notes=track_req.notes,
+                display_title=track_req.display_title or track_req.title
+            )
+            db.add(album_track)
+
+        db.commit()
+        db.refresh(album)
+        return album
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"CDインポート中にエラーが発生しました: {str(e)}")
+
+# [PUT] /albums/{album_id}/tracks/{track_id}
+# ----------------------------------------------------
+@album_router.put("/{album_id}/tracks/{track_id}", response_model=schemas.AlbumTrack, tags=["Albums"])
+def update_album_track(
+    album_id: int,
+    track_id: int,
+    request: schemas.AlbumTrackUpdate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    アルバム内の特定のトラックのメタデータ（表示名や備考など）を更新します。
+    """
+    track = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.id == track_id,
+        models.AlbumTrack.album_id == album_id
+    ).first()
+    
+    if not track:
+        raise HTTPException(status_code=404, detail="トラックが見つかりません。")
+        
+    if request.display_title is not None:
+        track.display_title = request.display_title
+    if request.notes is not None:
+        track.notes = request.notes
+    if request.media_format is not None:
+        track.media_format = request.media_format
+    if request.disc_number is not None:
+        track.disc_number = request.disc_number
+    if request.track_number is not None:
+        track.track_number = request.track_number
+    if request.song_id is not None:
+        # 楽曲IDが変更された場合、対象のSongが存在するか確認
+        song = db.query(models.Song).filter(models.Song.id == request.song_id).first()
+        if not song:
+            raise HTTPException(status_code=404, detail="指定された楽曲が存在しません。")
+        track.song_id = request.song_id
+    if request.is_unreleased is not None:
+        track.is_unreleased = request.is_unreleased
+        
+    db.commit()
+    db.refresh(track)
+    return track
