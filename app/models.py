@@ -243,6 +243,7 @@ class Song(Base):
     jasrac_title = Column(String(255), nullable=True)
     lyrics = Column(Text, nullable=True)
     work_id = Column(Integer, ForeignKey("musical_works.id"), nullable=True)
+    is_video = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     work = relationship("MusicalWork", back_populates="songs")

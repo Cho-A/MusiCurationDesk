@@ -208,19 +208,56 @@ def read_song(song_id: int, db: Session = Depends(models.get_db)):
             .filter(models.Song.work_id == db_song.work_id).all()
             
         combined_albums = []
+        other_versions = []
         for s in all_songs_in_work:
             for track in s.album_links:
                 # SQLAlchemyのオブジェクトに一時的な属性を付与
                 setattr(track, "song_title", s.title)
                 combined_albums.append(track)
+            if s.id != db_song.id:
+                other_versions.append(s)
                 
         # 自身のみのアルバムリストを、合算したアルバムリストで上書き
         db_song.album_links = combined_albums
-
-    # other_versionsはUIから廃止するため空にする
-    db_song.other_versions = []
+        db_song.other_versions = other_versions
+    else:
+        db_song.other_versions = []
 
     return db_song
+
+@router.patch("/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
+def patch_song(
+    song_id: int,
+    song_update: schemas.SongUpdate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    楽曲マスターのプロパティ (title, work_id, is_video など) を個別更新します。
+    """
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if db_song is None:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+
+    if song_update.title is not None:
+        db_song.title = song_update.title
+    if song_update.is_video is not None:
+        db_song.is_video = song_update.is_video
+    if song_update.work_id is not None:
+        db_song.work_id = song_update.work_id
+    if song_update.lyrics is not None:
+        db_song.lyrics = song_update.lyrics
+    if song_update.jasrac_code is not None:
+        db_song.jasrac_code = song_update.jasrac_code
+    if song_update.jasrac_title is not None:
+        db_song.jasrac_title = song_update.jasrac_title
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"更新エラー: {e}")
+
+    return read_song(song_id=song_id, db=db)
 
 @router.delete("/{song_id}", tags=["Songs"], status_code=204)
 def delete_song(song_id: int, db: Session = Depends(models.get_db)):

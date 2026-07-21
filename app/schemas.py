@@ -258,6 +258,7 @@ class SongDetail(BaseModel):
     jasrac_title: str | None = None
     lyrics: str | None = None
     work_id: int | None = None
+    is_video: bool = False
     work: MusicalWork | None = None
     
     other_versions: List["SongDetailMini"] = []
@@ -349,9 +350,18 @@ class PerformanceRoster(BaseModel):
 class SongMini(BaseModel):
     id: int
     title: str
+    is_video: bool = False
 
     class Config:
         from_attributes = True
+
+class SongUpdate(BaseModel):
+    title: str | None = None
+    work_id: int | None = None
+    is_video: bool | None = None
+    lyrics: str | None = None
+    jasrac_code: str | None = None
+    jasrac_title: str | None = None
 
 
 # --- SetlistEntry (セットリストのエントリ) ---
@@ -702,6 +712,7 @@ class SongDetailMini(BaseModel):
     id: int
     title: str
     spotify_song_title: str | None = None
+    is_video: bool = False
 
     class Config:
         from_attributes = True

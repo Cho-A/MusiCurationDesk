@@ -20,6 +20,7 @@ from .routers import (
     external_search,
     dashboard,
     musicbrainz,
+    works,
 )
 
 # --- 1. FastAPIアプリの初期化 ---
@@ -58,6 +59,7 @@ app.include_router(auth.token_router)
 app.include_router(auth.refresh_router)
 app.include_router(auth.logout_router)
 app.include_router(external_search.router)
+app.include_router(works.router)
 app.include_router(dashboard.router)
 
 # ReactアプリのURL（開発中は http://localhost:3000）を許可リストに入れる
