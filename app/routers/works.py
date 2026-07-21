@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from .. import models, schemas
 
 router = APIRouter(
@@ -17,7 +17,9 @@ def search_works(
     """
     抽象的な楽曲 (MusicalWork) の一覧・検索を行います。
     """
-    query = db.query(models.MusicalWork)
+    query = db.query(models.MusicalWork).options(
+        joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist)
+    )
     if q:
         query = query.filter(models.MusicalWork.title.ilike(f"%{q}%"))
     return query.limit(limit).all()

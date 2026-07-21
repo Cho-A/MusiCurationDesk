@@ -201,6 +201,16 @@ class ArtistLinkInfo(BaseModel):
         from_attributes = True
 
 
+class WorkArtistLinkInfo(BaseModel):
+    artist_id: int
+    role_category: str
+    role_detail: str | None = None
+    artist_name: str
+
+    class Config:
+        from_attributes = True
+
+
 # SongTieupLinkの情報を簡略化して返すためのスキーマ
 class TieupLinkInfo(BaseModel):
     tieup_id: int
@@ -231,6 +241,9 @@ class AlbumTrackInfo(BaseModel):
     duration_ms: int | None = None
     album: AlbumMini
     song_title: str | None = None
+    song_id: int | None = None
+    is_video: bool | None = None
+    display_title: str | None = None
     class Config:
         from_attributes = True
 
@@ -243,9 +256,14 @@ class MusicalWorkBase(BaseModel):
 
 class MusicalWork(MusicalWorkBase):
     id: int
+    artists: List[WorkArtistLinkInfo] = Field(
+        default=[],
+        alias="artist_links",
+    )
 
     class Config:
         from_attributes = True
+        allow_population_by_field_name = True
 
 
 # 既存のSongスキーマを拡張し、関連情報を含める
@@ -259,6 +277,8 @@ class SongDetail(BaseModel):
     lyrics: str | None = None
     work_id: int | None = None
     is_video: bool = False
+    version_name: str | None = None
+    is_streaming_available: bool = True
     work: MusicalWork | None = None
     
     other_versions: List["SongDetailMini"] = []
@@ -351,6 +371,8 @@ class SongMini(BaseModel):
     id: int
     title: str
     is_video: bool = False
+    version_name: str | None = None
+    is_streaming_available: bool = True
 
     class Config:
         from_attributes = True
@@ -359,6 +381,8 @@ class SongUpdate(BaseModel):
     title: str | None = None
     work_id: int | None = None
     is_video: bool | None = None
+    version_name: str | None = None
+    is_streaming_available: bool | None = None
     lyrics: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None
@@ -713,6 +737,8 @@ class SongDetailMini(BaseModel):
     title: str
     spotify_song_title: str | None = None
     is_video: bool = False
+    version_name: str | None = None
+    is_streaming_available: bool = True
 
     class Config:
         from_attributes = True

@@ -142,9 +142,16 @@ class Artist(Base):
         cascade="all, delete-orphan",
     )
 
-    # 3. SongArtistLink: 多対多 (曲の貢献度)
+    # 3. SongArtistLink: 多対多 (曲の貢献度 - 編曲、演奏など)
     song_links = relationship(
         "SongArtistLink",
+        back_populates="artist",
+        cascade="all, delete-orphan",
+    )
+
+    # 3.5. WorkArtistLink: 多対多 (楽曲の貢献度 - 作詞、作曲など)
+    work_links = relationship(
+        "WorkArtistLink",
         back_populates="artist",
         cascade="all, delete-orphan",
     )
@@ -224,13 +231,53 @@ class ArtistRelationship(Base):
 
 class MusicalWork(Base):
     __tablename__ = "musical_works"
+
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False, index=True)
-    jasrac_code = Column(String(20), nullable=True, index=True, unique=True)
-    iswc_code = Column(String(20), nullable=True, unique=True) # 国際標準音楽作品コード
-    
-    # 録音物 (Song) への1対多
+    title = Column(String(255), index=True, nullable=False)
+    jasrac_code = Column(String(20), unique=True, nullable=True)
+    iswc_code = Column(String(20), unique=True, nullable=True)
+
     songs = relationship("Song", back_populates="work")
+    artist_links = relationship("WorkArtistLink", back_populates="work", cascade="all, delete-orphan")
+
+
+class SongWorksLink(Base):
+    __tablename__ = "song_works_link"
+
+    id = Column(Integer, primary_key=True, index=True)
+    song_id = Column(Integer, ForeignKey("songs.id"), nullable=False)
+    work_id = Column(Integer, ForeignKey("musical_works.id"), nullable=False)
+    order_index = Column(Integer, nullable=False, default=0)
+
+    __table_args__ = (
+        UniqueConstraint("song_id", "order_index", name="_song_work_order_uc"),
+        Index("idx_song_works", "song_id", "order_index"),
+    )
+
+    song = relationship("Song", back_populates="works")
+    work = relationship("MusicalWork")
+
+
+class WorkArtistLink(Base):
+    __tablename__ = "work_artists_link"
+
+    id = Column(Integer, primary_key=True, index=True)
+    work_id = Column(Integer, ForeignKey("musical_works.id"), nullable=False)
+    artist_id = Column(Integer, ForeignKey("artists.id"), nullable=False)
+    role_category = Column(String(50), nullable=False)  # "Lyricist", "Composer"
+    role_detail = Column(String(100), nullable=True)    # 補足
+
+    __table_args__ = (
+        Index("idx_work_artist_role", "work_id", "artist_id", "role_category"),
+        UniqueConstraint("work_id", "artist_id", "role_category", "role_detail", name="_work_artist_role_uc"),
+    )
+
+    @property
+    def artist_name(self):
+        return self.artist.name if self.artist else None
+
+    artist = relationship("Artist", back_populates="work_links")
+    work = relationship("MusicalWork", back_populates="artist_links")
 
 
 class Song(Base):
@@ -244,6 +291,8 @@ class Song(Base):
     lyrics = Column(Text, nullable=True)
     work_id = Column(Integer, ForeignKey("musical_works.id"), nullable=True)
     is_video = Column(Boolean, default=False, nullable=False)
+    version_name = Column(String, nullable=True)
+    is_streaming_available = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     work = relationship("MusicalWork", back_populates="songs")
@@ -251,6 +300,7 @@ class Song(Base):
     tieup_links = relationship("SongTieupLink", back_populates="song")
     setlist_entries = relationship("SetlistEntry", back_populates="song")
     album_links = relationship("AlbumTrack", back_populates="song")
+    works = relationship("SongWorksLink", back_populates="song", cascade="all, delete-orphan", order_by="SongWorksLink.order_index")
 
     # 楽曲タグへのリレーション (中間テーブル song_tags を使用)
     tags = relationship(
