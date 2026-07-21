@@ -46,12 +46,14 @@ interface SongDetailData {
   id: number;
   title: string;
   spotify_song_id?: string;
+  is_video?: boolean;
   artist_links: ArtistLink[];
   tieup_links: TieupLink[];
   album_links?: AlbumTrackInfo[];
   tags?: TagData[];
-  other_versions?: { id: number; title: string }[];
+  other_versions?: { id: number; title: string; is_video?: boolean; spotify_song_title?: string }[];
   work_id?: number;
+  work?: { id: number; title: string };
 }
 
 const SongDetail = () => {
@@ -116,25 +118,19 @@ const SongDetail = () => {
     }
   };
 
-  const handleUpdateTitle = async () => {
-    if (!editTitleValue.trim()) return;
+  const handleToggleIsVideo = async () => {
+    if (!song) return;
+    const nextVal = !song.is_video;
     try {
-      const payload = {
-        title: editTitleValue,
-        // 他の必須フィールドがある場合はsongオブジェクトから補完する。
-        // PUTエンドポイントはSongCreateスキーマを要求する。
-        spotify_song_id: song?.spotify_song_id || null
-      };
       const res = await fetch(`http://127.0.0.1:8000/songs/${id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ is_video: nextVal })
       });
       if (res.ok) {
-        setIsEditingTitle(false);
         fetchSong();
       } else {
-        alert("タイトルの更新に失敗しました");
+        alert("種別の更新に失敗しました");
       }
     } catch (err) {
       console.error(err);
@@ -226,7 +222,18 @@ const SongDetail = () => {
                   }}
                   autoFocus
                 />
-                <button onClick={handleUpdateTitle} style={{ background: '#1DB954', color: '#000', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
+                <button onClick={async () => {
+                  if (!editTitleValue.trim()) return;
+                  const res = await fetch(`http://127.0.0.1:8000/songs/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: editTitleValue })
+                  });
+                  if (res.ok) {
+                    setIsEditingTitle(false);
+                    fetchSong();
+                  }
+                }} style={{ background: '#1DB954', color: '#000', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
                   <Check size={20} />
                 </button>
                 <button onClick={() => setIsEditingTitle(false)} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
@@ -234,7 +241,7 @@ const SongDetail = () => {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                 <h1 style={{ 
                   fontSize: '2.5rem', 
                   fontWeight: 800, 
@@ -251,10 +258,35 @@ const SongDetail = () => {
                     display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)', cursor: 'pointer',
                     transition: 'background-color 0.2s'
                   }}
-                  title="タイトル・バージョン名を編集"
+                  title="マスタータイトルを編集"
                 >
                   <Edit2 size={16} />
                 </button>
+
+                {/* 音源/映像 トグルバッジ */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={handleToggleIsVideo}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 14px', borderRadius: '20px', border: 'none',
+                      background: song.is_video ? 'rgba(255, 77, 77, 0.15)' : 'rgba(29, 185, 84, 0.15)',
+                      color: song.is_video ? '#ff4d4d' : '#1DB954',
+                      fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                      transition: 'transform 0.1s ease'
+                    }}
+                    title="この登録データの種別（音源か映像作品か）を切り替えます"
+                  >
+                    {song.is_video ? '🎬 映像作品 (MV/Live)' : '🎵 音源'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 原曲 (楽曲) 情報 */}
+            {song.work && (
+              <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>原曲 (楽曲): <strong style={{ color: '#fff' }}>{song.work.title}</strong></span>
               </div>
             )}
             
@@ -278,6 +310,38 @@ const SongDetail = () => {
         </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+        {/* 関連マスター・別バージョン */}
+        {song.other_versions && song.other_versions.length > 0 && (
+          <div>
+            <h2 style={{ fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              同じ原曲の別バージョン・映像作品
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+              {song.other_versions.map((ver) => (
+                <Link key={ver.id} to={`/songs/${ver.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div style={{
+                    padding: '14px 18px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.08)', transition: 'all 0.2s ease',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: '1rem' }}>{ver.title}</div>
+                    <span style={{
+                      fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px',
+                      background: ver.is_video ? 'rgba(255, 77, 77, 0.15)' : 'rgba(29, 185, 84, 0.15)',
+                      color: ver.is_video ? '#ff4d4d' : '#1DB954'
+                    }}>
+                      {ver.is_video ? '🎬 映像' : '🎵 音源'}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* クレジット */}
         <div>
           <h2 style={{ fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '16px' }}>
@@ -382,15 +446,15 @@ const SongDetail = () => {
           </div>
         </div>
 
-        {/* Advanced Management (作品の関連付け管理) */}
+        {/* 高級管理（原曲との紐付け管理） */}
         <div style={{ marginTop: '24px', padding: '24px', background: 'rgba(255,0,0,0.03)', border: '1px solid rgba(255,0,0,0.1)', borderRadius: '12px' }}>
           <h2 style={{ fontSize: '1.2rem', color: '#ff6b6b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Advanced Management
+            楽曲・原曲との紐付け管理
           </h2>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
-            現在の作品(Work) ID: <strong>{song.work_id || '未設定'}</strong>
+            現在の原曲 ID: <strong>{song.work_id || '未設定'}</strong> ({song.work?.title || '未登録'})
             <br />
-            同名異曲の分離や、別バージョンの手動統合を行います。
+            同名異曲を別の楽曲として独立させたり、誤って別々に登録されたバージョンを同じ原曲にまとめることができます。
           </div>
           <div style={{ display: 'flex', gap: '16px' }}>
             <button 
