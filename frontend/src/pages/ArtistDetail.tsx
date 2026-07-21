@@ -110,12 +110,19 @@ const ArtistDetail = () => {
 
       <div style={{ display: 'flex', gap: '32px', alignItems: 'center', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
         {artist.image_url ? (
-          <img src={artist.image_url} alt={artist.name} style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--border-color)', boxShadow: 'var(--shadow-md)', flexShrink: 0 }} />
-        ) : (
-           <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0 }}>
-              <Users size={64} color="var(--text-tertiary)" />
-           </div>
-        )}
+          <img 
+            src={artist.image_url} 
+            alt="" 
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling && ((e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex');
+            }}
+            style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--border-color)', boxShadow: 'var(--shadow-md)', flexShrink: 0 }} 
+          />
+        ) : null}
+        <div style={{ display: artist.image_url ? 'none' : 'flex', width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0 }}>
+          <Users size={64} color="var(--text-tertiary)" />
+        </div>
         <div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
             {artist.tags && artist.tags.map(tag => (
@@ -124,7 +131,16 @@ const ArtistDetail = () => {
               </span>
             ))}
           </div>
-          <h1 style={{ margin: '0 0 16px 0', fontSize: '2.5rem', fontWeight: 800 }}>{artist.name}</h1>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: 800 }}>{artist.name}</h1>
+          
+          {artist.spotify_artist_id && (
+            <a href={`https://open.spotify.com/artist/${artist.spotify_artist_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1DB954', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.56.3z" />
+              </svg>
+              Spotifyで開く
+            </a>
+          )}
           
           {artist.members && artist.members.length > 0 && (
             <div style={{ marginBottom: '12px', color: 'var(--text-secondary)', fontSize: '1.05rem', display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: 'column' }}>
@@ -134,14 +150,21 @@ const ArtistDetail = () => {
               </div>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '4px' }}>
                 {artist.members.map(m => (
-                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: m.end_date ? 0.7 : 1 }}>
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {m.image_url ? (
-                      <img src={m.image_url} alt={m.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                         <Users size={16} color="var(--text-tertiary)" />
-                      </div>
-                    )}
+                      <img 
+                        src={m.image_url} 
+                        alt=""
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling && ((e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex');
+                        }}
+                        style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} 
+                      />
+                    ) : null}
+                    <div style={{ display: m.image_url ? 'none' : 'flex', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center' }}>
+                       <Users size={16} color="var(--text-tertiary)" />
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <Link to={`/artists/${m.id}`} style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.95rem' }}>
                         {m.name}
