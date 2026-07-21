@@ -122,13 +122,15 @@ const Songs = () => {
 
   // 楽曲カードコンポーネント
   const SongCard = ({ song }: { song: Song }) => (
-    <Link to={`/songs/${song.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Link to={`/songs/${song.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
       <div style={{
         backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', padding: '16px',
         display: 'flex', alignItems: 'center', gap: '16px',
         transition: 'all 0.2s ease', cursor: 'pointer',
         boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-        border: '1px solid var(--border-color)'
+        border: '1px solid var(--border-color)',
+        height: '100%',
+        boxSizing: 'border-box'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
