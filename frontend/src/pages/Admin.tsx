@@ -96,7 +96,7 @@ const Admin = () => {
         <div>
           <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: 700 }}>開発者ツール (Dev Tools)</h1>
           <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-            データの一括インポート・管理ユーティリティ。ログインユーザー: <span style={{ color: 'white' }}>{user?.username}</span>
+            データの一括インポート・管理ユーティリティ。ログインユーザー: <span style={{ color: 'var(--text-primary)' }}>{user?.username}</span>
           </p>
         </div>
       </div>
@@ -147,7 +147,7 @@ const Admin = () => {
               placeholder="Spotify Artist ID" 
               value={artistId}
               onChange={(e) => setArtistId(e.target.value)}
-              style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white' }}
+              style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
             />
             <button type="submit" disabled={loading} style={{
               padding: '0 24px', borderRadius: '8px', background: '#1DB954', color: '#000', fontWeight: 600, border: 'none', cursor: loading ? 'wait' : 'pointer'
@@ -172,7 +172,7 @@ const Admin = () => {
               placeholder="Spotify Playlist ID" 
               value={playlistId}
               onChange={(e) => setPlaylistId(e.target.value)}
-              style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white' }}
+              style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
             />
             <button type="submit" disabled={loading} style={{
               padding: '0 24px', borderRadius: '8px', background: '#1DB954', color: '#000', fontWeight: 600, border: 'none', cursor: loading ? 'wait' : 'pointer'
