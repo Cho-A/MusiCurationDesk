@@ -156,6 +156,11 @@ class Artist(Base):
         cascade="all, delete-orphan",
     )
 
+    albums = relationship(
+        "Album",
+        back_populates="artist",
+    )
+
     # 4. Performance: 1対多 (メインアクトとしての公演)
     performances = relationship(
         "Performance",
@@ -453,6 +458,8 @@ class Album(Base):
     spotify_album_id = Column(String(100), nullable=True, unique=True)
     cover_image_url = Column(String(500), nullable=True)
     album_type = Column(String(50), nullable=True)  # "album", "single", "compilation", "dvd", etc.
+
+    artist = relationship("Artist", back_populates="albums")
 
     album_tracks = relationship("AlbumTrack", back_populates="album", cascade="all, delete-orphan")
     discs = relationship("AlbumDisc", back_populates="album", cascade="all, delete-orphan")
