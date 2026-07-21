@@ -680,8 +680,7 @@ const SongDetail = () => {
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)', color: '#ffa500',
-                border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
-                marginLeft: 'auto'
+                border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
               }}
               title="このバージョンを別のバージョンにマージして1つにまとめます"
             >

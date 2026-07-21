@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+
 import { Search, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -85,25 +85,7 @@ const Header = () => {
               <strong style={{ fontSize: '0.95rem' }}>{user.username}</strong>
             </div>
           </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '50%',
-              backgroundColor: 'var(--bg-tertiary)',
-              color: 'var(--text-secondary)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-              fontWeight: 'bold'
-            }}>
-              G
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ゲスト</span>
-              <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                <Link to="/login" style={{ color: 'inherit', textDecoration: 'none' }}>ログイン</Link> / 
-                <Link to="/register" style={{ color: 'inherit', textDecoration: 'none' }}>新規登録</Link>
-              </strong>
-            </div>
-          </div>
-        )}
+        ) : null}
       </div>
     </header>
   );
