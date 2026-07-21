@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Plus, Users } from 'lucide-react';
+import { Calendar, MapPin, Plus, Users, Download } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
 
@@ -33,6 +33,11 @@ const Concerts = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [showTourModal, setShowTourModal] = useState(false);
+  const [showSetlistImportModal, setShowSetlistImportModal] = useState(false);
+  const [importQuery, setImportQuery] = useState("");
+  const [importResults, setImportResults] = useState<any[]>([]);
+  const [importing, setImporting] = useState(false);
+
   const [newTourName, setNewTourName] = useState("");
   const [savingTour, setSavingTour] = useState(false);
 
@@ -75,6 +80,33 @@ const Concerts = () => {
     } finally {
       setSavingTour(false);
     }
+  };
+
+  const handleSearchSetlist = async () => {
+    if (!importQuery.trim()) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setImportResults(data.setlist || []);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleImportSetlist = async (setlistId: string) => {
+    setImporting(true);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/external/setlistfm/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setlist_id: setlistId })
+      });
+      if (res.ok) {
+        setShowSetlistImportModal(false);
+        fetchData();
+      }
+    } catch (err) { console.error(err); }
+    finally { setImporting(false); }
   };
 
   const standalonePerformances = performances.filter(p => !p.tour);
@@ -122,17 +154,30 @@ const Concerts = () => {
             placeholder="イベント名を検索..."
           />
         </div>
-        <button
-          onClick={() => activeTab === 'tours' ? setShowTourModal(true) : alert('単独ライブはまだ未実装です')}
-          style={{
-            background: '#1DB954', color: '#fff', border: 'none',
-            padding: '10px 20px', borderRadius: '24px', fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '8px'
-          }}
-        >
-          <Plus size={18} />
-          {activeTab === 'tours' ? '新規ツアー登録' : '新規ライブ登録'}
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => setShowTourModal(true)}
+            style={{
+              background: '#1DB954', color: '#fff', border: 'none',
+              padding: '10px 20px', borderRadius: '24px', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '8px'
+            }}
+          >
+            <Plus size={18} />
+            {activeTab === 'tours' ? '新規ツアー登録' : '新規ライブ登録'}
+          </button>
+          <button
+            onClick={() => setShowSetlistImportModal(true)}
+            style={{
+              background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+              padding: '10px 20px', borderRadius: '24px', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '8px'
+            }}
+          >
+            <Download size={18} />
+            インポート
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -225,6 +270,71 @@ const Concerts = () => {
                 }}
               >
                 {savingTour ? '登録中...' : '登録'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Setlist.fm インポートモーダル */}
+      {showSetlistImportModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-secondary)', padding: '32px', borderRadius: '12px',
+            width: '100%', maxWidth: '600px', border: '1px solid var(--border-color)',
+            maxHeight: '80vh', overflowY: 'auto'
+          }}>
+            <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>Setlist.fm からインポート</h2>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+              <input
+                type="text"
+                value={importQuery}
+                onChange={e => setImportQuery(e.target.value)}
+                placeholder="アーティスト名で検索..."
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px', boxSizing: 'border-box',
+                  backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)', outline: 'none'
+                }}
+              />
+              <button
+                onClick={handleSearchSetlist}
+                style={{ padding: '0 24px', borderRadius: '8px', background: '#1DB954', color: '#fff', border: 'none', cursor: 'pointer' }}
+              >
+                検索
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+              {importResults.map((sl: any) => (
+                <div key={sl.id} style={{ 
+                  background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                 }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{sl.eventDate} - {sl.tour?.name || 'No Tour Name'}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{sl.venue?.name}, {sl.venue?.city?.name}</div>
+                  </div>
+                  <button
+                    onClick={() => handleImportSetlist(sl.id)}
+                    disabled={importing}
+                    style={{ padding: '8px 16px', borderRadius: '16px', background: '#1DB954', color: '#fff', border: 'none', cursor: 'pointer' }}
+                  >
+                    インポート
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setShowSetlistImportModal(false)}
+                style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
+              >
+                閉じる
               </button>
             </div>
           </div>

@@ -18,6 +18,7 @@ interface Performance {
   name: string;
   date: string;
   event_type: string;
+  stage_name?: string;
   venue?: Venue;
   main_artist?: Artist;
 }
@@ -88,6 +89,15 @@ const TourDetail = () => {
   if (loading) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Tour...</div>;
   if (!tour) return <div style={{ padding: '64px', textAlign: 'center', color: '#ff4444' }}>Tour not found.</div>;
 
+  // 開催日ごとに公演をグループ化
+  const groupedPerformances = tour.performances.reduce((acc, perf) => {
+    if (!acc[perf.date]) acc[perf.date] = [];
+    acc[perf.date].push(perf);
+    return acc;
+  }, {} as Record<string, Performance[]>);
+
+  const sortedDates = Object.keys(groupedPerformances).sort();
+
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 16px', paddingBottom: '60px' }}>
       {/* 戻るボタン */}
@@ -126,62 +136,77 @@ const TourDetail = () => {
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {tour.performances.map((perf) => (
-          <Link key={perf.id} to={`/performances/${perf.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              padding: '24px',
-              border: '1px solid var(--border-color)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <div>
-                  <span style={{ 
-                    background: 'var(--bg-tertiary)', 
-                    padding: '4px 10px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75rem',
-                    marginRight: '8px',
-                    border: '1px solid var(--border-color)'
-                  }}>
-                    {perf.event_type}
-                  </span>
-                  <span style={{ color: 'var(--primary-color)', fontWeight: 600, fontSize: '0.9rem' }}>{perf.date}</span>
-                </div>
-              </div>
-              
-              <h2 style={{ margin: '0 0 12px 0', fontSize: '1.4rem', color: 'var(--text-primary)' }}>{perf.name}</h2>
-              
-              <div style={{ display: 'flex', gap: '24px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                {perf.main_artist ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Users size={16} /> {perf.main_artist.name}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#FF9800', fontWeight: 600 }}>
-                    ✨ Special Session
-                  </div>
-                )}
-                {perf.venue && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <MapPin size={16} /> {perf.venue.name} {perf.venue.prefecture && `(${perf.venue.prefecture})`}
-                  </div>
-                )}
-              </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        {sortedDates.map((date) => (
+          <div key={date}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>{date}</h2>
+              <div style={{ height: '1px', flex: 1, backgroundColor: 'var(--border-color)' }}></div>
             </div>
-          </Link>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+              {groupedPerformances[date].map((perf) => (
+                <Link key={perf.id} to={`/performances/${perf.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div style={{
+                    background: 'var(--bg-secondary)',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    border: '1px solid var(--border-color)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    cursor: 'pointer',
+                    height: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <span style={{ 
+                        background: 'var(--bg-tertiary)', 
+                        padding: '4px 10px', 
+                        borderRadius: '12px', 
+                        fontSize: '0.75rem',
+                        border: '1px solid var(--border-color)'
+                      }}>
+                        {perf.event_type}
+                      </span>
+                    </div>
+                    
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '1.2rem', color: 'var(--text-primary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {perf.name}
+                    </h3>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      {perf.stage_name && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                          🎤 {perf.stage_name}
+                        </div>
+                      )}
+                      {perf.main_artist ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Users size={16} /> {perf.main_artist.name}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#FF9800', fontWeight: 600 }}>
+                          ✨ Special Session
+                        </div>
+                      )}
+                      {perf.venue && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <MapPin size={16} /> {perf.venue.name} {perf.venue.prefecture && `(${perf.venue.prefecture})`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
