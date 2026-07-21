@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Disc, Download, AlertCircle } from 'lucide-react';
+import { Search, Disc, Download, PlusCircle } from 'lucide-react';
+import CDImportBuilderModal from '../components/CDImportBuilderModal';
 
 interface MBRelease {
   id: string;
@@ -10,22 +11,27 @@ interface MBRelease {
   artist: string;
 }
 
+interface MBTrack {
+  position: number;
+  number: string;
+  title: string;
+  length: number;
+}
+
+interface MBMedia {
+  position: number;
+  title?: string;
+  format: string;
+  track_count: number;
+  tracks: MBTrack[];
+}
+
 interface MBReleaseDetail {
   id: string;
   title: string;
   date: string;
   barcode: string;
-  media: {
-    position: number;
-    format: string;
-    track_count: number;
-    tracks: {
-      position: number;
-      number: string;
-      title: string;
-      length: number;
-    }[];
-  }[];
+  media: MBMedia[];
 }
 
 const MusicBrainzImport = () => {
@@ -33,6 +39,9 @@ const MusicBrainzImport = () => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<MBRelease[]>([]);
   const [selectedRelease, setSelectedRelease] = useState<MBReleaseDetail | null>(null);
+  
+  // モーダルステート
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,11 +50,16 @@ const MusicBrainzImport = () => {
     try {
       const res = await fetch(`http://127.0.0.1:8000/musicbrainz/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
-      setResults(data);
+      
+      if (!res.ok) {
+        throw new Error(data.detail || '検索に失敗しました');
+      }
+      
+      setResults(Array.isArray(data) ? data : []);
       setSelectedRelease(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('検索に失敗しました');
+      alert(`検索に失敗しました: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -56,10 +70,15 @@ const MusicBrainzImport = () => {
     try {
       const res = await fetch(`http://127.0.0.1:8000/musicbrainz/releases/${id}`);
       const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.detail || '詳細取得に失敗しました');
+      }
+      
       setSelectedRelease(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('詳細取得に失敗しました');
+      alert(`詳細取得に失敗しました: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -182,16 +201,36 @@ const MusicBrainzImport = () => {
                 </div>
               ))}
 
-              <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(255,200,0,0.1)', border: '1px solid rgba(255,200,0,0.3)', borderRadius: '8px', display: 'flex', gap: '12px' }}>
-                <AlertCircle size={24} color="#FFB800" />
-                <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)' }}>
-                  このフェーズ (Phase 20) では MusicBrainz からの検索とトラックリスト表示までの実装となります。実際のMusiCurationDeskデータベースへのインポート（アルバムおよび楽曲の生成・紐付け）は、次のフェーズで実装されます。
+              <div style={{ marginTop: '24px', padding: '24px', background: 'rgba(29,185,84,0.1)', border: '1px solid rgba(29,185,84,0.3)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: '#1DB954' }}>このCDをインポート</h4>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    トラック構成をMusiCurationDeskの楽曲データベースと突き合わせ、アルバムとして保存します。既存のSpotifyアルバムに上書きマージすることも可能です。
+                  </p>
                 </div>
+                <button 
+                  onClick={() => setIsBuilderOpen(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: '#1DB954', color: '#000', border: 'none', borderRadius: '24px',
+                    padding: '12px 32px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(29,185,84,0.3)'
+                  }}
+                >
+                  <PlusCircle size={20} />
+                  手動アルバムビルダーを起動
+                </button>
               </div>
             </div>
           )}
         </div>
       </div>
+      
+      <CDImportBuilderModal 
+        isOpen={isBuilderOpen}
+        onClose={() => setIsBuilderOpen(false)}
+        release={selectedRelease}
+      />
     </div>
   );
 };

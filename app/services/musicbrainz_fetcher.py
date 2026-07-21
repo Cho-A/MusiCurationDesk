@@ -1,8 +1,9 @@
 import requests
+import time
 from typing import List, Dict, Any
 
 MB_API_BASE = "https://musicbrainz.org/ws/2"
-USER_AGENT = "MusiCurationDesk/1.0 ( your-email@example.com )"
+USER_AGENT = "MusiCurationDesk/1.0 ( https://github.com/takanoryo/MusiCurationDesk )"
 
 def search_releases(query: str, limit: int = 10) -> List[Dict[str, Any]]:
     """
@@ -16,8 +17,15 @@ def search_releases(query: str, limit: int = 10) -> List[Dict[str, Any]]:
     }
     headers = {"User-Agent": USER_AGENT}
     
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        # 1度だけリトライ
+        time.sleep(1.5)
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        
     data = response.json()
     
     releases = []
@@ -43,8 +51,15 @@ def get_release_details(release_id: str) -> Dict[str, Any]:
     }
     headers = {"User-Agent": USER_AGENT}
     
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        # 1度だけリトライ
+        time.sleep(1.5)
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        
     data = response.json()
     
     media = []
