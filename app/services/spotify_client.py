@@ -16,17 +16,17 @@ class SpotifyClient:
     
     def search_artists(self, query: str, limit: int = 10):
         """Spotifyからアーティストを検索する"""
-        results = self.sp.search(q=query, type='artist', limit=limit)
+        results = self.sp.search(q=query, type='artist', limit=limit, market='JP')
         return results['artists']['items']
 
     def search_tracks(self, query: str, limit: int = 10):
         """Spotifyから楽曲を検索する"""
-        results = self.sp.search(q=query, type='track', limit=limit)
+        results = self.sp.search(q=query, type='track', limit=limit, market='JP')
         return results['tracks']['items']
 
     def get_track(self, track_id: str):
         """特定のトラックIDの情報を取得する"""
-        return self.sp.track(track_id)
+        return self.sp.track(track_id, market='JP')
 
     def get_artist(self, artist_id: str):
         """特定のアーティストIDの情報を取得する"""
@@ -34,17 +34,17 @@ class SpotifyClient:
 
     def get_artist_albums(self, artist_id: str, limit: int = 50):
         """特定のアーティストのアルバム一覧を取得する"""
-        results = self.sp.artist_albums(artist_id, album_type='album,single', limit=limit)
+        results = self.sp.artist_albums(artist_id, album_type='album,single', limit=limit, market='JP')
         return results['items']
 
     def get_album_tracks(self, album_id: str, limit: int = 50):
         """特定のアルバムのトラック一覧を取得する"""
-        results = self.sp.album_tracks(album_id, limit=limit)
+        results = self.sp.album_tracks(album_id, limit=limit, market='JP')
         return results['items']
 
     def get_playlist_tracks(self, playlist_id: str, limit: int = 100):
         """特定のプレイリストのトラック一覧を取得する"""
-        results = self.sp.playlist_tracks(playlist_id, limit=limit)
+        results = self.sp.playlist_tracks(playlist_id, limit=limit, market='JP')
         # プレイリストの items は { added_at, added_by, is_local, track: { ... } } という構造
         return [item['track'] for item in results['items'] if item.get('track')]
 

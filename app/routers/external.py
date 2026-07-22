@@ -111,7 +111,11 @@ def import_spotify_track(req: ImportRequest, db: Session = Depends(models.get_db
         ).first()
         
         if not db_song:
-            db_song = models.Song(title=track_name)
+            db_song = models.Song(
+                title=track_name, 
+                spotify_song_id=track['id'],
+                is_streaming_available=track.get('is_playable', True)
+            )
             db.add(db_song)
             db.commit()
             db.refresh(db_song)
