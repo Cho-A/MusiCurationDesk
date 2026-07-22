@@ -442,3 +442,53 @@ def copy_setlist(
         raise HTTPException(status_code=400, detail=f"Failed to copy setlist: {e}")
         
     return target_perf
+
+from pydantic import BaseModel
+
+class BulkUpdateTourRequest(BaseModel):
+    performance_ids: List[int]
+    tour_id: int | None
+
+@performance_router.post("/bulk-update-tour")
+def bulk_update_tour(req: BulkUpdateTourRequest, db: Session = Depends(models.get_db)):
+    perfs = db.query(models.Performance).filter(models.Performance.id.in_(req.performance_ids)).all()
+    for perf in perfs:
+        perf.tour_id = req.tour_id
+    db.commit()
+    return {"message": f"Updated {len(perfs)} performances."}
+
+class BulkCopySetlistRequest(BaseModel):
+    target_performance_ids: List[int]
+    source_performance_id: int
+
+@performance_router.post("/bulk-copy-setlist")
+def bulk_copy_setlist(req: BulkCopySetlistRequest, db: Session = Depends(models.get_db)):
+    source_perf = db.query(models.Performance).filter(models.Performance.id == req.source_performance_id).first()
+    if not source_perf:
+        raise HTTPException(status_code=404, detail="Source performance not found")
+        
+    if not source_perf.setlist_entries:
+        raise HTTPException(status_code=400, detail="Source performance has no setlist")
+        
+    target_perfs = db.query(models.Performance).filter(models.Performance.id.in_(req.target_performance_ids)).all()
+    updated_count = 0
+    
+    for perf in target_perfs:
+        # Delete existing setlist entries for this performance
+        db.query(models.SetlistEntry).filter(models.SetlistEntry.performance_id == perf.id).delete()
+        
+        # Copy from source
+        for entry in source_perf.setlist_entries:
+            new_entry = models.SetlistEntry(
+                performance_id=perf.id,
+                song_id=entry.song_id,
+                entry_type=entry.entry_type,
+                unresolved_song_name=entry.unresolved_song_name,
+                order_index=entry.order_index,
+                notes=entry.notes
+            )
+            db.add(new_entry)
+        updated_count += 1
+        
+    db.commit()
+    return {"message": f"Copied setlist to {updated_count} performances."}

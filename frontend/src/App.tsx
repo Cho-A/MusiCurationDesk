@@ -18,10 +18,12 @@ import AlbumDetail from './pages/AlbumDetail';
 import MusicBrainzImport from './pages/MusicBrainzImport';
 import Terms from './pages/Terms';
 import { AuthProvider } from './context/AuthContext';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />

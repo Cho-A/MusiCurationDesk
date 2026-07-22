@@ -1,8 +1,11 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
+import datetime
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Any
 
 from .. import models, schemas
@@ -163,15 +166,27 @@ def bulk_import_setlists(req: BulkImportRequest, db: Session = Depends(models.ge
     errors = []
     successes = []
     
-    for sid in req.setlist_ids:
+    # 1. Fetch data concurrently
+    setlist_data_results = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(setlistfm_client.get_setlist, sid): sid for sid in req.setlist_ids}
+        for future in futures:
+            sid = futures[future]
+            try:
+                data = future.result()
+                setlist_data_results.append((sid, data))
+            except Exception as e:
+                errors.append(f"Failed to fetch {sid}: {str(e)}")
+                
+    # 2. Insert sequentially to DB
+    for sid, data in setlist_data_results:
         try:
-            perf_id = _core_import_setlistfm(sid, db)
+            perf_id = _insert_setlist_data(data, sid, db)
             successes.append({"setlist_id": sid, "performance_id": perf_id})
         except Exception as e:
-            errors.append(str(e))
+            errors.append(f"Failed to insert {sid}: {str(e)}")
             
     if errors:
-        # Return partial success with errors
         return {"message": "Bulk import completed with some errors", "successes": successes, "errors": errors}
         
     return {"message": "Bulk import completed", "successes": successes}
@@ -179,7 +194,8 @@ def bulk_import_setlists(req: BulkImportRequest, db: Session = Depends(models.ge
 @router.post("/setlistfm/import")
 def import_setlistfm(req: SetlistImportRequest, db: Session = Depends(models.get_db)):
     try:
-        perf_id = _core_import_setlistfm(req.setlist_id, db)
+        data = setlistfm_client.get_setlist(req.setlist_id)
+        perf_id = _insert_setlist_data(data, req.setlist_id, db)
         return {"message": "Success", "performance_id": perf_id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -187,7 +203,11 @@ def import_setlistfm(req: SetlistImportRequest, db: Session = Depends(models.get
         raise HTTPException(status_code=500, detail=str(e))
 
 def _core_import_setlistfm(setlist_id: str, db: Session) -> int:
+    # Retained for backwards compatibility if needed elsewhere
     setlist_data = setlistfm_client.get_setlist(setlist_id)
+    return _insert_setlist_data(setlist_data, setlist_id, db)
+
+def _insert_setlist_data(setlist_data: dict, setlist_id: str, db: Session) -> int:
     
     artist_name = setlist_data.get("artist", {}).get("name")
     date_str = setlist_data.get("eventDate")

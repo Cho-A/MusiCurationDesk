@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Plus, Users, Download, CheckSquare, Square } from 'lucide-react';
+import toast from 'react-hot-toast';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
 
@@ -46,6 +47,8 @@ const Concerts = () => {
   const [showSetlistImportModal, setShowSetlistImportModal] = useState(false);
   const [importQuery, setImportQuery] = useState("");
   const [importResults, setImportResults] = useState<any[]>([]);
+  const [importPage, setImportPage] = useState(1);
+  const [hasMoreImportResults, setHasMoreImportResults] = useState(false);
   const [importing, setImporting] = useState(false);
   
   // Bulk import states
@@ -121,13 +124,17 @@ const Concerts = () => {
     }
   };
 
-  const handleSearchSetlist = async () => {
+  const handleSearchSetlist = async (page: number = 1) => {
     if (!importQuery.trim()) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}`);
+      const res = await fetch(`http://127.0.0.1:8000/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}&p=${page}`);
       if (res.ok) {
         const data = await res.json();
-        setImportResults(data.setlist || []);
+        const results = data.setlist || [];
+        setImportResults(results);
+        setImportPage(page);
+        // Setlist.fm returns up to 20 items per page
+        setHasMoreImportResults(results.length === 20);
         setSelectedSetlists(new Set()); // Reset selections
       }
     } catch (err) { console.error(err); }
@@ -151,6 +158,66 @@ const Concerts = () => {
     finally { setImporting(false); }
   };
 
+  // Bulk Action states
+  const [selectedSingles, setSelectedSingles] = useState<Set<number>>(new Set());
+  const [showBulkTourModal, setShowBulkTourModal] = useState(false);
+  const [bulkTourId, setBulkTourId] = useState<number | null>(null);
+  const [showBulkCopyModal, setShowBulkCopyModal] = useState(false);
+  const [bulkSourceId, setBulkSourceId] = useState<number | null>(null);
+
+  const toggleSingleSelection = (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newSet = new Set(selectedSingles);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedSingles(newSet);
+  };
+
+  const handleBulkUpdateTour = async () => {
+    if (!bulkTourId || selectedSingles.size === 0) return;
+    try {
+      const res = await fetch('http://127.0.0.1:8000/performances/bulk-update-tour', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ performance_ids: Array.from(selectedSingles), tour_id: bulkTourId })
+      });
+      if (res.ok) {
+        setShowBulkTourModal(false);
+        setSelectedSingles(new Set());
+        fetchData();
+        toast.success(`ツアーへの紐付けが完了しました (${selectedSingles.size}件)`);
+      } else {
+        toast.error('ツアーへの紐付けに失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('エラーが発生しました');
+    }
+  };
+
+  const handleBulkCopySetlist = async () => {
+    if (!bulkSourceId || selectedSingles.size === 0) return;
+    try {
+      const res = await fetch('http://127.0.0.1:8000/performances/bulk-copy-setlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_performance_ids: Array.from(selectedSingles), source_performance_id: bulkSourceId })
+      });
+      if (res.ok) {
+        setShowBulkCopyModal(false);
+        setSelectedSingles(new Set());
+        fetchData();
+        toast.success(`セットリストのコピーが完了しました (${selectedSingles.size}件)`);
+      } else {
+        toast.error('セットリストのコピーに失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('エラーが発生しました');
+    }
+  };
+  
   const handleBulkImport = async () => {
     if (selectedSetlists.size === 0) return;
     setImporting(true);
@@ -161,11 +228,26 @@ const Concerts = () => {
         body: JSON.stringify({ setlist_ids: Array.from(selectedSetlists) })
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data.errors && data.errors.length > 0) {
+          toast.success(`一部のセットリストのインポートが完了しました (${data.successes.length}件)\n${data.errors.length}件のエラーが発生しました`);
+        } else {
+          toast.success(`選択したセットリストのインポートが完了しました (${data.successes.length}件)`);
+        }
         setShowSetlistImportModal(false);
-        fetchData(); // Reload table
+        setImportQuery("");
+        setImportResults([]);
+        setSelectedSetlists(new Set());
+        fetchData();
+      } else {
+        toast.error('インポートに失敗しました');
       }
-    } catch (err) { console.error(err); }
-    finally { setImporting(false); }
+    } catch (err) {
+      console.error(err);
+      toast.error('エラーが発生しました');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const toggleSetlistSelection = (id: string) => {
@@ -290,7 +372,21 @@ const Concerts = () => {
           {activeTab === 'singles' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
               {filteredSingles.map(perf => (
-                <Link key={`perf-${perf.id}`} to={`/performances/${perf.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link key={`perf-${perf.id}`} to={`/performances/${perf.id}`} style={{ textDecoration: 'none', color: 'inherit', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
+                    <div 
+                      onClick={(e) => toggleSingleSelection(e, perf.id)}
+                      style={{ 
+                        width: '24px', height: '24px', borderRadius: '4px', 
+                        border: selectedSingles.has(perf.id) ? '2px solid var(--spotify-color)' : '2px solid var(--border-color)',
+                        background: selectedSingles.has(perf.id) ? 'var(--spotify-color)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {selectedSingles.has(perf.id) && <CheckSquare size={16} color="#fff" />}
+                    </div>
+                  </div>
                   <div style={{
                     background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px', transition: 'all 0.2s'
                   }}
@@ -397,7 +493,7 @@ const Concerts = () => {
                 }}
               />
               <button
-                onClick={handleSearchSetlist}
+                onClick={() => handleSearchSetlist(1)}
                 style={{ padding: '0 24px', borderRadius: '8px', background: 'var(--spotify-color)', color: '#fff', border: 'none', cursor: 'pointer' }}
               >
                 検索
@@ -469,6 +565,28 @@ const Concerts = () => {
                   <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px' }}>検索結果がありません</div>
               )}
             </div>
+
+            {importResults.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '16px' }}>
+                <button 
+                  onClick={() => handleSearchSetlist(importPage - 1)}
+                  disabled={importPage <= 1}
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '4px', cursor: importPage <= 1 ? 'not-allowed' : 'pointer', opacity: importPage <= 1 ? 0.5 : 1 }}
+                >
+                  前の20件
+                </button>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  ページ {importPage}
+                </span>
+                <button 
+                  onClick={() => handleSearchSetlist(importPage + 1)}
+                  disabled={!hasMoreImportResults}
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '4px', cursor: !hasMoreImportResults ? 'not-allowed' : 'pointer', opacity: !hasMoreImportResults ? 0.5 : 1 }}
+                >
+                  次の20件
+                </button>
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
               <div>
@@ -602,6 +720,61 @@ const Concerts = () => {
               >
                 {savingSingle ? '登録中...' : '登録'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Bulk Action Bar */}
+      {selectedSingles.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-secondary)', padding: '16px 32px', borderRadius: '32px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)', border: '1px solid var(--border-color)',
+          display: 'flex', alignItems: 'center', gap: '24px', zIndex: 100
+        }}>
+          <span style={{ fontWeight: 'bold' }}>{selectedSingles.size}件選択中</span>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button onClick={() => setShowBulkTourModal(true)} style={{ background: 'var(--spotify-color)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '16px', cursor: 'pointer', fontWeight: 'bold' }}>
+              ツアーに紐付け
+            </button>
+            <button onClick={() => setShowBulkCopyModal(true)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '16px', cursor: 'pointer', fontWeight: 'bold' }}>
+              セットリストをコピー
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Tour Update Modal */}
+      {showBulkTourModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '32px', borderRadius: '12px', width: '100%', maxWidth: '500px' }}>
+            <h2 style={{ marginBottom: '24px' }}>ツアーに紐付け</h2>
+            <select value={bulkTourId || ""} onChange={e => setBulkTourId(Number(e.target.value))} style={{ width: '100%', padding: '12px', marginBottom: '24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+              <option value="">選択してください...</option>
+              {tours.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button onClick={() => setShowBulkTourModal(false)} style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--bg-tertiary)', border: 'none', cursor: 'pointer' }}>キャンセル</button>
+              <button onClick={handleBulkUpdateTour} disabled={!bulkTourId} style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--spotify-color)', color: '#fff', border: 'none', cursor: 'pointer', opacity: !bulkTourId ? 0.5 : 1 }}>適用する</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Setlist Copy Modal */}
+      {showBulkCopyModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '32px', borderRadius: '12px', width: '100%', maxWidth: '500px' }}>
+            <h2 style={{ marginBottom: '24px' }}>セットリストをコピー</h2>
+            <p style={{ marginBottom: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>コピー元の公演を選択してください。選択した公演のセットリストで上書きされます。</p>
+            <select value={bulkSourceId || ""} onChange={e => setBulkSourceId(Number(e.target.value))} style={{ width: '100%', padding: '12px', marginBottom: '24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+              <option value="">選択してください...</option>
+              {performances.map(p => <option key={p.id} value={p.id}>{p.date} - {p.name}</option>)}
+            </select>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button onClick={() => setShowBulkCopyModal(false)} style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--bg-tertiary)', border: 'none', cursor: 'pointer' }}>キャンセル</button>
+              <button onClick={handleBulkCopySetlist} disabled={!bulkSourceId} style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--error-color)', color: '#fff', border: 'none', cursor: 'pointer', opacity: !bulkSourceId ? 0.5 : 1 }}>上書きコピー</button>
             </div>
           </div>
         </div>
