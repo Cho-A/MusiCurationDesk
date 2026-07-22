@@ -71,6 +71,7 @@ interface SongDetailData {
   is_video: boolean;
   version_name?: string;
   is_streaming_available?: boolean;
+  spotify_song_id?: string | null;
   spotify_song_title?: string;
   jasrac_code?: string;
   artist_links: ArtistLink[];
@@ -456,6 +457,20 @@ const SongDetail = () => {
               種別: {baseSong.is_video ? '映像' : '音源'}
             </button>
           </div>
+          
+          {/* Spotify Embed */}
+          {baseSong.spotify_song_id && (
+            <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+              <iframe 
+                src={`https://open.spotify.com/embed/track/${baseSong.spotify_song_id}`} 
+                width="100%" 
+                height="152" 
+                frameBorder="0" 
+                allow="encrypted-media"
+                style={{ borderRadius: '12px' }}
+              ></iframe>
+            </div>
+          )}
           
           {isEditingTitle && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>

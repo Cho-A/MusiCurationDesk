@@ -15,6 +15,7 @@ import ArtistDetail from './pages/ArtistDetail';
 import Albums from './pages/Albums';
 import AlbumDetail from './pages/AlbumDetail';
 import MusicBrainzImport from './pages/MusicBrainzImport';
+import Terms from './pages/Terms';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
           <Route path="admin" element={<Admin />} />
           <Route path="musicbrainz" element={<MusicBrainzImport />} />
           <Route path="settings" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>設定ページ (準備中)</div>} />
+          <Route path="terms" element={<Terms />} />
           <Route path="*" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>ページが見つかりません (404)</div>} />
         </Route>
       </Routes>

@@ -194,21 +194,27 @@ const AlbumDetail = () => {
 
       {/* ヘッダーエリア */}
       <div style={{ display: 'flex', gap: '40px', marginBottom: '48px', alignItems: 'flex-start' }}>
-        <div style={{ 
-          width: '280px', height: '280px', 
-          backgroundColor: 'var(--bg-tertiary)',
-          borderRadius: '12px',
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
-          overflow: 'hidden',
-          flexShrink: 0
-        }}>
-          {album.cover_image_url ? (
-            <img src={album.cover_image_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
+        {album.spotify_album_id ? (
+          <iframe 
+            src={`https://open.spotify.com/embed/album/${album.spotify_album_id}`} 
+            width="280" 
+            height="280" 
+            frameBorder="0" 
+            allow="encrypted-media"
+            style={{ borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.15)', flexShrink: 0 }}
+          ></iframe>
+        ) : (
+          <div style={{ 
+            width: '280px', height: '280px', 
+            backgroundColor: 'var(--bg-tertiary)',
+            borderRadius: '12px',
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
+            flexShrink: 0
+          }}>
             <Disc3 size={80} color="var(--text-tertiary)" />
-          )}
-        </div>
+          </div>
+        )}
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '16px' }}>
           <span style={{ 

@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, Download, User, LogOut, LogIn, UserPlus, Database } from 'lucide-react';
+import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, Download, User, LogOut, LogIn, UserPlus, Database, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
@@ -152,6 +152,22 @@ const Sidebar = () => {
             </Link>
           </>
         )}
+        
+        <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+          <Link to="/terms" style={{ textDecoration: 'none' }}>
+            <div style={{ 
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
+              borderRadius: '8px', color: 'var(--text-secondary)',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <Shield size={16} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>利用規約・免責事項</span>
+            </div>
+          </Link>
+        </div>
       </div>
     </aside>
   );

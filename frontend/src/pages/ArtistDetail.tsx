@@ -109,18 +109,7 @@ const ArtistDetail = () => {
       </button>
 
       <div style={{ display: 'flex', gap: '32px', alignItems: 'center', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
-        {artist.image_url ? (
-          <img 
-            src={artist.image_url} 
-            alt="" 
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.nextElementSibling && ((e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex');
-            }}
-            style={{ width: '160px', height: '160px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--border-color)', boxShadow: 'var(--shadow-md)', flexShrink: 0 }} 
-          />
-        ) : null}
-        <div style={{ display: artist.image_url ? 'none' : 'flex', width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0 }}>
           <Users size={64} color="var(--text-tertiary)" />
         </div>
         <div>
@@ -151,18 +140,7 @@ const ArtistDetail = () => {
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '4px' }}>
                 {artist.members.map(m => (
                   <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {m.image_url ? (
-                      <img 
-                        src={m.image_url} 
-                        alt=""
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling && ((e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex');
-                        }}
-                        style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} 
-                      />
-                    ) : null}
-                    <div style={{ display: m.image_url ? 'none' : 'flex', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center' }}>
                        <Users size={16} color="var(--text-tertiary)" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
