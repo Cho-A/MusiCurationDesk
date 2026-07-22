@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Plus, Users, Download, CheckSquare, Square } from 'lucide-react';
+import { Calendar, MapPin, Plus, Users, Download, CheckSquare, Square, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
+import EmptyState from '../components/EmptyState';
+import Button from '../components/Button';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Tour {
   id: number;
@@ -376,7 +379,7 @@ const Concerts = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
+        <LoadingSpinner />
       ) : (
         <>
           {activeTab === 'tours' && (
@@ -405,7 +408,7 @@ const Concerts = () => {
                   </div>
                 </Link>
               ))}
-              {filteredTours.length === 0 && <div style={{ color: 'var(--text-secondary)' }}>ツアーがありません。</div>}
+              {filteredTours.length === 0 && <EmptyState icon={Calendar} title="ツアーがありません" description="ツアーをインポートするか、新しく作成してください。" />}
             </div>
           )}
 
@@ -464,7 +467,7 @@ const Concerts = () => {
                   </div>
                 </Link>
               ))}
-              {filteredSingles.length === 0 && <div style={{ color: 'var(--text-secondary)' }}>単発ライブがありません。</div>}
+              {filteredSingles.length === 0 && <EmptyState icon={Calendar} title="単発ライブがありません" description="インポートするか、新しく追加してください。" />}
             </div>
           )}
         </>
@@ -481,22 +484,7 @@ const Concerts = () => {
             width: '100%', maxWidth: '700px', border: '1px solid var(--border-color)',
             maxHeight: '85vh', display: 'flex', flexDirection: 'column'
           }}>
-            {importing && (
-                <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '12px', zIndex: 2000,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexDirection: 'column', color: 'white'
-                }}>
-                    <div style={{
-                        width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid var(--spotify-color)',
-                        borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px'
-                    }} />
-                    <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-                    <h3 style={{ margin: 0 }}>インポート中...</h3>
-                    <p style={{ marginTop: '8px', color: '#ccc' }}>データ量により数十秒かかる場合があります</p>
-                </div>
-            )}
+            {importing && <LoadingSpinner />}
             
             <h2 style={{ marginBottom: '16px', color: 'var(--text-primary)' }}>Setlist.fm からインポート</h2>
             
@@ -533,12 +521,9 @@ const Concerts = () => {
                   color: 'var(--text-primary)', outline: 'none'
                 }}
               />
-              <button
-                onClick={() => handleSearchSetlist(1)}
-                style={{ padding: '0 24px', borderRadius: '8px', background: 'var(--spotify-color)', color: '#fff', border: 'none', cursor: 'pointer' }}
-              >
+              <Button variant="primary" icon={Search} onClick={() => handleSearchSetlist(1)} disabled={importing}>
                 検索
-              </button>
+              </Button>
             </div>
             
             {importMode === 'bulk' && importResults.length > 0 && (
@@ -591,19 +576,15 @@ const Concerts = () => {
                       </div>
                     </div>
                     {importMode === 'single' && (
-                        <button
-                        onClick={() => handleImportSetlist(sl.id)}
-                        disabled={importing}
-                        style={{ padding: '8px 16px', borderRadius: '16px', background: 'var(--spotify-color)', color: '#fff', border: 'none', cursor: 'pointer' }}
-                        >
-                        インポート
-                        </button>
+                        <Button variant="primary" onClick={() => handleImportSetlist(sl.id)} disabled={importing}>
+                          インポート
+                        </Button>
                     )}
                   </div>
                 );
               })}
               {importResults.length === 0 && importQuery && (
-                  <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px' }}>検索結果がありません</div>
+                  <EmptyState icon={Search} title="検索結果がありません" description="別のキーワードをお試しください。" />
               )}
             </div>
 
@@ -632,41 +613,21 @@ const Concerts = () => {
               {importResults.length > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
                 <div>
-                  <button
-                    onClick={() => {
+                  <Button variant="secondary" onClick={() => {
                       const firstArtist = importResults[0]?.artist;
                       handleFullSyncArtist(importQuery, firstArtist?.mbid, firstArtist?.name);
-                    }}
-                    disabled={importing}
-                    style={{ 
-                        padding: '10px 24px', borderRadius: '24px', background: 'var(--accent-primary)', color: '#fff', border: 'none', 
-                        cursor: importing ? 'not-allowed' : 'pointer',
-                        opacity: importing ? 0.5 : 1,
-                        marginRight: '12px'
-                    }}
-                  >
+                    }} disabled={importing} style={{ marginRight: '12px' }}>
                     「{importResults[0]?.artist?.name || importQuery}」の全履歴 ({importTotal}件) を同期
-                  </button>
+                  </Button>
                   {importMode === 'bulk' && (
-                      <button
-                        onClick={handleBulkImport}
-                        disabled={importing || selectedSetlists.size === 0}
-                        style={{ 
-                            padding: '10px 24px', borderRadius: '24px', background: 'var(--spotify-color)', color: '#fff', border: 'none', 
-                            cursor: (importing || selectedSetlists.size === 0) ? 'not-allowed' : 'pointer',
-                            opacity: (importing || selectedSetlists.size === 0) ? 0.5 : 1
-                        }}
-                      >
+                      <Button variant="primary" onClick={handleBulkImport} disabled={importing || selectedSetlists.size === 0}>
                         選択した {selectedSetlists.size}件 をインポート
-                      </button>
+                      </Button>
                   )}
                 </div>
-                <button
-                onClick={() => setShowSetlistImportModal(false)}
-                style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
-              >
+                <Button variant="secondary" onClick={() => setShowSetlistImportModal(false)}>
                 閉じる
-              </button>
+              </Button>
             </div>
             )}
           </div>

@@ -3,6 +3,8 @@ import { Users, Disc, Music } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 interface Artist {
   id: number;
@@ -48,11 +50,9 @@ const Artists = () => {
       />
 
       {loading ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
+        <LoadingSpinner fullPage />
       ) : filteredArtists.length === 0 ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px' }}>
-          アーティストが見つかりません。
-        </div>
+        <EmptyState icon={Users} title="アーティストが見つかりませんでした" description="別のキーワードで検索するか、新しく追加してください。" />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
           {filteredArtists.map(artist => (

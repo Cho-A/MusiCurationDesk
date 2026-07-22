@@ -4,6 +4,8 @@ import { Music, Disc, Mic2, Calendar, Play, Sparkles, Headphones } from 'lucide-
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/PageHeader';
 import AlbumCard, { type Album } from '../components/AlbumCard';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 interface DashboardStats {
   total_songs?: number;
@@ -87,7 +89,7 @@ const Dashboard = () => {
   }, [isAuthenticated, token]);
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>ダッシュボードを読み込み中...</div>;
+    return <LoadingSpinner fullPage />;
   }
 
   return (
@@ -165,7 +167,7 @@ const Dashboard = () => {
                 <AlbumCard album={album as unknown as Album} layout="vertical" />
               </div>
             )) : (
-              <div style={{ color: 'var(--text-tertiary)' }}>まだアルバムが追加されていません。</div>
+              <EmptyState title="最近追加されたアルバムがありません" description="新しくアルバムを追加してください。" />
             )}
           </div>
         </section>
@@ -206,7 +208,7 @@ const Dashboard = () => {
                 </div>
               </Link>
             )) : (
-              <div style={{ color: 'var(--text-tertiary)' }}>まだ楽曲が追加されていません。</div>
+              <EmptyState title="最近追加された楽曲がありません" description="新しく楽曲を追加してください。" />
             )}
           </div>
         </section>
@@ -223,7 +225,7 @@ const Dashboard = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--spotify-color)', marginBottom: '20px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
             <Sparkles size={18} />
-            Today's Discovery
+            PICK UP
           </div>
           
           {discovery ? (
@@ -256,7 +258,7 @@ const Dashboard = () => {
               </Link>
             </div>
           ) : (
-            <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>No music available to discover.</div>
+            <EmptyState icon={Sparkles} title="ピックアップできる楽曲がありません" description="楽曲を追加して、新しい発見を楽しみましょう。" />
           )}
         </div>
         

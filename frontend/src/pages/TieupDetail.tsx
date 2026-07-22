@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronRight, Folder, Music, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Folder, Music, ArrowLeft, Music2 } from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 interface TieupHierarchyNode {
   id: number;
@@ -61,7 +63,7 @@ const TieupDetail = () => {
     fetchData();
   }, [id]);
 
-  if (loading) return <div style={{ padding: '32px' }}>読み込み中...</div>;
+  if (loading) return <LoadingSpinner fullPage message="タイアップ情報を読み込んでいます..." />;
   if (error) return <div style={{ padding: '32px', color: 'red' }}>{error}</div>;
   if (!tieup) return <div style={{ padding: '32px' }}>タイアップが見つかりません。</div>;
 
@@ -169,7 +171,7 @@ const TieupDetail = () => {
               ))}
             </div>
           ) : (
-            <div style={{ color: 'var(--text-tertiary)' }}>関連楽曲は登録されていません。</div>
+            <EmptyState icon={Music2} title="関連する楽曲がありません" />
           )}
         </div>
 

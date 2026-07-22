@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, Save, Trash, ArrowUp, ArrowDown, Search, X, Link2Off, Copy } from 'lucide-react';
+import { ArrowLeft, Edit3, Save, X, ListMusic, ArrowUp, ArrowDown, Search, Link2Off, Copy, Users, Trash2 } from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 interface Artist {
   id: number;
@@ -347,7 +349,7 @@ const PerformanceDetail = () => {
     }
   };
 
-  if (loading) return <div style={{ padding: '64px', textAlign: 'center', fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Loading Event...</div>;
+  if (loading) return <LoadingSpinner fullPage message="公演情報を読み込んでいます..." />;
   if (!performance) return <div style={{ padding: '64px', textAlign: 'center', fontSize: '1.2rem', color: 'var(--error-color)' }}>Event not found.</div>;
 
   return (
@@ -418,7 +420,7 @@ const PerformanceDetail = () => {
               style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-primary)', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
               title="公演情報を編集"
             >
-              <Edit2 size={18} />
+              <Edit3 size={18} />
             </button>
           </div>
           <div style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
@@ -482,7 +484,7 @@ const PerformanceDetail = () => {
             onClick={() => { setIsEditing(true); setDraftSetlist(performance.setlist_entries || []); }}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-tertiary)', border: 'none', padding: '8px 16px', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}
           >
-            <Edit2 size={16} />
+            <Edit3 size={16} />
             編集
           </button>
         )}
@@ -493,7 +495,7 @@ const PerformanceDetail = () => {
           <div>
             {performance.setlist_entries.length === 0 ? (
               <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                <p>セットリストはまだ登録されていません。</p>
+                <EmptyState title="セットリストはまだ登録されていません" />
                 {performance.tour && tourPerformances.length > 0 && (
                   <div style={{ 
                     marginTop: '20px', 
@@ -717,11 +719,11 @@ const PerformanceDetail = () => {
                     onClick={() => removeEntry(index)}
                     style={{ background: 'none', border: 'none', color: 'var(--error-color)', cursor: 'pointer', padding: '8px' }}
                   >
-                    <Trash size={18} />
+                    <Trash2 size={18} />
                   </button>
                 </div>
               ))}
-              {draftSetlist.length === 0 && <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '16px' }}>曲がありません</div>}
+              {draftSetlist.length === 0 && <EmptyState icon={ListMusic} title="曲がありません" />}
             </div>
 
             <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '24px 0' }} />
@@ -801,7 +803,7 @@ const PerformanceDetail = () => {
           <div>
             {performance.roster_entries.length === 0 ? (
               <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
-                参加メンバー情報はありません。
+                <EmptyState icon={Users} title="参加メンバー情報はありません。" />
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>

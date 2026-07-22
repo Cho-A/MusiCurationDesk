@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Disc3, Music, Calendar, MapPin, ArrowLeft, Users, Pencil, X, Plus, Trash2, Search } from 'lucide-react';
+import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPin, Music, Disc3 } from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 interface AlbumMini {
   id: number;
@@ -180,7 +182,7 @@ const ArtistDetail = () => {
   };
 
 
-  if (loading) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Artist...</div>;
+  if (loading) return <LoadingSpinner />;
   if (!artist) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--error-color)' }}>Artist not found.</div>;
 
   // Combine and sort performances
@@ -217,7 +219,7 @@ const ArtistDetail = () => {
           onClick={() => setIsEditing(true)}
           style={{ position: 'absolute', top: '24px', right: '24px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
         >
-          <Pencil size={18} />
+          <Edit3 size={18} />
         </button>
 
         <div style={{ display: 'flex', width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0, overflow: 'hidden' }}>
@@ -351,7 +353,7 @@ const ArtistDetail = () => {
               </div>
             </Link>
           ))}
-          {(artist.albums || []).length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>リリース作品がありません</div>}
+          {(artist.albums || []).length === 0 && <EmptyState icon={Disc} title="作品がありません" />}
         </div>
       )}
 
@@ -384,7 +386,7 @@ const ArtistDetail = () => {
               </div>
             </Link>
           ))}
-          {allPerformances.length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>ライブ情報がありません</div>}
+          {allPerformances.length === 0 && <EmptyState icon={Calendar} title="ライブ情報がありません" />}
         </div>
       )}
 
@@ -418,7 +420,7 @@ const ArtistDetail = () => {
               </div>
             </div>
           ))}
-          {Object.keys(songsByRole).length === 0 && <div style={{ color: 'var(--text-tertiary)' }}>楽曲情報がありません</div>}
+          {Object.keys(songsByRole).length === 0 && <EmptyState icon={Music} title="楽曲情報がありません" />}
         </div>
       )}
 
@@ -459,7 +461,7 @@ const ArtistDetail = () => {
               </button>
             </div>
 
-                        <hr style={{ borderColor: 'var(--border-color)', marginBottom: '24px' }} />
+            <hr style={{ borderColor: 'var(--border-color)', marginBottom: '24px' }} />
 
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>タグ管理</h3>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
@@ -479,7 +481,7 @@ const ArtistDetail = () => {
               </select>
               <button onClick={addTag} style={{ whiteSpace: 'nowrap', flexShrink: 0, background: 'var(--accent-primary)', border: 'none', color: '#fff', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>追加</button>
             </div>
-<hr style={{ borderColor: 'var(--border-color)', marginBottom: '24px', marginTop: '32px' }} />
+            <hr style={{ borderColor: 'var(--border-color)', marginBottom: '24px', marginTop: '32px' }} />
 
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>メンバー管理</h3>
             

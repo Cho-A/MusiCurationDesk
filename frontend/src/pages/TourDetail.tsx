@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Plus, MapPin, Users, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Calendar, Plus, MapPin, Users } from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
+import Button from '../components/Button';
 
 interface Venue {
   id: number;
@@ -86,7 +89,7 @@ const TourDetail = () => {
     }
   };
 
-  if (loading) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Tour...</div>;
+  if (loading) return <LoadingSpinner fullPage message="読み込み中..." />;
   if (!tour) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--error-color)' }}>Tour not found.</div>;
 
   // 開催日ごとに公演をグループ化
@@ -120,20 +123,16 @@ const TourDetail = () => {
             {tour.name}
           </h1>
           <div style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-            全 {tour.performances.length} 公演
+            {tour.performances.length === 0 ? (
+              <EmptyState icon={Calendar} title="公演がありません" description="公演を追加してツアーを作成しましょう。" />
+            ) : (
+              `全 ${tour.performances.length} 公演`
+            )}
           </div>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            background: 'var(--primary-color)', color: 'var(--text-primary)', border: 'none',
-            padding: '10px 20px', borderRadius: '24px', fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s'
-          }}
-        >
-          <Plus size={18} />
+        <Button variant="primary" icon={Plus} onClick={() => setShowModal(true)}>
           公演を追加
-        </button>
+        </Button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -252,23 +251,12 @@ const TourDetail = () => {
               ※出演アーティストや会場の指定は、現時点では未対応です。作成後にセットリスト等の編集が可能です。
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
-              >
+              <Button variant="secondary" onClick={() => setShowModal(false)}>
                 キャンセル
-              </button>
-              <button
-                onClick={handleAddPerformance}
-                disabled={savingPerf || !newPerfName.trim() || !newPerfDate}
-                style={{
-                  padding: '10px 20px', borderRadius: '24px', background: 'var(--primary-color)', color: 'var(--text-primary)', border: 'none',
-                  cursor: (savingPerf || !newPerfName.trim() || !newPerfDate) ? 'not-allowed' : 'pointer',
-                  opacity: (savingPerf || !newPerfName.trim() || !newPerfDate) ? 0.5 : 1
-                }}
-              >
+              </Button>
+              <Button variant="primary" onClick={handleAddPerformance} disabled={savingPerf || !newPerfName.trim() || !newPerfDate}>
                 {savingPerf ? '追加中...' : '追加'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

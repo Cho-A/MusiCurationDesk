@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Disc3, Calendar, AlertCircle, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
+import Button from '../components/Button';
 
 interface SongMini {
   id: number;
@@ -150,17 +154,18 @@ const AlbumDetail = () => {
       if (res.ok) {
         fetchAlbum();
         setEditingTrackId(null);
+        toast.success('トラック情報を更新しました');
       } else {
-        alert('保存に失敗しました');
+        toast.error('保存に失敗しました');
       }
     } catch (err) {
       console.error(err);
-      alert('ネットワークエラーが発生しました');
+      toast.error('ネットワークエラーが発生しました');
     }
   };
 
-  if (loading) return <div style={{ padding: '32px' }}>読み込み中...</div>;
-  if (!album) return <div style={{ padding: '32px' }}>アルバムが見つかりませんでした。</div>;
+  if (loading) return <LoadingSpinner fullPage message="アルバムデータを読み込んでいます..." />;
+  if (!album) return <EmptyState title="アルバムが見つかりませんでした。" />;
 
   const releaseDate = album.physical_release_date || album.digital_release_date || '発売日不明';
 
@@ -251,7 +256,7 @@ const AlbumDetail = () => {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', color: 'var(--text-secondary)', marginTop: '8px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Calendar size={18} />
+              {/* <Calendar size={18} /> */}
               {releaseDate}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -310,17 +315,13 @@ const AlbumDetail = () => {
                   const isUnreleased = !isVideoTrack && track.song.spotify_song_id === null;
                   
                   return (
-                    <Link key={track.id} to={`/songs/${track.song_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div key={track.id} style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div style={{ 
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '16px 20px', backgroundColor: isUnreleased ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)', 
                         borderRadius: '8px', transition: 'background-color 0.2s',
-                        cursor: 'pointer',
                         border: 'none'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isUnreleased ? 'rgba(255,255,255,0.05)' : 'var(--bg-tertiary)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isUnreleased ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)'}
-                      >
+                      }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flex: 1 }}>
                           <div style={{ color: 'var(--text-tertiary)', fontWeight: 600, width: '24px', textAlign: 'right' }}>
                             {track.track_number}
@@ -385,14 +386,16 @@ const AlbumDetail = () => {
                                   このトラック（バージョン）はサブスク未解禁とする
                                 </label>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button onClick={(e) => handleSaveTrack(e, track)} style={{ background: 'var(--spotify-color)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}><Save size={16} /> 保存</button>
-                                  <button onClick={handleCancelEdit} style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><X size={16} /> キャンセル</button>
+                                  <Button variant="primary" icon={Save} onClick={(e) => handleSaveTrack(e, track)}>保存</Button>
+                                  <Button variant="secondary" icon={X} onClick={handleCancelEdit}>キャンセル</Button>
                                 </div>
                               </div>
                             </div>
                           ) : (
                             <div style={{ fontWeight: 500, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              {track.display_title || track.song.title}
+                              <Link to={`/songs/${track.song_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                {track.display_title || track.song.title}
+                              </Link>
                               {isUnreleased && (
                                 <span style={{ 
                                   display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -431,17 +434,16 @@ const AlbumDetail = () => {
                                 {formatTime(track.duration_ms)}
                               </span>
                             )}
-                            <button 
-                              onClick={(e) => handleEditClick(e, track)} 
-                              style={{ background: 'transparent', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                              title="トラック名の編集"
+                            <Button 
+                              variant="ghost" 
+                              onClick={(e) => handleEditClick(e, track)}
                             >
                               <Edit2 size={16} />
-                            </button>
+                            </Button>
                           </div>
                         )}
                       </div>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
@@ -449,9 +451,7 @@ const AlbumDetail = () => {
           );
         })}
         {album.album_tracks.length === 0 && (
-          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px' }}>
-            収録曲が登録されていません
-          </div>
+          <EmptyState title="収録曲が登録されていません" />
         )}
       </div>
     </div>

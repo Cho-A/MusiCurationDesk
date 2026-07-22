@@ -3,6 +3,8 @@ import { Disc3 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
 import AlbumCard from '../components/AlbumCard';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 interface Album {
   id: number;
@@ -31,9 +33,7 @@ const Albums = () => {
       });
   }, []);
 
-  if (loading) {
-    return <div style={{ padding: '32px', color: 'var(--text-secondary)' }}>読み込み中...</div>;
-  }
+  if (loading) return <LoadingSpinner fullPage />;
 
   const filteredAlbums = albums.filter(album => 
     album.main_title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -58,10 +58,7 @@ const Albums = () => {
       />
 
       {filteredAlbums.length === 0 ? (
-        <div style={{ padding: '48px', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: '16px' }}>
-          <Disc3 size={48} color="var(--text-tertiary)" style={{ marginBottom: '16px' }} />
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>まだアルバムが登録されていません。</p>
-        </div>
+        <EmptyState icon={Disc3} title="アルバムが見つかりませんでした" description="別のキーワードで検索するか、新しくアルバムを追加してください。" />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px' }}>
           {filteredAlbums.map((album) => (

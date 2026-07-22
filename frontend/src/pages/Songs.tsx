@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Music, Clock } from 'lucide-react';
+import { Music, Music2, Clock } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
+import EmptyState from '../components/EmptyState';
 
 interface AlbumMini {
   id: number;
@@ -331,7 +332,7 @@ const Songs = () => {
                   {songs.map((song: Song) => <SongCard key={song.id} song={song} />)}
                 </div>
               ) : (
-                <div style={{ color: 'var(--text-tertiary)', padding: '24px' }}>まだ楽曲が登録されていません。</div>
+                <EmptyState icon={Music2} title="楽曲が見つかりませんでした" description="別のキーワードで検索するか、新しく楽曲を追加してください。" />
               )}
             </div>
           )}
