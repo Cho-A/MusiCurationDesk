@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 from app.services import musicbrainz_fetcher

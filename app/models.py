@@ -306,6 +306,19 @@ class WorkArtistLink(Base):
     work = relationship("MusicalWork", back_populates="artist_links")
 
 
+class SongAlias(Base):
+    __tablename__ = "song_aliases"
+    id = Column(Integer, primary_key=True, index=True)
+    song_id = Column(Integer, ForeignKey("songs.id"), nullable=False)
+    alias_name = Column(String(255), nullable=False, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("song_id", "alias_name", name="uq_song_id_alias"),
+    )
+
+    song = relationship("Song", back_populates="aliases")
+
+
 class Song(Base):
     __tablename__ = "songs"
     id = Column(Integer, primary_key=True, index=True)
@@ -327,6 +340,7 @@ class Song(Base):
     setlist_entries = relationship("SetlistEntry", back_populates="song")
     album_links = relationship("AlbumTrack", back_populates="song")
     works = relationship("SongWorksLink", back_populates="song", cascade="all, delete-orphan", order_by="SongWorksLink.order_index")
+    aliases = relationship("SongAlias", back_populates="song", cascade="all, delete-orphan")
 
     @property
     def primary_album(self):

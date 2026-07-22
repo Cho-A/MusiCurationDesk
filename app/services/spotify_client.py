@@ -12,7 +12,7 @@ class SpotifyClient:
             client_id=SPOTIPY_CLIENT_ID,
             client_secret=SPOTIPY_CLIENT_SECRET
         )
-        self.sp = spotipy.Spotify(auth_manager=auth_manager)
+        self.sp = spotipy.Spotify(auth_manager=auth_manager, language='ja')
     
     def search_artists(self, query: str, limit: int = 10):
         """Spotifyからアーティストを検索する"""

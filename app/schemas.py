@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import List, Optional
-from datetime import date, time, Any
+from typing import Any
 from datetime import date, datetime, time
+from datetime import date as dt_date, time as dt_time  # aliases for PerformanceUpdate field collision
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -38,7 +38,7 @@ class AliasInfo(BaseModel):
 class SongContribution(BaseModel):
     song_id: int
     title: str  # 楽曲名
-    roles: List[str]  # 役割 (Composer, Vocalist, etc.)
+    roles: list[str]  # 役割 (Composer, Vocalist, etc.)
 
     class Config:
         from_attributes = True
@@ -53,19 +53,19 @@ class ArtistDetail(BaseModel):
     notes: str | None
 
     # ★ 関連情報をリストとして含める ★
-    aliases: List[AliasInfo] = []
-    songs_contributed: List[SongContribution] = []
-    members: List["ArtistRelationshipInfo"] = []
-    tags: List["TagInfo"] = []
+    aliases: list[AliasInfo] = []
+    songs_contributed: list[SongContribution] = []
+    members: list["ArtistRelationshipInfo"] = []
+    tags: list["TagInfo"] = []
     
     # 追加
-    albums: List["AlbumMini"] = []
-    performances: List["Performance"] = []
-    performances_as_guest: List["Performance"] = []
+    albums: list["AlbumMini"] = []
+    performances: list["Performance"] = []
+    performances_as_guest: list["Performance"] = []
 
     class Config:
         from_attributes = True
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 # --- ArtistMini (参照用) ---
@@ -94,6 +94,18 @@ class TagInfo(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ArtistMemberCreate(BaseModel):
+    member_artist_id: int
+    start_date: date | None = None
+    end_date: date | None = None
+
+class ArtistMemberUpdate(BaseModel):
+    start_date: date | None = None
+    end_date: date | None = None
+
+class TagAssign(BaseModel):
+    tag_id: int
 
 
 # --- Tag (タグ・マスター) ---
@@ -136,15 +148,15 @@ class Song(BaseModel):
     version_name: str | None = None
     
     # 検索一覧などでアーティスト情報を表示できるように追加
-    artists: List["ArtistLinkInfo"] = Field(
+    artists: list["ArtistLinkInfo"] = Field(
         default=[],
         alias="artist_links",
     )
-    primary_album: Optional["AlbumMini"] = None
+    primary_album: AlbumMini | None = None
 
     class Config:
         from_attributes = True  # SQLAlchemyモデルをPydanticモデルに変換
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 # --- SongArtistLink (アーティスト紐付け) ---
@@ -212,8 +224,8 @@ class TieupHierarchyNode(BaseModel):
 
 
 class TieupDetail(Tieup):
-    children: List[Tieup] = []
-    parents: List[TieupHierarchyNode] = []  # ルートからのパンくずリスト
+    children: list[Tieup] = []
+    parents: list[TieupHierarchyNode] = []  # ルートからのパンくずリスト
 
     class Config:
         from_attributes = True
@@ -287,14 +299,14 @@ class MusicalWorkBase(BaseModel):
 
 class MusicalWork(MusicalWorkBase):
     id: int
-    artists: List[WorkArtistLinkInfo] = Field(
+    artists: list[WorkArtistLinkInfo] = Field(
         default=[],
         alias="artist_links",
     )
 
     class Config:
         from_attributes = True
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 # 既存のSongスキーマを拡張し、関連情報を含める
@@ -312,27 +324,28 @@ class SongDetail(BaseModel):
     is_streaming_available: bool = True
     work: MusicalWork | None = None
     
-    other_versions: List["SongDetailMini"] = []
+    other_versions: list["SongDetailMini"] = []
 
-    artists: List[ArtistLinkInfo] = Field(
+    artists: list[ArtistLinkInfo] = Field(
         ...,
         alias="artist_links",
     )  # 'artist_links' リレーションシップを参照
-    tieups: List[TieupLinkInfo] = Field(
+    tieups: list[TieupLinkInfo] = Field(
         ...,
         alias="tieup_links",
     )  # 'tieup_links' リレーションシップを参照
 
-    albums: List[AlbumTrackInfo] = Field(
+    albums: list[AlbumTrackInfo] = Field(
         default=[],
         alias="album_links",
     )
 
-    tags: List[Tag] = []  # 👈 この曲に紐づくタグのリスト
+    tags: list[Tag] = []  # 👈 この曲に紐づくタグのリスト
+    aliases: list["SongAlias"] = []
 
     class Config:
         from_attributes = True
-        allow_population_by_field_name = True  # エイリアスが機能するために必要
+        populate_by_name = True  # エイリアスが機能するために必要
 
 
 # --- Song Search Result (検索結果) ---
@@ -372,11 +385,24 @@ class PerformanceCreate(BaseModel):
     performance_type: str
     event_type: str | None = "Live"
     name: str
-    date: date
+    date: dt_date
     venue_id: int | None = None
-    open_time: time | None = None
-    start_time: time | None = None
-    end_time: time | None = None
+    open_time: dt_time | None = None
+    start_time: dt_time | None = None
+    end_time: dt_time | None = None
+    stage_name: str | None = None
+
+
+class PerformanceUpdate(BaseModel):
+    name: str | None = None
+    date: dt_date | None = None
+    event_type: str | None = None
+    venue_id: int | None = None
+    tour_id: int | None = None
+    performance_type: str | None = None
+    open_time: dt_time | None = None
+    start_time: dt_time | None = None
+    end_time: dt_time | None = None
     stage_name: str | None = None
 
 
@@ -408,6 +434,17 @@ class SongMini(BaseModel):
     class Config:
         from_attributes = True
 
+class SongAliasCreate(BaseModel):
+    alias_name: str
+
+class SongAlias(BaseModel):
+    id: int
+    song_id: int
+    alias_name: str
+
+    class Config:
+        from_attributes = True
+
 class SongUpdate(BaseModel):
     title: str | None = None
     work_id: int | None = None
@@ -428,6 +465,17 @@ class SetlistEntryCreate(BaseModel):
     order_index: int
     notes: str | None = None  # "Encore 1", "Medley" など
 
+
+class SetlistEntryUpdate(BaseModel):
+    song_id: int | None = None
+    entry_type: str = "SONG"
+    unresolved_song_name: str | None = None
+    order_index: int
+    notes: str | None = None
+
+
+class SetlistUpdatePayload(BaseModel):
+    entries: list[SetlistEntryUpdate]
 
 class SetlistEntry(BaseModel):
     id: int
@@ -473,8 +521,8 @@ class Performance(BaseModel):
     stage_name: str | None = None
 
     # ★ ネストされた関連データの追加 ★
-    setlist_entries: List[SetlistEntry] = []  # SetlistEntry のリスト
-    roster_entries: List[PerformanceRoster] = []  # PerformanceRoster のリスト
+    setlist_entries: list[SetlistEntry] = []  # SetlistEntry のリスト
+    roster_entries: list[PerformanceRoster] = []  # PerformanceRoster のリスト
 
     class Config:
         from_attributes = True
@@ -504,16 +552,17 @@ class PerformanceSummary(BaseModel):
 
 # --- PerformanceDetail (詳細表示用) ---
 class PerformanceDetail(Performance):
-    setlist_entries: List[SetlistEntry] = []
-    roster_entries: List[PerformanceRoster] = []
-    
+    setlist_entries: list[SetlistEntry] = []
+    roster_entries: list[PerformanceRoster] = []
+
     class Config:
         from_attributes = True
 
 
+
 # --- TourDetail (ツアー詳細・公演一覧用) ---
 class TourDetail(Tour):
-    performances: List[Performance] = []
+    performances: list[Performance] = []
 
     class Config:
         from_attributes = True
@@ -571,8 +620,8 @@ class AlbumTrackForAlbum(BaseModel):
         from_attributes = True
 
 class AlbumDetail(Album):
-    discs: List[AlbumDiscBase] = []
-    album_tracks: List[AlbumTrackForAlbum] = []
+    discs: list[AlbumDiscBase] = []
+    album_tracks: list[AlbumTrackForAlbum] = []
 
     class Config:
         from_attributes = True

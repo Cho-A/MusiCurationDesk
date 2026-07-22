@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import models , schemas # 先ほど作成したファイルをインポート

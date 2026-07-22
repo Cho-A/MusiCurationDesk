@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
@@ -20,7 +21,7 @@ def create_venue(venue: schemas.VenueCreate, db: Session = Depends(models.get_db
         raise HTTPException(status_code=400, detail=str(e))
     return db_venue
 
-@router.get("/", response_model=List[schemas.Venue])
+@router.get("/", response_model=list[schemas.Venue])
 def get_venues(db: Session = Depends(models.get_db)):
     return db.query(models.Venue).order_by(models.Venue.id).all()
 

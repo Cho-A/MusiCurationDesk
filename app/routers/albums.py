@@ -62,7 +62,7 @@ def create_album(
 
 # [GET] /albums/
 # ----------------------------------------------------
-@album_router.get("/", response_model=List[schemas.Album], tags=["Albums"])
+@album_router.get("/", response_model=list[schemas.Album], tags=["Albums"])
 def read_albums(
     skip: int = 0, 
     limit: int = 100, 

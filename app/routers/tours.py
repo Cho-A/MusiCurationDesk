@@ -43,7 +43,7 @@ def create_tour(
 
     return new_tour
 
-@router.get("/", response_model=List[schemas.Tour], tags=["Tours"])
+@router.get("/", response_model=list[schemas.Tour], tags=["Tours"])
 def get_tours(skip: int = 0, limit: int = 100, db: Session = Depends(models.get_db)):
     """登録されているすべてのツアー/イベントシリーズ一覧を取得します。"""
     tours = db.query(models.Tour).order_by(models.Tour.id.desc()).offset(skip).limit(limit).all()

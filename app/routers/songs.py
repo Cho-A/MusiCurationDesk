@@ -49,7 +49,31 @@ def create_song(
     # 5. 登録した楽曲情報を返す
     return new_song
 
-@router.get("/recent", response_model=List[schemas.Song], tags=["Songs"])
+@router.post("/{song_id}/aliases", response_model=schemas.SongAlias, tags=["Songs"])
+def add_song_alias(
+    song_id: int,
+    alias: schemas.SongAliasCreate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    既存の楽曲に別名（Alias）を登録します。
+    """
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not db_song:
+        raise HTTPException(status_code=404, detail="Song not found")
+
+    new_alias = models.SongAlias(song_id=song_id, alias_name=alias.alias_name)
+    db.add(new_alias)
+    try:
+        db.commit()
+        db.refresh(new_alias)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="このエイリアスは既に登録されています。")
+        
+    return new_alias
+
+@router.get("/recent", response_model=list[schemas.Song], tags=["Songs"])
 def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
     """
     最近追加された楽曲を取得します。
@@ -61,17 +85,17 @@ def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
 # 
 # [GET] /songs/
 # ----------------------------------------------------
-@router.get("/", response_model=List[schemas.Song], tags=["Songs"])
+@router.get("/", response_model=list[schemas.Song], tags=["Songs"])
 def read_songs(
     skip: int = 0,
     limit: int = 100,
-    title_search: Optional[str] = Query(None, description="曲名での部分一致検索"),
+    title_search: str | None = Query(None, description="曲名での部分一致検索"),
     sort_by: str = Query("id", description="ソート基準 (id, title, release_date)"),
     # ★ 拡張検索パラメータの追加 ★
-    role_filter: Optional[str] = Query(None, description="役割によるフィルタ (カンマ区切り、例: Composer,Vocalist)"),
-    tieup_id_filter: Optional[int] = Query(None, description="タイアップIDによるフィルタ"),
+    role_filter: str | None = Query(None, description="役割によるフィルタ (カンマ区切り、例: Composer,Vocalist)"),
+    tieup_id_filter: int | None = Query(None, description="タイアップIDによるフィルタ"),
     # ★★★ 新規追加 ★★★
-    artist_id_filter: Optional[int] = Query(None, description="特定のアーティストIDで絞り込む"),
+    artist_id_filter: int | None = Query(None, description="特定のアーティストIDで絞り込む"),
     db: Session = Depends(models.get_db)
 ):
     """
@@ -356,7 +380,7 @@ def remove_credit_from_song(
     song_id: int,
     artist_id: int,
     role_category: str = Query(..., description="削除する役割の大分類"),
-    role_detail: Optional[str] = Query(None, description="削除する役割の詳細"),
+    role_detail: str | None = Query(None, description="削除する役割の詳細"),
     db: Session = Depends(models.get_db)
 ):
     """
@@ -426,7 +450,7 @@ def link_song_to_tag(
 
 # (POST /songs/generate-spotify-ids)
 # ----------------------------------------------------
-@router.post("/generate-spotify-ids", response_model=List[str], tags=["Playlists"])
+@router.post("/generate-spotify-ids", response_model=list[str], tags=["Playlists"])
 def generate_spotify_ids_from_search(
     # read_songs と同じ検索条件を「リクエストボディ」として受け取る
     search_params: schemas.SongSearch, # 👈 ★新しいスキーマ

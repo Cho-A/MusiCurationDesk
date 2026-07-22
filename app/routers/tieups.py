@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ def create_tieup(tieup: schemas.TieupCreate, db: Session = Depends(models.get_db
     db.refresh(db_tieup)
     return db_tieup
 
-@router.get("/", response_model=List[schemas.Tieup])
+@router.get("/", response_model=list[schemas.Tieup])
 def get_tieups(db: Session = Depends(models.get_db)):
     return db.query(models.Tieup).all()
 
@@ -51,13 +52,13 @@ def get_tieup(tieup_id: int, db: Session = Depends(models.get_db)):
         parents=parents
     )
 
-@router.get("/{tieup_id}/songs", response_model=List[schemas.Song])
+@router.get("/{tieup_id}/songs", response_model=list[schemas.Song])
 def get_tieup_songs(tieup_id: int, db: Session = Depends(models.get_db)):
     """
     指定されたタイアップ、およびその子孫（階層下）に紐づくすべての楽曲を取得します。
     """
     # 1. 階層下の全Tieup IDを再帰的に取得
-    def get_all_descendant_ids(t_id: int) -> List[int]:
+    def get_all_descendant_ids(t_id: int) -> list[int]:
         ids = [t_id]
         children = db.query(models.Tieup.id).filter(models.Tieup.parent_id == t_id).all()
         for child in children:

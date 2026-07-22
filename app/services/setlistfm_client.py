@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import requests
 from typing import Optional, Dict, Any
@@ -16,7 +17,7 @@ class SetlistFMClient:
             "x-api-key": self.api_key
         }
 
-    def search_setlists(self, artist_name: str, p: int = 1) -> Dict[str, Any]:
+    def search_setlists(self, artist_name: str, p: int = 1) -> dict[str, Any]:
         """Search for setlists by artist name."""
         url = f"{self.BASE_URL}/search/setlists"
         params = {
@@ -29,7 +30,7 @@ class SetlistFMClient:
         res.raise_for_status()
         return res.json()
 
-    def get_setlist(self, setlist_id: str) -> Dict[str, Any]:
+    def get_setlist(self, setlist_id: str) -> dict[str, Any]:
         """Get a specific setlist by ID."""
         url = f"{self.BASE_URL}/setlist/{setlist_id}"
         res = requests.get(url, headers=self._get_headers())

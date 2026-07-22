@@ -1,3 +1,4 @@
+from __future__ import annotations
 import requests
 import time
 from typing import List, Dict, Any
@@ -5,7 +6,7 @@ from typing import List, Dict, Any
 MB_API_BASE = "https://musicbrainz.org/ws/2"
 USER_AGENT = "MusiCurationDesk/1.0 ( https://github.com/takanoryo/MusiCurationDesk )"
 
-def search_releases(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+def search_releases(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """
     MusicBrainz からアルバム(Release)を検索する
     """
@@ -40,7 +41,7 @@ def search_releases(query: str, limit: int = 10) -> List[Dict[str, Any]]:
         })
     return releases
 
-def get_release_details(release_id: str) -> Dict[str, Any]:
+def get_release_details(release_id: str) -> dict[str, Any]:
     """
     ReleaseのIDから、ディスク(media)とトラックリストを取得する
     """

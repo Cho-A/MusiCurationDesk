@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
@@ -8,9 +9,9 @@ router = APIRouter(
     tags=["MusicalWorks"]
 )
 
-@router.get("/", response_model=List[schemas.MusicalWork])
+@router.get("/", response_model=list[schemas.MusicalWork])
 def search_works(
-    q: Optional[str] = Query(None, description="楽曲名検索キーワード"),
+    q: str | None = Query(None, description="楽曲名検索キーワード"),
     limit: int = 50,
     db: Session = Depends(models.get_db)
 ):
