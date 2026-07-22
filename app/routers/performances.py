@@ -73,7 +73,7 @@ def create_performance(
 
     return new_performance
 
-@performance_router.get("/", response_model=List[schemas.Performance], tags=["Performances"])
+@performance_router.get("/", response_model=list[schemas.Performance], tags=["Performances"])
 def get_performances(
     tour_id: int = Query(None, description="Filter by Tour ID"),
     skip: int = 0, 
@@ -181,7 +181,7 @@ def add_performance_roster_entry(
 # [GET] /performances/
 # ----------------------------------------------------
 @performance_router.get(
-    "/", response_model=List[schemas.PerformanceSummary], tags=["Performances"]
+    "/", response_model=list[schemas.PerformanceSummary], tags=["Performances"]
 )
 def read_performances(
     # クエリパラメータを定義
@@ -258,6 +258,59 @@ def read_performance(
     return db_performance
 
 
+@performance_router.put(
+    "/{performance_id}/setlist",
+    response_model=list[schemas.SetlistEntry],
+    tags=["Performances"]
+)
+def update_setlist(
+    performance_id: int,
+    payload: schemas.SetlistUpdatePayload,
+    db: Session = Depends(models.get_db),
+):
+    """公演のセットリストを一括更新します。"""
+    db_performance = db.query(models.Performance).filter(models.Performance.id == performance_id).first()
+    if not db_performance:
+        raise HTTPException(status_code=404, detail="Performance not found")
+
+    # 既存のセットリストを削除
+    db.query(models.SetlistEntry).filter(models.SetlistEntry.performance_id == performance_id).delete()
+
+    new_entries = []
+    for entry in payload.entries:
+        if entry.song_id is not None:
+            db_song = db.query(models.Song).filter(models.Song.id == entry.song_id).first()
+            if not db_song:
+                raise HTTPException(status_code=404, detail=f"Song ID {entry.song_id} not found")
+        
+        new_entry = models.SetlistEntry(
+            performance_id=performance_id,
+            song_id=entry.song_id,
+            entry_type=entry.entry_type,
+            unresolved_song_name=entry.unresolved_song_name,
+            order_index=entry.order_index,
+            notes=entry.notes
+        )
+        db.add(new_entry)
+        new_entries.append(new_entry)
+
+    db.commit()
+
+    # refresh each entry
+    for entry in new_entries:
+        db.refresh(entry)
+
+    # Re-fetch to populate relationships like song
+    updated_setlist = (
+        db.query(models.SetlistEntry)
+        .options(joinedload(models.SetlistEntry.song))
+        .filter(models.SetlistEntry.performance_id == performance_id)
+        .order_by(models.SetlistEntry.order_index)
+        .all()
+    )
+    return updated_setlist
+
+
 # --- ★セットリスト登録APIエンドポイント★ ---
 #
 # [POST] /setlist_entries/
@@ -316,3 +369,76 @@ def create_setlist_entry(
     db.refresh(new_entry)
 
     return new_entry
+
+@performance_router.put(
+    "/{performance_id}", response_model=schemas.PerformanceDetail, tags=["Performances"]
+)
+def update_performance(
+    performance_id: int,
+    payload: schemas.PerformanceUpdate,
+    db: Session = Depends(models.get_db),
+):
+    """公演メタデータを更新します。"""
+    
+    db_performance = db.query(models.Performance).filter(models.Performance.id == performance_id).first()
+    if db_performance is None:
+        raise HTTPException(status_code=404, detail="Performance not found.")
+        
+    update_data = payload.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_performance, key, value)
+        
+    try:
+        db.commit()
+        db.refresh(db_performance)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to update performance: {e}")
+        
+    return db_performance
+
+
+@performance_router.post(
+    "/{performance_id}/copy-setlist", response_model=schemas.PerformanceDetail, tags=["Performances"]
+)
+def copy_setlist(
+    performance_id: int,
+    from_performance_id: int,
+    db: Session = Depends(models.get_db),
+):
+    """指定した公演からセットリストをコピーします。"""
+    
+    target_perf = db.query(models.Performance).filter(models.Performance.id == performance_id).first()
+    if not target_perf:
+        raise HTTPException(status_code=404, detail="Target performance not found.")
+        
+    source_perf = db.query(models.Performance).filter(models.Performance.id == from_performance_id).first()
+    if not source_perf:
+        raise HTTPException(status_code=404, detail="Source performance not found.")
+        
+    if target_perf.setlist_entries:
+        raise HTTPException(status_code=400, detail="Target performance already has a setlist.")
+        
+    if not source_perf.setlist_entries:
+        raise HTTPException(status_code=400, detail="Source performance has no setlist to copy.")
+        
+    # Copy entries
+    for entry in source_perf.setlist_entries:
+        new_entry = models.SetlistEntry(
+            performance_id=target_perf.id,
+            song_id=entry.song_id,
+            entry_type=entry.entry_type,
+            unresolved_song_name=entry.unresolved_song_name,
+            order_index=entry.order_index,
+            notes=entry.notes
+        )
+        db.add(new_entry)
+        
+    try:
+        db.commit()
+        db.refresh(target_perf)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to copy setlist: {e}")
+        
+    return target_perf

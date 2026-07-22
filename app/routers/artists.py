@@ -1,7 +1,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from typing import List, Optional
-from sqlalchemy.orm import Session, joinedload, aliased
+from sqlalchemy.orm import Session, joinedload, selectinload, aliased
 from .. import models , schemas # 先ほど作成したファイルをインポート
 
 # --- 1. APIRouter のインスタンスを作成 ---
@@ -12,7 +12,7 @@ router = APIRouter(
 
 # [GET] /artists/
 # ----------------------------------------------------
-@router.get("/", response_model=List[schemas.ArtistDetail], tags=["Artists"])
+@router.get("/", response_model=list[schemas.ArtistDetail], tags=["Artists"])
 def read_artists(skip: int = 0, limit: int = 100, db: Session = Depends(models.get_db)):
     """全アーティストのリストを取得する"""
     artists = db.query(models.Artist).order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
@@ -68,17 +68,17 @@ def read_artist(artist_id: int, db: Session = Depends(models.get_db)):
     db_artist = db.query(models.Artist)\
         .options(
             # Alias (別名義) 情報を取得
-            joinedload(models.Artist.aliases),
+            selectinload(models.Artist.aliases),
             # 楽曲リンク (SongArtistLink) 情報とその先の楽曲タイトルをまとめて取得
-            joinedload(models.Artist.song_links)\
+            selectinload(models.Artist.song_links)\
                 .joinedload(models.SongArtistLink.song),
-            joinedload(models.Artist.albums),
-            joinedload(models.Artist.performances).joinedload(models.Performance.venue),
-            joinedload(models.Artist.performances).joinedload(models.Performance.tour),
-            joinedload(models.Artist.tags),
-            joinedload(models.Artist.relationships_as_a).joinedload(models.ArtistRelationship.artist_b),
-            joinedload(models.Artist.roster_participations).joinedload(models.PerformanceRoster.performance).joinedload(models.Performance.venue),
-            joinedload(models.Artist.roster_participations).joinedload(models.PerformanceRoster.performance).joinedload(models.Performance.tour),
+            selectinload(models.Artist.albums),
+            selectinload(models.Artist.performances).joinedload(models.Performance.venue),
+            selectinload(models.Artist.performances).joinedload(models.Performance.tour),
+            selectinload(models.Artist.tags),
+            selectinload(models.Artist.relationships_as_a).joinedload(models.ArtistRelationship.artist_b),
+            selectinload(models.Artist.roster_participations).joinedload(models.PerformanceRoster.performance).joinedload(models.Performance.venue),
+            selectinload(models.Artist.roster_participations).joinedload(models.PerformanceRoster.performance).joinedload(models.Performance.tour),
         )\
         .filter(models.Artist.id == artist_id).first()
     
@@ -93,11 +93,11 @@ def read_artist(artist_id: int, db: Session = Depends(models.get_db)):
 #
 # [GET] /artists/{artist_id}/songs
 # ----------------------------------------------------
-@router.get("/{artist_id}/songs", response_model=List[schemas.SongSearchResult], tags=["Artists"])
+@router.get("/{artist_id}/songs", response_model=list[schemas.SongSearchResult], tags=["Artists"])
 def get_artist_contributions(
     artist_id: int,
     # カンマ区切りの文字列でroleを受け取る (例: Composer,Lyricist)
-    roles: Optional[str] = Query(None, description="検索したい役割 (カンマ区切り、例: Composer,Vocalist)"),
+    roles: str | None = Query(None, description="検索したい役割 (カンマ区切り、例: Composer,Vocalist)"),
     sort_by: str = Query("release_date", description="ソート基準 (release_date, title)"),
     db: Session = Depends(models.get_db)
 ):
@@ -190,3 +190,100 @@ def update_artist(
 
     db.refresh(db_artist)
     return db_artist
+
+# --- メンバー管理 API ---
+
+@router.post("/{artist_id}/members", tags=["Artists"])
+def add_artist_member(artist_id: int, member_data: schemas.ArtistMemberCreate, db: Session = Depends(models.get_db)):
+    db_artist = db.query(models.Artist).filter(models.Artist.id == artist_id).first()
+    if not db_artist:
+        raise HTTPException(status_code=404, detail="アーティストが見つかりません。")
+    
+    member_artist = db.query(models.Artist).filter(models.Artist.id == member_data.member_artist_id).first()
+    if not member_artist:
+        raise HTTPException(status_code=404, detail="追加するメンバー（アーティスト）が見つかりません。")
+        
+    # 重複チェック
+    existing = db.query(models.ArtistRelationship).filter(
+        models.ArtistRelationship.artist_id_1 == artist_id,
+        models.ArtistRelationship.artist_id_2 == member_data.member_artist_id,
+        models.ArtistRelationship.relationship_type == "member"
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="既にメンバーとして登録されています。")
+        
+    new_rel = models.ArtistRelationship(
+        artist_id_1=artist_id,
+        artist_id_2=member_data.member_artist_id,
+        relationship_type="member",
+        start_date=member_data.start_date,
+        end_date=member_data.end_date
+    )
+    db.add(new_rel)
+    db.commit()
+    return {"message": "メンバーを追加しました。"}
+
+@router.put("/{artist_id}/members/{member_id}", tags=["Artists"])
+def update_artist_member(artist_id: int, member_id: int, member_data: schemas.ArtistMemberUpdate, db: Session = Depends(models.get_db)):
+    rel = db.query(models.ArtistRelationship).filter(
+        models.ArtistRelationship.artist_id_1 == artist_id,
+        models.ArtistRelationship.artist_id_2 == member_id,
+        models.ArtistRelationship.relationship_type == "member"
+    ).first()
+    if not rel:
+        raise HTTPException(status_code=404, detail="メンバー登録が見つかりません。")
+        
+    if member_data.start_date is not None:
+        rel.start_date = member_data.start_date
+    if member_data.end_date is not None:
+        rel.end_date = member_data.end_date
+        
+    db.commit()
+    return {"message": "メンバー情報を更新しました。"}
+
+@router.delete("/{artist_id}/members/{member_id}", tags=["Artists"])
+def remove_artist_member(artist_id: int, member_id: int, db: Session = Depends(models.get_db)):
+    rel = db.query(models.ArtistRelationship).filter(
+        models.ArtistRelationship.artist_id_1 == artist_id,
+        models.ArtistRelationship.artist_id_2 == member_id,
+        models.ArtistRelationship.relationship_type == "member"
+    ).first()
+    if not rel:
+        raise HTTPException(status_code=404, detail="メンバー登録が見つかりません。")
+        
+    db.delete(rel)
+    db.commit()
+    return {"message": "メンバーを削除しました。"}
+
+# --- タグ管理 API ---
+
+@router.post("/{artist_id}/tags", tags=["Artists"])
+def add_artist_tag(artist_id: int, tag_data: schemas.TagAssign, db: Session = Depends(models.get_db)):
+    db_artist = db.query(models.Artist).filter(models.Artist.id == artist_id).first()
+    if not db_artist:
+        raise HTTPException(status_code=404, detail="アーティストが見つかりません。")
+        
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_data.tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="タグが見つかりません。")
+        
+    if tag in db_artist.tags:
+        raise HTTPException(status_code=400, detail="既にこのタグは付与されています。")
+        
+    db_artist.tags.append(tag)
+    db.commit()
+    return {"message": "タグを追加しました。"}
+
+@router.delete("/{artist_id}/tags/{tag_id}", tags=["Artists"])
+def remove_artist_tag(artist_id: int, tag_id: int, db: Session = Depends(models.get_db)):
+    db_artist = db.query(models.Artist).filter(models.Artist.id == artist_id).first()
+    if not db_artist:
+        raise HTTPException(status_code=404, detail="アーティストが見つかりません。")
+        
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag or tag not in db_artist.tags:
+        raise HTTPException(status_code=404, detail="付与されているタグが見つかりません。")
+        
+    db_artist.tags.remove(tag)
+    db.commit()
+    return {"message": "タグを削除しました。"}
