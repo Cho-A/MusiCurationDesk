@@ -250,6 +250,38 @@ const Concerts = () => {
     }
   };
 
+  const handleFullSyncArtist = async (artistName: string) => {
+    if (!artistName) return;
+    setImporting(true);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/external/setlistfm/full-sync-artist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ artist_name: artistName })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.errors && data.errors.length > 0) {
+          toast.success(`同期が完了しました (${data.successes.length}件)\n${data.errors.length}件のエラーが発生しました`);
+        } else {
+          toast.success(`${artistName}の全履歴同期が完了しました (${data.successes?.length || 0}件)`);
+        }
+        setShowSetlistImportModal(false);
+        setImportQuery("");
+        setImportResults([]);
+        setSelectedSetlists(new Set());
+        fetchData();
+      } else {
+        toast.error('同期に失敗しました');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('エラーが発生しました');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const toggleSetlistSelection = (id: string) => {
     const newSet = new Set(selectedSetlists);
     if (newSet.has(id)) newSet.delete(id);
@@ -388,7 +420,8 @@ const Concerts = () => {
                     </div>
                   </div>
                   <div style={{
-                    background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px', transition: 'all 0.2s'
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px', transition: 'all 0.2s',
+                    height: '100%', display: 'flex', flexDirection: 'column'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = 'var(--primary-color)';
@@ -401,14 +434,14 @@ const Concerts = () => {
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-primary)', background: 'var(--warning-bg)', padding: '2px 8px', borderRadius: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', paddingRight: '32px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-primary)', background: 'var(--warning-bg)', padding: '2px 8px', borderRadius: '12px', alignSelf: 'flex-start' }}>
                         {perf.event_type}
                       </span>
                       <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{perf.date}</span>
                     </div>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', lineHeight: '1.4' }}>{perf.name}</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', lineHeight: '1.4', flex: 1 }}>{perf.name}</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: 'auto' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Users size={16} />
                         <span>{perf.main_artist ? perf.main_artist.name : 'Unknown Artist'}</span>
@@ -416,7 +449,7 @@ const Concerts = () => {
                       {perf.venue && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <MapPin size={16} />
-                          <span>{perf.venue.name}</span>
+                          <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{perf.venue.name}</span>
                         </div>
                       )}
                     </div>
@@ -588,8 +621,21 @@ const Concerts = () => {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-              <div>
+              {importResults.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+                <div>
+                  <button
+                    onClick={() => handleFullSyncArtist(importQuery)}
+                    disabled={importing}
+                    style={{ 
+                        padding: '10px 24px', borderRadius: '24px', background: 'var(--accent-primary)', color: '#fff', border: 'none', 
+                        cursor: importing ? 'not-allowed' : 'pointer',
+                        opacity: importing ? 0.5 : 1,
+                        marginRight: '12px'
+                    }}
+                  >
+                    このアーティストの全履歴を同期
+                  </button>
                   {importMode === 'bulk' && (
                       <button
                         onClick={handleBulkImport}
@@ -603,14 +649,15 @@ const Concerts = () => {
                         選択した {selectedSetlists.size}件 をインポート
                       </button>
                   )}
-              </div>
-              <button
+                </div>
+                <button
                 onClick={() => setShowSetlistImportModal(false)}
                 style={{ padding: '10px 20px', borderRadius: '24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
               >
                 閉じる
               </button>
             </div>
+            )}
           </div>
         </div>
       )}

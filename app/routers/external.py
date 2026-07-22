@@ -165,6 +165,9 @@ class SetlistImportRequest(BaseModel):
 class BulkImportRequest(BaseModel):
     setlist_ids: list[str]
 
+class FullSyncRequest(BaseModel):
+    artist_name: str
+
 @router.post("/setlistfm/bulk-import")
 def bulk_import_setlists(req: BulkImportRequest, db: Session = Depends(models.get_db)):
     errors = []
@@ -194,6 +197,49 @@ def bulk_import_setlists(req: BulkImportRequest, db: Session = Depends(models.ge
         return {"message": "Bulk import completed with some errors", "successes": successes, "errors": errors}
         
     return {"message": "Bulk import completed", "successes": successes}
+
+@router.post("/setlistfm/full-sync-artist")
+def full_sync_artist(req: FullSyncRequest, db: Session = Depends(models.get_db)):
+    try:
+        first_page = setlistfm_client.search_setlists(req.artist_name, 1)
+        if not first_page.get("setlist"):
+            return {"message": "No setlists found", "successes": [], "errors": []}
+            
+        total_items = first_page.get("total", 0)
+        items_per_page = first_page.get("itemsPerPage", 20)
+        import math
+        total_pages = math.ceil(total_items / items_per_page)
+        
+        all_setlists = first_page["setlist"]
+        
+        def fetch_page(p: int):
+            import time
+            time.sleep(0.5)
+            data = setlistfm_client.search_setlists(req.artist_name, p)
+            return data.get("setlist", [])
+
+        if total_pages > 1:
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures = [executor.submit(fetch_page, p) for p in range(2, total_pages + 1)]
+                for future in futures:
+                    try:
+                        all_setlists.extend(future.result())
+                    except Exception as e:
+                        print(f"Error fetching page: {e}")
+                        
+        successes = []
+        errors = []
+        for sl_data in all_setlists:
+            sid = sl_data.get("id")
+            try:
+                perf_id = _insert_setlist_data(sl_data, sid, db)
+                successes.append({"setlist_id": sid, "performance_id": perf_id})
+            except Exception as e:
+                errors.append(f"Failed to insert {sid}: {str(e)}")
+                
+        return {"message": "Full sync completed", "successes": successes, "errors": errors, "total_found": len(all_setlists)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/setlistfm/import")
 def import_setlistfm(req: SetlistImportRequest, db: Session = Depends(models.get_db)):
@@ -253,6 +299,18 @@ def _insert_setlist_data(setlist_data: dict, setlist_id: str, db: Session) -> in
             pass
             
     performance_name = tour_name if tour_name else f"{artist_name} Live at {venue_name}"
+    
+    # 既存チェック (重複を防ぐため、同日・同名・同アーティストならスキップ)
+    existing_perf = db.query(models.Performance).filter(
+        models.Performance.name == performance_name,
+        models.Performance.date == event_date,
+        models.Performance.artist_id == artist.id
+    ).first()
+    
+    if existing_perf:
+        # 重複の場合は既存のIDを返し、セットリストの上書きは行わない
+        return existing_perf.id
+
     perf = models.Performance(
         name=performance_name,
         date=event_date,
