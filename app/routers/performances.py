@@ -183,7 +183,7 @@ def add_performance_roster_entry(
 @performance_router.get(
     "/", response_model=list[schemas.PerformanceSummary], tags=["Performances"]
 )
-def read_performances(
+def get_all_performances(
     # クエリパラメータを定義
     artist_id: int | None = Query(
         None, description="メインアクトのアーティストIDでフィルタリングします。"
@@ -229,7 +229,7 @@ def read_performances(
 @performance_router.get(
     "/{performance_id}", response_model=schemas.Performance, tags=["Performances"]
 )
-def read_performance(
+def get_performance_by_id(
     performance_id: int,
     db: Session = Depends(models.get_db),
 ):

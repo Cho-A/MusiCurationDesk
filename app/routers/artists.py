@@ -13,7 +13,7 @@ router = APIRouter(
 # [GET] /artists/
 # ----------------------------------------------------
 @router.get("/", response_model=list[schemas.ArtistDetail], tags=["Artists"])
-def read_artists(skip: int = 0, limit: int = 100, db: Session = Depends(models.get_db)):
+def get_all_artists(skip: int = 0, limit: int = 100, db: Session = Depends(models.get_db)):
     """全アーティストのリストを取得する"""
     artists = db.query(models.Artist).order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
     return artists
@@ -60,7 +60,7 @@ def create_artist(
 
 # --- 4. (おまけ) 登録したアーティストを読み取るAPI ---
 @router.get("/{artist_id}", response_model=schemas.ArtistDetail, tags=["Artists"])
-def read_artist(artist_id: int, db: Session = Depends(models.get_db)):
+def get_artist_by_id(artist_id: int, db: Session = Depends(models.get_db)):
     """
     指定されたIDのアーティスト情報に加え、別名義と楽曲貢献リストを取得します。
     """

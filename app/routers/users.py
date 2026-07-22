@@ -131,7 +131,7 @@ def create_user_attendance(
 # --- ★★★ 新規実装: マイページ情報取得 (保護されたAPI) ★★★ ---
 # GET /users/me
 @user_router.get("/me", response_model=schemas.User)
-def read_users_me(
+def get_current_user_profile(
     # ★ ここで門番 (get_current_user) を使う！
     current_user: models.User = Depends(dependencies.get_current_user)
 ):

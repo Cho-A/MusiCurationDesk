@@ -86,7 +86,7 @@ def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
 # [GET] /songs/
 # ----------------------------------------------------
 @router.get("/", response_model=list[schemas.Song], tags=["Songs"])
-def read_songs(
+def get_all_songs(
     skip: int = 0,
     limit: int = 100,
     title_search: str | None = Query(None, description="曲名での部分一致検索"),
@@ -197,7 +197,7 @@ def update_song(
 # [GET] /songs/{song_id}
 # ----------------------------------------------------
 @router.get("/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
-def read_song(song_id: int, db: Session = Depends(models.get_db)):
+def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
     """
     指定されたIDの楽曲詳細情報を取得します。
     アーティスト貢献度、タイアップ、タグ、最終演奏日、演奏回数を含みます。
