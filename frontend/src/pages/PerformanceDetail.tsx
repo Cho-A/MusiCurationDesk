@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, Save, Trash, ArrowUp, ArrowDown, Search, X, Link2Off } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, Trash, ArrowUp, ArrowDown, Search, X, Link2Off, Copy } from 'lucide-react';
 
 interface Artist {
   id: number;
@@ -495,13 +495,45 @@ const PerformanceDetail = () => {
               <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
                 <p>セットリストはまだ登録されていません。</p>
                 {performance.tour && tourPerformances.length > 0 && (
-                  <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '8px', display: 'inline-block', textAlign: 'left' }}>
-                    <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem' }}>💡 同じツアーの別公演からセットリストをコピーできます</p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ 
+                    marginTop: '20px', 
+                    padding: '20px', 
+                    background: 'var(--bg-tertiary)', 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--border-color)',
+                    width: '100%',
+                    maxWidth: '560px', 
+                    margin: '20px auto 0 auto', 
+                    textAlign: 'left' 
+                  }}>
+                    <p style={{ 
+                      margin: '0 0 12px 0', 
+                      fontSize: '0.9rem', 
+                      color: 'var(--text-primary)', 
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <Copy size={16} style={{ color: 'var(--accent-primary)' }} /> 
+                      同じツアーの別公演からセットリストをコピー
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <select 
                         value={copyFromPerfId}
                         onChange={(e) => setCopyFromPerfId(e.target.value ? Number(e.target.value) : "")}
-                        style={{ padding: '8px', borderRadius: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                        style={{ 
+                          flex: 1, 
+                          minWidth: 0, 
+                          padding: '10px 14px', 
+                          borderRadius: '8px', 
+                          background: 'var(--bg-secondary)', 
+                          border: '1px solid var(--border-color)', 
+                          color: 'var(--text-primary)',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
                       >
                         <option value="">コピー元の公演を選択...</option>
                         {tourPerformances.map(p => (
@@ -511,8 +543,25 @@ const PerformanceDetail = () => {
                       <button 
                         onClick={handleCopySetlist}
                         disabled={!copyFromPerfId}
-                        style={{ padding: '8px 16px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: copyFromPerfId ? 'pointer' : 'default', opacity: copyFromPerfId ? 1 : 0.5 }}
+                        style={{ 
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          padding: '10px 20px', 
+                          background: 'var(--accent-primary)', 
+                          color: '#fff', 
+                          border: 'none', 
+                          borderRadius: '8px', 
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          cursor: copyFromPerfId ? 'pointer' : 'not-allowed', 
+                          opacity: copyFromPerfId ? 1 : 0.5,
+                          transition: 'all 0.2s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
                       >
+                        <Copy size={15} />
                         コピー
                       </button>
                     </div>
@@ -697,7 +746,14 @@ const PerformanceDetail = () => {
                     {searchResults.map(song => (
                       <div key={song.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid var(--border-color)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ fontWeight: 'bold' }}>{song.title}</span>
+                          <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {song.title}
+                            {!song.is_video && song.is_streaming_available === false && (
+                              <span style={{color: 'var(--error-color)', fontSize: '0.8rem', border: '1px solid #ff4d4d', padding: '2px 4px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
+                                サブスク未解禁
+                              </span>
+                            )}
+                          </span>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '8px' }}>
                             <span>👤 {song.artist_links?.map((a: any) => a.artist_name).join(', ') || '不明'}</span>
                             {song.primary_album && <span>💿 {song.primary_album.main_title}</span>}
@@ -791,7 +847,14 @@ const PerformanceDetail = () => {
                 {mappingSearchResults.map(song => (
                   <div key={song.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderBottom: '1px solid var(--border-color)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontWeight: 'bold' }}>{song.title}</span>
+                      <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {song.title}
+                        {!song.is_video && song.is_streaming_available === false && (
+                          <span style={{color: 'var(--error-color)', fontSize: '0.8rem', border: '1px solid #ff4d4d', padding: '2px 4px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
+                            サブスク未解禁
+                          </span>
+                        )}
+                      </span>
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '12px' }}>
                         <span>👤 {song.artist_links?.map((a: any) => a.artist_name).join(', ') || '不明'}</span>
                         {song.primary_album && <span>💿 {song.primary_album.main_title}</span>}

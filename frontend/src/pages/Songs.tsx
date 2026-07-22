@@ -17,6 +17,7 @@ interface Song {
   jasrac_code?: string;
   is_video?: boolean;
   version_name?: string;
+  is_streaming_available?: boolean;
   primary_album?: AlbumMini | null;
   spotify_song_id?: string | null;
 }
@@ -161,8 +162,13 @@ const Songs = () => {
             }}>
               {song.is_video ? '映像' : '音源'}
             </span>
-            <div style={{ fontWeight: 600, fontSize: '1.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 600, fontSize: '1.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {song.title}
+              {!song.is_video && song.is_streaming_available === false && (
+                <span style={{color: 'var(--error-color)', fontSize: '0.75rem', border: '1px solid #ff4d4d', padding: '2px 4px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
+                  サブスク未解禁
+                </span>
+              )}
             </div>
           </div>
           
