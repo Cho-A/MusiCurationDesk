@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Disc3, Music, Calendar, MapPin, ArrowLeft, Users } from 'lucide-react';
+import { Disc3, Music, Calendar, MapPin, ArrowLeft, Users, Pencil, X, Plus, Trash2, Search } from 'lucide-react';
 
 interface AlbumMini {
   id: number;
@@ -65,19 +65,123 @@ const ArtistDetail = () => {
   const [activeTab, setActiveTab] = useState<'albums' | 'performances' | 'songs'>('albums');
   const navigate = useNavigate();
 
-  useEffect(() => {
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editSpotifyId, setEditSpotifyId] = useState("");
+  
+  // Member edit states
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [memberSearchResults, setMemberSearchResults] = useState<any[]>([]);
+  const [newMemberStartDate] = useState("");
+  const [newMemberEndDate] = useState("");
+  
+  // Tag edit states
+  const [availableTags, setAvailableTags] = useState<any[]>([]);
+  const [selectedTagId, setSelectedTagId] = useState<string>("");
+
+  const fetchArtist = () => {
     fetch(`http://127.0.0.1:8000/artists/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch');
-        return res.json();
+      .then(res => res.json())
+      .then(data => {
+        setArtist(data);
+        setEditImageUrl(data.image_url || "");
+        setEditSpotifyId(data.spotify_artist_id || "");
       })
-      .then(data => setArtist(data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchArtist();
+    fetch('http://127.0.0.1:8000/tags/')
+      .then(res => res.json())
+      .then(data => setAvailableTags(data))
+      .catch(err => console.error(err));
   }, [id]);
 
+  const saveBasicInfo = async () => {
+    try {
+      await fetch(`http://127.0.0.1:8000/artists/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: editImageUrl, spotify_artist_id: editSpotifyId })
+      });
+      setIsEditing(false);
+      fetchArtist();
+    } catch (e) { console.error(e); }
+  };
+
+  const searchMembers = async () => {
+    if (!memberSearchQuery.trim()) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/artists/?q=${encodeURIComponent(memberSearchQuery)}`);
+      if (res.ok) {
+        setMemberSearchResults(await res.json());
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const addMember = async (memberId: number) => {
+    try {
+      await fetch(`http://127.0.0.1:8000/artists/${id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          member_artist_id: memberId, 
+          start_date: newMemberStartDate || null, 
+          end_date: newMemberEndDate || null 
+        })
+      });
+      setIsAddingMember(false);
+      fetchArtist();
+    } catch (e) { console.error(e); }
+  };
+
+  const removeMember = async (memberId: number) => {
+    if (!confirm('本当にこのメンバーを削除しますか？')) return;
+    try {
+      await fetch(`http://127.0.0.1:8000/artists/${id}/members/${memberId}`, { method: 'DELETE' });
+      fetchArtist();
+    } catch (e) { console.error(e); }
+  };
+
+  const addTag = async () => {
+    if (!selectedTagId) return;
+    try {
+      await fetch(`http://127.0.0.1:8000/artists/${id}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag_id: parseInt(selectedTagId) })
+      });
+      fetchArtist();
+      setSelectedTagId("");
+    } catch (e) { console.error(e); }
+  };
+
+  const removeTag = async (tagId: number) => {
+    if (!confirm('このタグを削除しますか？')) return;
+    try {
+      await fetch(`http://127.0.0.1:8000/artists/${id}/tags/${tagId}`, { method: 'DELETE' });
+      fetchArtist();
+    } catch (e) { console.error(e); }
+  };
+
+  const updateMemberDates = async (memberId: number, start: string, end: string) => {
+    try {
+      await fetch(`http://127.0.0.1:8000/artists/${id}/members/${memberId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_date: start || null, end_date: end || null })
+      });
+      fetchArtist();
+    } catch (e) { console.error(e); }
+  };
+
+
   if (loading) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Artist...</div>;
-  if (!artist) return <div style={{ padding: '64px', textAlign: 'center', color: '#ff4444' }}>Artist not found.</div>;
+  if (!artist) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--error-color)' }}>Artist not found.</div>;
 
   // Combine and sort performances
   const allPerformances = [
@@ -108,14 +212,25 @@ const ArtistDetail = () => {
         戻る
       </button>
 
-      <div style={{ display: 'flex', gap: '32px', alignItems: 'center', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
-        <div style={{ display: 'flex', width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0 }}>
-          <Users size={64} color="var(--text-tertiary)" />
+      <div style={{ position: 'relative', display: 'flex', gap: '32px', alignItems: 'center', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
+        <button 
+          onClick={() => setIsEditing(true)}
+          style={{ position: 'absolute', top: '24px', right: '24px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
+        >
+          <Pencil size={18} />
+        </button>
+
+        <div style={{ display: 'flex', width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0, overflow: 'hidden' }}>
+          {artist.image_url ? (
+            <img src={artist.image_url} alt={artist.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <Users size={64} color="var(--text-tertiary)" />
+          )}
         </div>
         <div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
             {artist.tags && artist.tags.map(tag => (
-              <span key={tag.id} style={{ background: tag.color || 'var(--primary-color)', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>
+              <span key={tag.id} style={{ background: tag.color || 'var(--primary-color)', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>
                 {tag.name}
               </span>
             ))}
@@ -123,7 +238,7 @@ const ArtistDetail = () => {
           <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: 800 }}>{artist.name}</h1>
           
           {artist.spotify_artist_id && (
-            <a href={`https://open.spotify.com/artist/${artist.spotify_artist_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1DB954', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
+            <a href={`https://open.spotify.com/artist/${artist.spotify_artist_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.56.3z" />
               </svg>
@@ -140,18 +255,20 @@ const ArtistDetail = () => {
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '4px' }}>
                 {artist.members.map(m => (
                   <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ display: 'flex', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center' }}>
-                       <Users size={16} color="var(--text-tertiary)" />
+                    <div style={{ display: 'flex', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                       {m.image_url ? (
+                         <img src={m.image_url} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                       ) : (
+                         <Users size={16} color="var(--text-tertiary)" />
+                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <Link to={`/artists/${m.id}`} style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.95rem' }}>
                         {m.name}
                       </Link>
-                      {(m.start_date || m.end_date) && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                          {m.start_date ? m.start_date.split('-')[0] : ''} - {m.end_date ? m.end_date.split('-')[0] : '現在'}
-                        </span>
-                      )}
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {m.start_date ? m.start_date.split('-')[0] : '過去'} - {m.end_date ? m.end_date.split('-')[0] : '現在'}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -253,9 +370,9 @@ const ArtistDetail = () => {
                   <div style={{ color: 'var(--primary-color)', fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {perf.date}
                     {perf.isGuest ? (
-                      <span style={{ background: 'rgba(255, 152, 0, 0.1)', color: '#ff9800', padding: '2px 8px', borderRadius: '8px', fontSize: '0.75rem' }}>Guest / Festival</span>
+                      <span style={{ background: 'var(--warning-bg)', color: '#ff9800', padding: '2px 8px', borderRadius: '8px', fontSize: '0.75rem' }}>Guest / Festival</span>
                     ) : (
-                      <span style={{ background: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', padding: '2px 8px', borderRadius: '8px', fontSize: '0.75rem' }}>Main Act</span>
+                      <span style={{ background: 'var(--success-bg)', color: '#4caf50', padding: '2px 8px', borderRadius: '8px', fontSize: '0.75rem' }}>Main Act</span>
                     )}
                   </div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '8px' }}>{perf.name}</div>
@@ -305,6 +422,126 @@ const ArtistDetail = () => {
         </div>
       )}
 
+
+      {/* 編集モーダル */}
+      {isEditing && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: 'var(--bg-tertiary)', padding: '32px', borderRadius: '16px', width: '700px', maxWidth: '100%', border: '1px solid var(--border-color)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{artist.name} の編集</h2>
+              <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>画像URL (アー写・ロゴ等)</label>
+                <input 
+                  type="text" 
+                  value={editImageUrl}
+                  onChange={(e) => setEditImageUrl(e.target.value)}
+                  placeholder="https://..."
+                  style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '12px', borderRadius: '8px', boxSizing: 'border-box' }}
+                />
+                <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>※著作権に配慮し、公式のURLやSpotify等のURLを指定してください。</small>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Spotify Artist ID</label>
+                <input 
+                  type="text" 
+                  value={editSpotifyId}
+                  onChange={(e) => setEditSpotifyId(e.target.value)}
+                  placeholder="例: 1vPNhY14LpuL46sTXGvD80"
+                  style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '12px', borderRadius: '8px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <button onClick={saveBasicInfo} style={{ background: 'var(--primary-color)', border: 'none', color: 'var(--text-primary)', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+                基本情報を保存
+              </button>
+            </div>
+
+                        <hr style={{ borderColor: 'var(--border-color)', marginBottom: '24px' }} />
+
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>タグ管理</h3>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {artist.tags && artist.tags.map(tag => (
+                <span key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: tag.color || 'var(--primary-color)', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>
+                  {tag.name}
+                  <button onClick={() => removeTag(tag.id)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: 0, marginLeft: '4px', display: 'flex', alignItems: 'center' }}><X size={14} /></button>
+                </span>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '32px' }}>
+              <select value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px', borderRadius: '4px' }}>
+                <option value="">タグを選択...</option>
+                {availableTags.filter(t => !artist.tags?.find(at => at.id === t.id)).map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <button onClick={addTag} style={{ background: 'var(--primary-color)', border: 'none', color: 'var(--text-primary)', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>追加</button>
+            </div>
+<hr style={{ borderColor: 'var(--border-color)', marginBottom: '24px', marginTop: '32px' }} />
+
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>メンバー管理</h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+              {artist.members.map(m => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontWeight: 'bold', width: '150px' }}>{m.name}</div>
+                  <input 
+                    type="date" 
+                    value={m.start_date || ""}
+                    onChange={(e) => updateMemberDates(m.id, e.target.value, m.end_date || "")}
+                    style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '6px', borderRadius: '4px' }}
+                  />
+                  <span>〜</span>
+                  <input 
+                    type="date" 
+                    value={m.end_date || ""}
+                    onChange={(e) => updateMemberDates(m.id, m.start_date || "", e.target.value)}
+                    style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '6px', borderRadius: '4px' }}
+                  />
+                  <button onClick={() => removeMember(m.id)} style={{ background: 'none', border: 'none', color: 'var(--error-color)', cursor: 'pointer', marginLeft: 'auto' }}><Trash2 size={18} /></button>
+                </div>
+              ))}
+            </div>
+
+            {!isAddingMember ? (
+              <button onClick={() => setIsAddingMember(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: '1px dashed #666', color: 'var(--text-secondary)', padding: '12px', borderRadius: '8px', cursor: 'pointer', width: '100%', justifyContent: 'center' }}>
+                <Plus size={18} /> 新しいメンバーを追加
+              </button>
+            ) : (
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="アーティスト名で検索..." 
+                    value={memberSearchQuery}
+                    onChange={(e) => setMemberSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && searchMembers()}
+                    style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px 12px', borderRadius: '4px' }}
+                  />
+                  <button onClick={searchMembers} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer' }}><Search size={18} /></button>
+                </div>
+                
+                {memberSearchResults.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                    {memberSearchResults.map(res => (
+                      <div key={res.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid var(--border-color)' }}>
+                        <span>{res.name}</span>
+                        <button onClick={() => addMember(res.id)} style={{ background: 'var(--primary-color)', border: 'none', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}>追加</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button onClick={() => { setIsAddingMember(false); setMemberSearchResults([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>キャンセル</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
