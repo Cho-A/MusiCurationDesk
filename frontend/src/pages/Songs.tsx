@@ -18,6 +18,7 @@ interface Song {
   is_video?: boolean;
   version_name?: string;
   primary_album?: AlbumMini | null;
+  spotify_song_id?: string | null;
 }
 
 interface SpotifyTrack {
@@ -144,7 +145,7 @@ const Songs = () => {
         {song.primary_album?.cover_image_url ? (
           <img src={song.primary_album.cover_image_url} alt="Cover" style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} />
         ) : (
-          <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Music size={20} color={song.is_video ? "#ff4d4d" : "#1DB954"} />
           </div>
         )}
@@ -276,7 +277,7 @@ const Songs = () => {
                   disabled={importingTrackId === track.spotify_id}
                   style={{
                     background: importingTrackId === track.spotify_id ? '#555' : '#1DB954',
-                    color: '#fff',
+                    color: 'var(--text-primary)',
                     border: 'none',
                     padding: '8px 16px',
                     borderRadius: '20px',

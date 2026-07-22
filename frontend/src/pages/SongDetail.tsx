@@ -310,7 +310,7 @@ const SongDetail = () => {
         background: 'var(--bg-secondary)',
         padding: '32px', borderRadius: '16px', marginBottom: '32px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-md)'
       }}>
-        <div style={{ fontSize: '0.9rem', color: '#1DB954', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.1em' }}>
+        <div style={{ fontSize: '0.9rem', color: 'var(--spotify-color)', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.1em' }}>
           楽曲 (WORK)
         </div>
         <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: '0 0 16px 0', letterSpacing: '-0.02em' }}>
@@ -387,7 +387,7 @@ const SongDetail = () => {
             >
               {v.title} {v.version_name ? `(${v.version_name})` : ''}
               {!v.is_video && v.is_streaming_available === false && (
-                <span style={{color: '#ff4d4d', marginLeft: '6px', fontSize: '0.8em', border: '1px solid #ff4d4d', padding: '1px 4px', borderRadius: '4px'}}>
+                <span style={{color: 'var(--error-color)', marginLeft: '6px', fontSize: '0.8em', border: '1px solid #ff4d4d', padding: '1px 4px', borderRadius: '4px'}}>
                   サブスク未解禁
                 </span>
               )}
@@ -411,7 +411,7 @@ const SongDetail = () => {
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {baseSong.title}
                   {!baseSong.is_video && baseSong.is_streaming_available === false && (
-                    <span style={{color: '#ff4d4d', fontSize: '0.9rem', border: '1px solid #ff4d4d', padding: '2px 6px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
+                    <span style={{color: 'var(--error-color)', fontSize: '0.9rem', border: '1px solid #ff4d4d', padding: '2px 6px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
                       サブスク未解禁
                     </span>
                   )}
@@ -458,9 +458,15 @@ const SongDetail = () => {
             </button>
           </div>
           
-          {/* Spotify Embed */}
+          {/* Spotify Embed & Link */}
           {baseSong.spotify_song_id && (
             <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+              <a href={`https://open.spotify.com/track/${baseSong.spotify_song_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '12px', width: 'fit-content' }}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.56.3z" />
+                </svg>
+                Spotifyで開く
+              </a>
               <iframe 
                 src={`https://open.spotify.com/embed/track/${baseSong.spotify_song_id}`} 
                 width="100%" 
@@ -522,7 +528,7 @@ const SongDetail = () => {
                   setIsEditingTitle(false);
                   if (selectedVersionId) handleVersionSelect(selectedVersionId);
                 }
-              }} style={{ background: '#1DB954', color: '#000', border: 'none', borderRadius: '4px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600 }}>
+              }} style={{ background: 'var(--spotify-color)', color: '#000', border: 'none', borderRadius: '4px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600 }}>
                 保存
               </button>
               <button onClick={() => setIsEditingTitle(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600 }}>
@@ -627,6 +633,22 @@ const SongDetail = () => {
                       </div>
                     )}
                   </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: 'auto' }}>
+                    <a 
+                      href={`https://www.amazon.co.jp/s?k=${encodeURIComponent(albumLink.album.main_title + ' CD')}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()} // Linkへの遷移を防ぐ
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        background: 'var(--warning-color)', color: '#fff', fontSize: '0.8rem', fontWeight: 'bold',
+                        padding: '6px 12px', borderRadius: '16px', textDecoration: 'none',
+                        border: '1px solid #E68A00'
+                      }}
+                    >
+                      🛒 Amazonで探す
+                    </a>
+                  </div>
                 </div>
               </Link>
             ))}
@@ -651,7 +673,7 @@ const SongDetail = () => {
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                 >
-                  <div style={{ fontSize: '0.8rem', color: '#1DB954', marginBottom: '4px' }}>{tieup.tieup_category}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--spotify-color)', marginBottom: '4px' }}>{tieup.tieup_category}</div>
                   <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{tieup.tieup_name}</div>
                   {tieup.context && <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{tieup.context}</div>}
                 </div>
@@ -665,7 +687,7 @@ const SongDetail = () => {
 
         {/* 高級管理（原曲との紐付け管理） */}
         <div style={{ marginTop: '24px', padding: '24px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--accent-primary)', borderRadius: '12px' }}>
-          <h3 style={{ fontSize: '1rem', color: '#ff6b6b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ fontSize: '1rem', color: 'var(--error-color)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             楽曲・原曲との紐付け管理
           </h3>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
@@ -679,7 +701,7 @@ const SongDetail = () => {
               onClick={handleDetachWork}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)', color: '#ff6b6b',
+                padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--error-color)',
                 border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
               }}
             >
@@ -701,7 +723,7 @@ const SongDetail = () => {
               onClick={() => setIsMergeModalOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)', color: '#ffa500',
+                padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--warning-color)',
                 border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
               }}
               title="このバージョンを別のバージョンにマージして1つにまとめます"

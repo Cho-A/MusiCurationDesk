@@ -8,6 +8,7 @@ import PerformanceDetail from './pages/PerformanceDetail';
 import TourDetail from './pages/TourDetail';
 import Concerts from './pages/Concerts';
 import Login from './pages/Login';
+import Legal from './pages/Legal';
 import Register from './pages/Register';
 import Admin from './pages/Admin';
 import Artists from './pages/Artists';
@@ -43,6 +44,7 @@ function App() {
           <Route path="musicbrainz" element={<MusicBrainzImport />} />
           <Route path="settings" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>設定ページ (準備中)</div>} />
           <Route path="terms" element={<Terms />} />
+          <Route path="legal" element={<Legal />} />
           <Route path="*" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>ページが見つかりません (404)</div>} />
         </Route>
       </Routes>

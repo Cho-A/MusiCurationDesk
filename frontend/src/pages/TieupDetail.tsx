@@ -93,7 +93,7 @@ const TieupDetail = () => {
           </div>
         ))}
         {/* カレント */}
-        <div style={{ padding: '4px 8px', background: 'rgba(29, 185, 84, 0.1)', color: '#1DB954', borderRadius: '4px', fontWeight: 'bold' }}>
+        <div style={{ padding: '4px 8px', background: 'var(--spotify-bg)', color: 'var(--spotify-color)', borderRadius: '4px', fontWeight: 'bold' }}>
           {tieup.name} {tieup.category && <span style={{ fontSize: '0.8em', opacity: 0.8 }}>({tieup.category})</span>}
         </div>
       </div>
@@ -131,7 +131,7 @@ const TieupDetail = () => {
                     <Folder size={20} color="var(--text-secondary)" />
                     <div>
                       <div style={{ fontWeight: 600 }}>{child.name}</div>
-                      <div style={{ fontSize: '0.8rem', color: '#1DB954', marginTop: '4px' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--spotify-color)', marginTop: '4px' }}>
                         {child.category}
                       </div>
                     </div>

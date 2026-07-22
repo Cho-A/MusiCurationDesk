@@ -52,7 +52,7 @@ const Register = () => {
         </div>
 
         {error && (
-          <div style={{ padding: '12px', background: 'rgba(255,50,50,0.1)', border: '1px solid rgba(255,50,50,0.3)', borderRadius: '8px', color: '#ff6b6b', fontSize: '0.9rem', textAlign: 'center' }}>
+          <div style={{ padding: '12px', background: 'var(--error-bg)', border: '1px solid rgba(255,50,50,0.3)', borderRadius: '8px', color: 'var(--error-color)', fontSize: '0.9rem', textAlign: 'center' }}>
             {error}
           </div>
         )}
@@ -94,7 +94,7 @@ const Register = () => {
           <button 
             type="submit" 
             disabled={loading}
-            style={{ marginTop: '8px', padding: '14px', borderRadius: '30px', background: '#1DB954', color: '#000', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', transition: 'transform 0.2s' }}
+            style={{ marginTop: '8px', padding: '14px', borderRadius: '30px', background: 'var(--spotify-color)', color: '#000', fontWeight: 700, fontSize: '1rem', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', transition: 'transform 0.2s' }}
             onMouseEnter={(e) => { if(!loading) e.currentTarget.style.transform = 'scale(1.02)' }}
             onMouseLeave={(e) => { if(!loading) e.currentTarget.style.transform = 'scale(1)' }}
           >
@@ -103,7 +103,7 @@ const Register = () => {
         </form>
 
         <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          すでにアカウントをお持ちですか？ <Link to="/login" style={{ color: '#1DB954', textDecoration: 'none', fontWeight: 600 }}>ログイン</Link>
+          すでにアカウントをお持ちですか？ <Link to="/login" style={{ color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600 }}>ログイン</Link>
         </div>
         
         <div style={{ textAlign: 'center', marginTop: '-8px' }}>

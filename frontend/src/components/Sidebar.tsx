@@ -102,7 +102,7 @@ const Sidebar = () => {
         {isAuthenticated && user ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <User size={20} />
               </div>
               <div style={{ overflow: 'hidden' }}>

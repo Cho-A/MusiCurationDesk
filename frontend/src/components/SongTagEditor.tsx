@@ -75,7 +75,7 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
       const createRes = await fetch('http://127.0.0.1:8000/tags/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: tagName.trim(), color: '#1DB954' }) // デフォルトカラー
+        body: JSON.stringify({ name: tagName.trim(), color: 'var(--spotify-color)' }) // デフォルトカラー
       });
       
       if (createRes.ok) {
@@ -109,7 +109,7 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
         {existingTags.map(tag => (
           <div key={tag.id} style={{ 
             display: 'flex', alignItems: 'center', gap: '4px',
-            padding: '4px 10px', background: 'rgba(29, 185, 84, 0.1)', 
+            padding: '4px 10px', background: 'var(--spotify-bg)', 
             border: `1px solid ${tag.color || '#1DB954'}40`,
             color: tag.color || '#1DB954', borderRadius: '16px', fontSize: '0.85rem'
           }}>
@@ -155,7 +155,7 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
                 onFocus={() => setShowSuggestions(true)}
                 autoFocus
                 style={{ 
-                  background: 'rgba(255,255,255,0.1)', color: 'white', 
+                  background: 'var(--bg-tertiary)', color: 'white', 
                   border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', 
                   borderRadius: '16px', outline: 'none', fontSize: '0.9rem',
                   minWidth: '200px'

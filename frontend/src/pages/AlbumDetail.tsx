@@ -197,8 +197,8 @@ const AlbumDetail = () => {
         {album.spotify_album_id ? (
           <iframe 
             src={`https://open.spotify.com/embed/album/${album.spotify_album_id}`} 
-            width="280" 
-            height="280" 
+            width="300" 
+            height="380" 
             frameBorder="0" 
             allow="encrypted-media"
             style={{ borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.15)', flexShrink: 0 }}
@@ -241,7 +241,7 @@ const AlbumDetail = () => {
           )}
           
           {album.spotify_album_id && (
-            <a href={`https://open.spotify.com/album/${album.spotify_album_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1DB954', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
+            <a href={`https://open.spotify.com/album/${album.spotify_album_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.56.3z" />
               </svg>
@@ -329,17 +329,17 @@ const AlbumDetail = () => {
                           {editingTrackId === track.id ? (
                             <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: 'column' }} onClick={(e) => e.preventDefault()}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                                <span style={{ color: '#aaa', fontSize: '0.85rem', width: '80px' }}>マスター楽曲:</span>
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px' }}>マスター楽曲:</span>
                                 <div style={{ position: 'relative', flex: 1 }}>
                                   <input 
                                     type="text"
                                     value={editForm.song_title}
                                     onChange={(e) => handleSongSearch(e.target.value)}
                                     placeholder="検索..."
-                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', background: '#333', color: '#fff' }}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                   />
                                   {songSearchResults.length > 0 && (
-                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#222', border: '1px solid #444', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto' }}>
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto' }}>
                                       {songSearchResults.map(s => (
                                         <div 
                                           key={s.id} 
@@ -347,7 +347,7 @@ const AlbumDetail = () => {
                                             setEditForm(prev => ({ ...prev, song_id: s.id, song_title: s.title }));
                                             setSongSearchResults([]);
                                           }}
-                                          style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid #333' }}
+                                          style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
                                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
                                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
@@ -359,24 +359,24 @@ const AlbumDetail = () => {
                                 </div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                                <span style={{ color: '#aaa', fontSize: '0.85rem', width: '80px' }}>アルバム表記:</span>
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px' }}>アルバム表記:</span>
                                 <input 
                                   type="text"
                                   value={editForm.display_title}
                                   onChange={(e) => setEditForm({ ...editForm, display_title: e.target.value })}
                                   placeholder={`(空の場合はマスター「${track.song.title}」を表示)`}
-                                  style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff' }}
+                                  style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                 />
                                 <input 
                                   type="text"
                                   value={editForm.notes}
                                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                                   placeholder="備考(例: Live)"
-                                  style={{ width: '120px', padding: '8px', borderRadius: '4px', border: '1px solid #444', background: '#222', color: '#fff' }}
+                                  style={{ width: '120px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                 />
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', paddingLeft: '88px', justifyContent: 'space-between' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#ccc', cursor: 'pointer' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                                   <input 
                                     type="checkbox"
                                     checked={editForm.is_unreleased}
@@ -385,8 +385,8 @@ const AlbumDetail = () => {
                                   このトラック（バージョン）はサブスク未解禁とする
                                 </label>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                  <button onClick={(e) => handleSaveTrack(e, track)} style={{ background: '#1DB954', color: '#000', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}><Save size={16} /> 保存</button>
-                                  <button onClick={handleCancelEdit} style={{ background: 'transparent', color: '#fff', border: '1px solid #555', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><X size={16} /> キャンセル</button>
+                                  <button onClick={(e) => handleSaveTrack(e, track)} style={{ background: 'var(--spotify-color)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}><Save size={16} /> 保存</button>
+                                  <button onClick={handleCancelEdit} style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}><X size={16} /> キャンセル</button>
                                 </div>
                               </div>
                             </div>
@@ -396,7 +396,7 @@ const AlbumDetail = () => {
                               {isUnreleased && (
                                 <span style={{ 
                                   display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                  fontSize: '0.75rem', backgroundColor: '#333', color: '#aaa',
+                                  fontSize: '0.75rem', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
                                   padding: '2px 6px', borderRadius: '4px'
                                 }}>
                                   <AlertCircle size={12} />
@@ -406,7 +406,7 @@ const AlbumDetail = () => {
                               {track.media_format && track.media_format !== 'CD' && (
                                 <span style={{ 
                                   display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                  fontSize: '0.75rem', backgroundColor: 'rgba(29, 185, 84, 0.1)', color: '#1DB954',
+                                  fontSize: '0.75rem', backgroundColor: 'rgba(29, 185, 84, 0.1)', color: 'var(--spotify-color)',
                                   padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(29, 185, 84, 0.3)', flexShrink: 0, whiteSpace: 'nowrap'
                                 }}>
                                   📺 {track.media_format}

@@ -87,7 +87,7 @@ const Dashboard = () => {
   }, [isAuthenticated, token]);
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>ダッシュボードを読み込み中...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>ダッシュボードを読み込み中...</div>;
   }
 
   return (
@@ -114,7 +114,7 @@ const Dashboard = () => {
               borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '20px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}>
-              <div style={{ background: 'rgba(29, 185, 84, 0.1)', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ background: 'var(--spotify-bg)', padding: '12px', borderRadius: '12px' }}>
                 {stat.icon}
               </div>
               <div>
@@ -135,7 +135,7 @@ const Dashboard = () => {
               borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '20px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
             }}>
-              <div style={{ background: 'rgba(29, 185, 84, 0.1)', padding: '12px', borderRadius: '12px' }}>
+              <div style={{ background: 'var(--spotify-bg)', padding: '12px', borderRadius: '12px' }}>
                 {stat.icon}
               </div>
               <div>
@@ -165,7 +165,7 @@ const Dashboard = () => {
                 <AlbumCard album={album as unknown as Album} layout="vertical" />
               </div>
             )) : (
-              <div style={{ color: '#666' }}>まだアルバムが追加されていません。</div>
+              <div style={{ color: 'var(--text-tertiary)' }}>まだアルバムが追加されていません。</div>
             )}
           </div>
         </section>
@@ -206,7 +206,7 @@ const Dashboard = () => {
                 </div>
               </Link>
             )) : (
-              <div style={{ color: '#666' }}>まだ楽曲が追加されていません。</div>
+              <div style={{ color: 'var(--text-tertiary)' }}>まだ楽曲が追加されていません。</div>
             )}
           </div>
         </section>
@@ -221,7 +221,7 @@ const Dashboard = () => {
           border: '1px solid rgba(29,185,84,0.2)', borderRadius: '20px', padding: '24px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1DB954', marginBottom: '20px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--spotify-color)', marginBottom: '20px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
             <Sparkles size={18} />
             Today's Discovery
           </div>
@@ -247,7 +247,7 @@ const Dashboard = () => {
               </div>
               <Link to={`/songs/${discovery.id}`} style={{ textDecoration: 'none', width: '100%', marginTop: '8px' }}>
                 <button style={{ 
-                  width: '100%', padding: '12px', borderRadius: '30px', background: '#1DB954', color: '#000',
+                  width: '100%', padding: '12px', borderRadius: '30px', background: 'var(--spotify-color)', color: '#000',
                   fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
                 }}>
                   <Play fill="currentColor" size={18} />
@@ -256,7 +256,7 @@ const Dashboard = () => {
               </Link>
             </div>
           ) : (
-            <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>No music available to discover.</div>
+            <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>No music available to discover.</div>
           )}
         </div>
         

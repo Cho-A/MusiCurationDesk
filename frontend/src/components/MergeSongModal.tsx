@@ -93,7 +93,7 @@ const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, curren
             <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
               統合先のバージョンを選択してください。実体が全く同じ音源や映像であるにもかかわらず、別々に登録されてしまっている場合に使用します。
             </p>
-            <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: '#ff6b6b' }}>
+            <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: 'var(--error-color)' }}>
               ※現在のバージョンは削除され、クレジットや収録アルバムは統合先に引き継がれます（元に戻せません）。
             </p>
           </div>
@@ -148,14 +148,14 @@ const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, curren
                       {song.artist_links && song.artist_links.length > 0 ? song.artist_links.map(a => a.artist_name).join(', ') : 'Unknown Artist'}
                       <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.2)' }}>|</span>
                       Song ID: {song.id}
-                      {song.is_video && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'rgba(255,165,0,0.1)', color: '#ffa500', borderRadius: '4px', fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}>映像</span>}
+                      {song.is_video && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--warning-bg)', color: 'var(--warning-color)', borderRadius: '4px', fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}>映像</span>}
                     </div>
                   </div>
                   <button 
                     onClick={() => onMerge(song.id)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-                      padding: '8px 16px', backgroundColor: '#ffa500', color: '#000',
+                      padding: '8px 16px', backgroundColor: 'var(--warning-color)', color: '#000',
                       border: 'none', borderRadius: '20px', fontWeight: 600, cursor: 'pointer',
                       fontSize: '0.9rem', transition: 'transform 0.1s'
                     }}

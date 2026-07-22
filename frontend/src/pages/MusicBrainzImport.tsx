@@ -125,7 +125,7 @@ const MusicBrainzImport = () => {
           type="submit" 
           disabled={loading || !query}
           style={{ 
-            backgroundColor: '#1DB954', color: 'black', border: 'none', 
+            backgroundColor: 'var(--spotify-color)', color: 'black', border: 'none', 
             borderRadius: '8px', padding: '0 24px', fontWeight: 'bold', cursor: 'pointer',
             opacity: loading ? 0.5 : 1
           }}
@@ -185,7 +185,7 @@ const MusicBrainzImport = () => {
 
               {selectedRelease.media.map(m => (
                 <div key={m.position} style={{ marginBottom: '24px' }}>
-                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginBottom: '12px', color: '#1DB954' }}>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginBottom: '12px', color: 'var(--spotify-color)' }}>
                     <Disc size={20} />
                     Disc {m.position} ({m.format}) - {m.track_count} Tracks
                   </h4>
@@ -201,9 +201,9 @@ const MusicBrainzImport = () => {
                 </div>
               ))}
 
-              <div style={{ marginTop: '24px', padding: '24px', background: 'rgba(29,185,84,0.1)', border: '1px solid rgba(29,185,84,0.3)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{ marginTop: '24px', padding: '24px', background: 'var(--spotify-bg)', border: '1px solid rgba(29,185,84,0.3)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                 <div style={{ textAlign: 'center' }}>
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: '#1DB954' }}>このCDをインポート</h4>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: 'var(--spotify-color)' }}>このCDをインポート</h4>
                   <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                     トラック構成をMusiCurationDeskの楽曲データベースと突き合わせ、アルバムとして保存します。既存のSpotifyアルバムに上書きマージすることも可能です。
                   </p>
@@ -212,7 +212,7 @@ const MusicBrainzImport = () => {
                   onClick={() => setIsBuilderOpen(true)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '8px',
-                    background: '#1DB954', color: '#000', border: 'none', borderRadius: '24px',
+                    background: 'var(--spotify-color)', color: '#000', border: 'none', borderRadius: '24px',
                     padding: '12px 32px', fontSize: '1.05rem', fontWeight: 'bold', cursor: 'pointer',
                     boxShadow: '0 4px 12px rgba(29,185,84,0.3)'
                   }}

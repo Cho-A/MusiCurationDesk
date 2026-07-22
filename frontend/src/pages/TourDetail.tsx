@@ -87,7 +87,7 @@ const TourDetail = () => {
   };
 
   if (loading) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Tour...</div>;
-  if (!tour) return <div style={{ padding: '64px', textAlign: 'center', color: '#ff4444' }}>Tour not found.</div>;
+  if (!tour) return <div style={{ padding: '64px', textAlign: 'center', color: 'var(--error-color)' }}>Tour not found.</div>;
 
   // 開催日ごとに公演をグループ化
   const groupedPerformances = tour.performances.reduce((acc, perf) => {
@@ -126,7 +126,7 @@ const TourDetail = () => {
         <button
           onClick={() => setShowModal(true)}
           style={{
-            background: 'var(--primary-color)', color: '#fff', border: 'none',
+            background: 'var(--primary-color)', color: 'var(--text-primary)', border: 'none',
             padding: '10px 20px', borderRadius: '24px', fontWeight: 600, cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s'
           }}
@@ -192,7 +192,7 @@ const TourDetail = () => {
                           <Users size={16} /> {perf.main_artist.name}
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#FF9800', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning-color)', fontWeight: 600 }}>
                           ✨ Special Session
                         </div>
                       )}
@@ -262,7 +262,7 @@ const TourDetail = () => {
                 onClick={handleAddPerformance}
                 disabled={savingPerf || !newPerfName.trim() || !newPerfDate}
                 style={{
-                  padding: '10px 20px', borderRadius: '24px', background: 'var(--primary-color)', color: '#fff', border: 'none',
+                  padding: '10px 20px', borderRadius: '24px', background: 'var(--primary-color)', color: 'var(--text-primary)', border: 'none',
                   cursor: (savingPerf || !newPerfName.trim() || !newPerfDate) ? 'not-allowed' : 'pointer',
                   opacity: (savingPerf || !newPerfName.trim() || !newPerfDate) ? 0.5 : 1
                 }}

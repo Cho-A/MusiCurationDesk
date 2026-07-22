@@ -52,7 +52,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           type="submit" 
           disabled={disabled}
           style={{
-            background: '#1DB954',
+            background: 'var(--spotify-color)',
             color: '#000',
             border: 'none',
             borderRadius: '30px',

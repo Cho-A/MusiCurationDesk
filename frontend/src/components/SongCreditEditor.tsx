@@ -57,7 +57,7 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ fontWeight: 600, minWidth: '150px' }}>{credit.artist_name}</span>
               <span style={{
-                background: 'rgba(29, 185, 84, 0.2)', color: '#1DB954',
+                background: 'rgba(29, 185, 84, 0.2)', color: 'var(--spotify-color)',
                 padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem'
               }}>
                 {credit.role_category}
@@ -130,7 +130,7 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
         <button
           onClick={handleAdd}
           style={{
-            background: '#1DB954', color: 'black', fontWeight: 600,
+            background: 'var(--spotify-color)', color: 'black', fontWeight: 600,
             padding: '10px 20px', borderRadius: '24px', border: 'none',
             display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
           }}

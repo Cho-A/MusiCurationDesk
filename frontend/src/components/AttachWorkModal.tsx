@@ -172,7 +172,7 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
                     onClick={() => song.work_id && onAttach(song.work_id)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-                      padding: '8px 16px', backgroundColor: '#1DB954', color: '#000',
+                      padding: '8px 16px', backgroundColor: 'var(--spotify-color)', color: '#000',
                       border: 'none', borderRadius: '20px', fontWeight: 600, cursor: 'pointer',
                       fontSize: '0.9rem', transition: 'transform 0.1s'
                     }}

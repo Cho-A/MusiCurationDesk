@@ -86,15 +86,15 @@ const AlbumSearchCombobox: React.FC<{
           }}
           onFocus={() => { if(albumSearchQuery) setIsAlbumDropdownOpen(true); }}
           style={{ 
-            width: '100%', padding: '12px', backgroundColor: '#222', color: '#fff', 
-            border: '1px solid #444', borderRadius: '6px', fontSize: '1rem',
+            width: '100%', padding: '12px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
+            border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '1rem',
             boxSizing: 'border-box'
           }}
         />
         {isAlbumDropdownOpen && (
           <div style={{ 
             position: 'absolute', top: '100%', left: 0, right: 0, maxHeight: '250px', 
-            overflowY: 'auto', background: '#333', zIndex: 10, border: '1px solid #555',
+            overflowY: 'auto', background: 'var(--bg-tertiary)', zIndex: 10, border: '1px solid var(--border-color)',
             borderRadius: '0 0 6px 6px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
           }}>
             <div 
@@ -103,7 +103,7 @@ const AlbumSearchCombobox: React.FC<{
                 setAlbumSearchQuery('');
                 setIsAlbumDropdownOpen(false);
               }}
-              style={{ padding: '12px', cursor: 'pointer', borderBottom: '1px solid #444', color: '#1DB954' }}
+              style={{ padding: '12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)', color: 'var(--spotify-color)' }}
             >
               ✨ [新規作成] {releaseTitle} として新しくアルバムを作る
             </div>
@@ -122,7 +122,7 @@ const AlbumSearchCombobox: React.FC<{
                   setAlbumSearchQuery(a.main_title);
                   setIsAlbumDropdownOpen(false);
                 }}
-                style={{ padding: '12px', cursor: 'pointer', borderBottom: '1px solid #444' }}
+                style={{ padding: '12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
               >
                 {a.main_title}
               </div>
@@ -130,8 +130,8 @@ const AlbumSearchCombobox: React.FC<{
           </div>
         )}
       </div>
-      <div style={{ marginTop: '12px', color: '#ccc' }}>
-        現在の選択: {targetAlbumId === 'new' ? <span style={{color: '#1DB954'}}>✨ 新規作成 ({releaseTitle})</span> : <span style={{fontWeight: 'bold'}}>{albums.find(a => a.id === targetAlbumId)?.main_title}</span>}
+      <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
+        現在の選択: {targetAlbumId === 'new' ? <span style={{color: 'var(--spotify-color)'}}>✨ 新規作成 ({releaseTitle})</span> : <span style={{fontWeight: 'bold'}}>{albums.find(a => a.id === targetAlbumId)?.main_title}</span>}
       </div>
     </div>
   );
@@ -335,12 +335,12 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
       padding: '40px 20px', overflowY: 'auto'
     }}>
       <div style={{
-        backgroundColor: '#121212', border: '1px solid #333', borderRadius: '12px',
+        backgroundColor: '#121212', border: '1px solid var(--border-color)', borderRadius: '12px',
         width: '100%', maxWidth: '900px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
         display: 'flex', flexDirection: 'column'
       }}>
         {/* Header */}
-        <div style={{ padding: '24px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <RefreshCw size={24} color="#1DB954" />
@@ -350,13 +350,13 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
               MusicBrainzの情報を使って、アルバムのトラックリストを構築します。
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={24} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><X size={24} /></button>
         </div>
 
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
           
           {/* Step 1: ターゲットアルバムの選択 */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid #333' }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem' }}>1. どのアルバムに保存しますか？</h3>
             <AlbumSearchCombobox 
               albums={albums} 
@@ -365,7 +365,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
               setTargetAlbumId={setTargetAlbumId} 
             />
             {targetAlbumId !== 'new' && (
-              <div style={{ marginTop: '12px', color: '#ff6b6b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ marginTop: '12px', color: 'var(--error-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <AlertCircle size={16} />
                 既存のアルバムを選択した場合、現在のSpotifyのトラックリストはすべて削除され、CD版のトラックリストで上書きされます。
               </div>
@@ -373,7 +373,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
           </div>
 
           {/* Step 2: ディスク情報の確認と編集 */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid #333' }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem' }}>2. ディスク(Media)の名称設定</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '0.9rem' }}>
               MusicBrainzの情報に基づき、各ディスクの名称を編集できます。単一ディスクの場合や、特に名称がない場合は空欄のままで構いません。
@@ -391,14 +391,14 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                       value={disc.title}
                       onChange={(e) => handleDiscTitleChange(disc.disc_number, e.target.value)}
                       placeholder={`Disc ${disc.disc_number} のタイトル (例: LIVE at Nippon Budokan)`}
-                      style={{ flex: 1, padding: '10px', backgroundColor: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      style={{ flex: 1, padding: '10px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
                     />
                     <input
                       type="text"
                       value={disc.edition || ''}
                       onChange={(e) => handleDiscEditionChange(disc.disc_number, e.target.value)}
                       placeholder="エディション (例: 初回限定盤)"
-                      style={{ width: '180px', padding: '10px', backgroundColor: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      style={{ width: '180px', padding: '10px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
                     />
                   </div>
                 </div>
@@ -418,7 +418,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                 const isExpanded = expandedDiscs.includes(disc.disc_number);
                 
                 return (
-                  <div key={disc.disc_number} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid #333' }}>
+                  <div key={disc.disc_number} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                     <div 
                       onClick={() => setExpandedDiscs(prev => isExpanded ? prev.filter(d => d !== disc.disc_number) : [...prev, disc.disc_number])}
                       style={{ 
@@ -441,14 +441,14 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                     </div>
                     
                     {isExpanded && (
-                      <div style={{ padding: '16px', borderTop: '1px solid #333', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {discMatches.map((match, idx) => (
                           <div key={idx} style={{ 
                             display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', 
-                            background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid #222'
+                            background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid #222'
                           }}>
                             <div style={{ width: '60px', color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
-                              Track<br/><span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>{match.track_number}</span>
+                              Track<br/><span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{match.track_number}</span>
                             </div>
                             <div style={{ flex: 1, fontWeight: 'bold' }}>
                               {match.mb_title}
@@ -464,7 +464,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                                   width: '100%', padding: '10px', textAlign: 'left',
                                   backgroundColor: match.song_id === null ? 'rgba(29,185,84,0.1)' : '#222', 
                                   color: match.song_id === null ? '#1DB954' : '#fff', 
-                                  border: '1px solid #444', borderRadius: '6px', cursor: 'pointer',
+                                  border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer',
                                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                                 }}
                               >
@@ -475,7 +475,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                                 placeholder="備考 (例: MV, Live, Acoustic)"
                                 value={match.notes || ''}
                                 onChange={(e) => handleNotesChange(match.disc_number, match.track_number, e.target.value)}
-                                style={{ padding: '8px', backgroundColor: '#222', color: '#fff', border: '1px solid #444', borderRadius: '4px', fontSize: '0.9rem' }}
+                                style={{ padding: '8px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.9rem' }}
                               />
                             </div>
                           </div>
@@ -491,15 +491,15 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         </div>
 
         {/* Footer Actions */}
-        <div style={{ padding: '24px', borderTop: '1px solid #333', display: 'flex', justifyContent: 'flex-end', gap: '16px', background: 'rgba(0,0,0,0.2)' }}>
-          <button onClick={onClose} style={{ padding: '12px 24px', background: 'transparent', border: '1px solid #555', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+        <div style={{ padding: '24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '16px', background: 'var(--bg-tertiary)' }}>
+          <button onClick={onClose} style={{ padding: '12px 24px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
             キャンセル
           </button>
           <button 
             onClick={handleSubmit} 
             disabled={isSubmitting}
             style={{ 
-              padding: '12px 32px', background: '#1DB954', border: 'none', color: '#000', borderRadius: '8px', cursor: 'pointer', 
+              padding: '12px 32px', background: 'var(--spotify-color)', border: 'none', color: '#000', borderRadius: '8px', cursor: 'pointer', 
               fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', opacity: isSubmitting ? 0.7 : 1
             }}
           >
@@ -518,13 +518,13 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '12px',
+            backgroundColor: '#1a1a1a', border: '1px solid var(--border-color)', borderRadius: '12px',
             width: '100%', maxWidth: '600px', display: 'flex', flexDirection: 'column',
             maxHeight: '80vh'
           }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0 }}>楽曲の検索・紐付け</h3>
-              <button onClick={() => setActiveSongMatchIndex(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={20} /></button>
+              <button onClick={() => setActiveSongMatchIndex(null)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             
             <div style={{ padding: '20px' }}>
@@ -536,22 +536,22 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                   onChange={e => setSongSearchQuery(e.target.value)}
                   placeholder="曲名で検索..."
                   style={{ 
-                    flex: 1, padding: '12px', backgroundColor: '#222', color: '#fff', 
-                    border: '1px solid #444', borderRadius: '6px', fontSize: '1rem' 
+                    flex: 1, padding: '12px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
+                    border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '1rem' 
                   }}
                   autoFocus
                 />
               </div>
               
               <div style={{ 
-                maxHeight: '400px', overflowY: 'auto', border: '1px solid #333', 
-                borderRadius: '8px', background: '#111' 
+                maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--border-color)', 
+                borderRadius: '8px', background: 'var(--bg-tertiary)' 
               }}>
                 <div 
                   onClick={() => handleMatchChange(matches[activeSongMatchIndex].disc_number, matches[activeSongMatchIndex].track_number, null)}
                   style={{ 
-                    padding: '16px', borderBottom: '1px solid #333', cursor: 'pointer',
-                    color: '#1DB954', fontWeight: 'bold'
+                    padding: '16px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer',
+                    color: 'var(--spotify-color)', fontWeight: 'bold'
                   }}
                 >
                   ✨ [新規登録] データベースにない新しい曲として追加
@@ -572,7 +572,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                     }}
                   >
                     <span>{s.title}</span>
-                    <span style={{ color: '#666', fontSize: '0.85rem' }}>ID: {s.id}</span>
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>ID: {s.id}</span>
                   </div>
                 ))}
               </div>

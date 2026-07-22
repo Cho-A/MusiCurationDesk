@@ -90,7 +90,7 @@ const Admin = () => {
   return (
     <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-        <div style={{ background: 'rgba(255, 50, 50, 0.1)', padding: '12px', borderRadius: '12px' }}>
+        <div style={{ background: 'var(--error-bg)', padding: '12px', borderRadius: '12px' }}>
           <Database size={32} color="#ff6b6b" />
         </div>
         <div>
@@ -102,20 +102,20 @@ const Admin = () => {
       </div>
 
       {error && (
-        <div style={{ padding: '16px', background: 'rgba(255, 50, 50, 0.1)', border: '1px solid rgba(255, 50, 50, 0.3)', borderRadius: '8px', color: '#ff6b6b', marginBottom: '24px' }}>
+        <div style={{ padding: '16px', background: 'var(--error-bg)', border: '1px solid rgba(255, 50, 50, 0.3)', borderRadius: '8px', color: 'var(--error-color)', marginBottom: '24px' }}>
           {error}
         </div>
       )}
 
       {jobProgress && (
-        <div style={{ padding: '20px', background: 'rgba(29, 185, 84, 0.1)', border: '1px solid rgba(29, 185, 84, 0.3)', borderRadius: '12px', marginBottom: '24px' }}>
+        <div style={{ padding: '20px', background: 'var(--spotify-bg)', border: '1px solid rgba(29, 185, 84, 0.3)', borderRadius: '12px', marginBottom: '24px' }}>
           <h3 style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px', color: jobProgress.status === 'failed' ? '#ff6b6b' : '#1DB954' }}>
             <DownloadCloud size={20} /> 
             {jobProgress.status === 'running' ? 'インポート実行中...' : jobProgress.status === 'completed' ? 'インポート完了' : jobProgress.status === 'failed' ? 'インポート失敗' : '待機中'}
           </h3>
           
           {/* Progress Bar */}
-          <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden', marginBottom: '12px' }}>
+          <div style={{ width: '100%', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden', marginBottom: '12px' }}>
             <div style={{ 
               width: `${jobProgress.progress}%`, height: '100%', 
               background: jobProgress.status === 'failed' ? '#ff6b6b' : '#1DB954',
@@ -150,7 +150,7 @@ const Admin = () => {
               style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
             />
             <button type="submit" disabled={loading} style={{
-              padding: '0 24px', borderRadius: '8px', background: '#1DB954', color: '#000', fontWeight: 600, border: 'none', cursor: loading ? 'wait' : 'pointer'
+              padding: '0 24px', borderRadius: '8px', background: 'var(--spotify-color)', color: '#000', fontWeight: 600, border: 'none', cursor: loading ? 'wait' : 'pointer'
             }}>
               {loading ? 'インポート中...' : 'インポート開始'}
             </button>
@@ -175,7 +175,7 @@ const Admin = () => {
               style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
             />
             <button type="submit" disabled={loading} style={{
-              padding: '0 24px', borderRadius: '8px', background: '#1DB954', color: '#000', fontWeight: 600, border: 'none', cursor: loading ? 'wait' : 'pointer'
+              padding: '0 24px', borderRadius: '8px', background: 'var(--spotify-color)', color: '#000', fontWeight: 600, border: 'none', cursor: loading ? 'wait' : 'pointer'
             }}>
               {loading ? 'インポート中...' : 'インポート開始'}
             </button>
