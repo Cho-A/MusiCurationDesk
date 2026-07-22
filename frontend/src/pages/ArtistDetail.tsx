@@ -470,14 +470,14 @@ const ArtistDetail = () => {
                 </span>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '32px' }}>
-              <select value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '32px', alignItems: 'center' }}>
+              <select value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)} style={{ flex: 1, minWidth: 0, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '10px 14px', borderRadius: '8px', outline: 'none' }}>
                 <option value="">タグを選択...</option>
                 {availableTags.filter(t => !artist.tags?.find(at => at.id === t.id)).map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
-              <button onClick={addTag} style={{ background: 'var(--primary-color)', border: 'none', color: 'var(--text-primary)', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>追加</button>
+              <button onClick={addTag} style={{ whiteSpace: 'nowrap', flexShrink: 0, background: 'var(--accent-primary)', border: 'none', color: '#fff', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>追加</button>
             </div>
 <hr style={{ borderColor: 'var(--border-color)', marginBottom: '24px', marginTop: '32px' }} />
 

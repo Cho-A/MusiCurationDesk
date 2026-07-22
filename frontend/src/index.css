@@ -98,6 +98,8 @@ button {
   background: none;
   cursor: pointer;
   color: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 ul {
