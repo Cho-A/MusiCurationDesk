@@ -45,6 +45,7 @@ const Concerts = () => {
   const [savingSingle, setSavingSingle] = useState(false);
 
   const [showSetlistImportModal, setShowSetlistImportModal] = useState(false);
+  const [importTotal, setImportTotal] = useState<number>(0);
   const [importQuery, setImportQuery] = useState("");
   const [importResults, setImportResults] = useState<any[]>([]);
   const [importPage, setImportPage] = useState(1);
@@ -133,6 +134,7 @@ const Concerts = () => {
         const results = data.setlist || [];
         setImportResults(results);
         setImportPage(page);
+        setImportTotal(data.total || 0);
         // Setlist.fm returns up to 20 items per page
         setHasMoreImportResults(results.length === 20);
         setSelectedSetlists(new Set()); // Reset selections
@@ -609,7 +611,7 @@ const Concerts = () => {
                   前の20件
                 </button>
                 <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                  ページ {importPage}
+                  ページ {importPage} (全 {importTotal} 件)
                 </span>
                 <button 
                   onClick={() => handleSearchSetlist(importPage + 1)}
@@ -634,7 +636,7 @@ const Concerts = () => {
                         marginRight: '12px'
                     }}
                   >
-                    このアーティストの全履歴を同期
+                    「{importQuery}」の全履歴 ({importTotal}件) を同期
                   </button>
                   {importMode === 'bulk' && (
                       <button
