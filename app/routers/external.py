@@ -167,6 +167,7 @@ class BulkImportRequest(BaseModel):
 
 class FullSyncRequest(BaseModel):
     artist_name: str
+    artist_mbid: str = None
 
 @router.post("/setlistfm/bulk-import")
 def bulk_import_setlists(req: BulkImportRequest, db: Session = Depends(models.get_db)):
@@ -201,7 +202,7 @@ def bulk_import_setlists(req: BulkImportRequest, db: Session = Depends(models.ge
 @router.post("/setlistfm/full-sync-artist")
 def full_sync_artist(req: FullSyncRequest, db: Session = Depends(models.get_db)):
     try:
-        first_page = setlistfm_client.search_setlists(req.artist_name, 1)
+        first_page = setlistfm_client.search_setlists(req.artist_name, 1, req.artist_mbid)
         if not first_page.get("setlist"):
             return {"message": "No setlists found", "successes": [], "errors": []}
             
@@ -215,7 +216,7 @@ def full_sync_artist(req: FullSyncRequest, db: Session = Depends(models.get_db))
         def fetch_page(p: int):
             import time
             time.sleep(0.5)
-            data = setlistfm_client.search_setlists(req.artist_name, p)
+            data = setlistfm_client.search_setlists(req.artist_name, p, req.artist_mbid)
             return data.get("setlist", [])
 
         if total_pages > 1:
@@ -261,9 +262,11 @@ def _insert_setlist_data(setlist_data: dict, setlist_id: str, db: Session) -> in
     
     artist_name = setlist_data.get("artist", {}).get("name")
     date_str = setlist_data.get("eventDate")
-    tour_name = setlist_data.get("tour", {}).get("name")
-    venue_name = setlist_data.get("venue", {}).get("name")
-    venue_city = setlist_data.get("venue", {}).get("city", {}).get("name")
+    tour_dict = setlist_data.get("tour") or {}
+    tour_name = tour_dict.get("name")
+    venue_dict = setlist_data.get("venue") or {}
+    venue_name = venue_dict.get("name")
+    venue_city = venue_dict.get("city", {}).get("name")
     
     artist = db.query(models.Artist).filter(models.Artist.name == artist_name).first()
     if not artist:

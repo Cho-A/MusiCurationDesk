@@ -252,14 +252,20 @@ const Concerts = () => {
     }
   };
 
-  const handleFullSyncArtist = async (artistName: string) => {
-    if (!artistName) return;
+  const handleFullSyncArtist = async (query: string, artistMbid?: string, artistName?: string) => {
+    const confirm = window.confirm(`「${artistName || query}」の全履歴（約${importTotal}件）を同期します。データ量により数十秒〜数分かかる場合がありますが、よろしいですか？`);
+    if (!confirm) return;
+
     setImporting(true);
     try {
+      const payload: any = { artist_name: artistName || query };
+      if (artistMbid) {
+        payload.artist_mbid = artistMbid;
+      }
       const res = await fetch('http://127.0.0.1:8000/external/setlistfm/full-sync-artist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ artist_name: artistName })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         const data = await res.json();
@@ -627,7 +633,10 @@ const Concerts = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
                 <div>
                   <button
-                    onClick={() => handleFullSyncArtist(importQuery)}
+                    onClick={() => {
+                      const firstArtist = importResults[0]?.artist;
+                      handleFullSyncArtist(importQuery, firstArtist?.mbid, firstArtist?.name);
+                    }}
                     disabled={importing}
                     style={{ 
                         padding: '10px 24px', borderRadius: '24px', background: 'var(--accent-primary)', color: '#fff', border: 'none', 
@@ -636,7 +645,7 @@ const Concerts = () => {
                         marginRight: '12px'
                     }}
                   >
-                    「{importQuery}」の全履歴 ({importTotal}件) を同期
+                    「{importResults[0]?.artist?.name || importQuery}」の全履歴 ({importTotal}件) を同期
                   </button>
                   {importMode === 'bulk' && (
                       <button

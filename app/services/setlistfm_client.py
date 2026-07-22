@@ -17,13 +17,16 @@ class SetlistFMClient:
             "x-api-key": self.api_key
         }
 
-    def search_setlists(self, artist_name: str, p: int = 1) -> dict[str, Any]:
-        """Search for setlists by artist name."""
+    def search_setlists(self, artist_name: str, p: int = 1, artist_mbid: str = None) -> dict[str, Any]:
+        """Search for setlists by artist name or MBID."""
         url = f"{self.BASE_URL}/search/setlists"
         params = {
-            "artistName": artist_name,
             "p": p
         }
+        if artist_mbid:
+            params["artistMbid"] = artist_mbid
+        else:
+            params["artistName"] = artist_name
         res = requests.get(url, headers=self._get_headers(), params=params)
         if res.status_code == 404:
             return {"setlist": []}  # No results
