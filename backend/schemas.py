@@ -131,6 +131,7 @@ class Tag(BaseModel):
 class SongCreate(BaseModel):
     title: str
     spotify_song_id: str | None = None
+    isrc: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None
     lyrics: str | None = None
@@ -141,6 +142,7 @@ class Song(BaseModel):
     id: int
     title: str
     spotify_song_id: str | None = None
+    isrc: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None
     work_id: int | None = None
@@ -314,6 +316,7 @@ class SongDetail(BaseModel):
     id: int
     title: str
     spotify_song_id: str | None = None
+    isrc: str | None = None
     spotify_song_title: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None
@@ -429,6 +432,8 @@ class SongMini(BaseModel):
     is_video: bool = False
     version_name: str | None = None
     is_streaming_available: bool = True
+    spotify_song_id: str | None = None
+    isrc: str | None = None
 
     class Config:
         from_attributes = True
@@ -613,6 +618,7 @@ class AlbumTrackForAlbum(BaseModel):
     notes: str | None = None
     media_format: str | None = None
     is_unreleased: bool = False
+    spotify_track_id: str | None = None
     song: "Song"  # Songスキーマを参照
 
     class Config:
@@ -652,6 +658,7 @@ class AlbumTrackBase(BaseModel):
     display_title: str | None = None
     notes: str | None = None
     is_unreleased: bool = False
+    spotify_track_id: str | None = None
 
 class AlbumTrackCreate(AlbumTrackBase):
     pass
@@ -814,7 +821,8 @@ class TokenData(BaseModel):
 class SongDetailMini(BaseModel):
     id: int
     title: str
-    spotify_song_title: str | None = None
+    spotify_song_id: str | None = None
+    isrc: str | None = None
     is_video: bool = False
     version_name: str | None = None
     is_streaming_available: bool = True

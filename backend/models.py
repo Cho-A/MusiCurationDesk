@@ -324,6 +324,7 @@ class Song(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False, index=True)
     spotify_song_id = Column(String(100), nullable=True, unique=True)
+    isrc = Column(String(50), nullable=True, index=True)
     spotify_song_title = Column(String(255), nullable=True)
     jasrac_code = Column(String(20), nullable=True, index=True, unique=True)
     jasrac_title = Column(String(255), nullable=True)
@@ -544,6 +545,7 @@ class AlbumTrack(Base):
     notes = Column(String(255), nullable=True)
     display_title = Column(String(255), nullable=True)
     is_unreleased = Column(Boolean, default=False, nullable=False)
+    spotify_track_id = Column(String(100), nullable=True)
 
     __table_args__ = (
         # CD/DVD特典等で同一アルバム内に同じ曲が複数回収録されることがあるため、

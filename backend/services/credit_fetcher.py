@@ -14,6 +14,7 @@ class MusicImporter:
         """SpotifyのトラックIDから楽曲情報を取得し、MusicBrainzでクレジットを補完してDBに保存する"""
         
         # 1. 既にDBに存在するかチェック
+        # まずはSpotifyのTrack IDで完全一致するか確認（過去にインポート済みの場合）
         existing_song = db.query(models.Song).filter(models.Song.spotify_song_id == spotify_track_id).first()
         if existing_song:
             return existing_song
@@ -22,6 +23,14 @@ class MusicImporter:
         track_data = self.spotify.get_track(spotify_track_id)
         if not track_data:
             raise ValueError("Track not found on Spotify")
+            
+        # 3. ISRCによる重複排除
+        isrc = track_data.get('external_ids', {}).get('isrc')
+        if isrc:
+            existing_by_isrc = db.query(models.Song).filter(models.Song.isrc == isrc).first()
+            if existing_by_isrc:
+                # 完全に同一の音源が存在する場合は既存の曲を返す
+                return existing_by_isrc
             
         # 3. 楽曲の基本情報を登録
         release_date_str = track_data['album']['release_date']
@@ -38,6 +47,7 @@ class MusicImporter:
         new_song = models.Song(
             title=track_data['name'],
             spotify_song_id=spotify_track_id,
+            isrc=isrc,
             spotify_song_title=track_data['name'],
             is_streaming_available=is_streaming
         )
@@ -181,7 +191,8 @@ class MusicImporter:
                             song_id=song.id,
                             track_number=track.get('track_number', 1),
                             disc_number=track.get('disc_number', 1),
-                            duration_ms=track.get('duration_ms', None)
+                            duration_ms=track.get('duration_ms', None),
+                            spotify_track_id=track['id']
                         )
                         db.add(album_track)
                         db.commit()
