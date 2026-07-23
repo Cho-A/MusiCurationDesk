@@ -56,11 +56,43 @@ class MusicImporter:
         db.refresh(new_song)
         
         # 4. Spotifyのメインアーティストを紐付け
-        for artist_data in track_data['artists']:
+        primary_artist_id = None
+        for i, artist_data in enumerate(track_data['artists']):
             artist_id = self._get_or_create_artist(artist_data['id'], artist_data['name'], db)
+            if i == 0:
+                primary_artist_id = artist_id
             link = models.SongArtistLink(song_id=new_song.id, artist_id=artist_id, role_category="Artist")
             db.add(link)
             
+        # 4.5. 同名楽曲のWork自動紐付け (再録やLiveバージョンの自動グループ化)
+        if primary_artist_id:
+            same_title_songs = db.query(models.Song).filter(
+                models.Song.title == track_data['name'],
+                models.Song.id != new_song.id
+            ).all()
+            
+            for s in same_title_songs:
+                # 既存曲のメインアーティストを確認
+                first_artist_link = db.query(models.SongArtistLink).filter(
+                    models.SongArtistLink.song_id == s.id,
+                    models.SongArtistLink.role_category == "Artist"
+                ).first()
+                
+                if first_artist_link and first_artist_link.artist_id == primary_artist_id:
+                    # 曲名とメインアーティストが完全一致した！
+                    if s.work_id:
+                        new_song.work_id = s.work_id
+                    else:
+                        # まだWorkが存在しない場合は新規作成して両方を紐付ける
+                        new_work = models.MusicalWork(title=track_data['name'])
+                        db.add(new_work)
+                        db.commit()
+                        db.refresh(new_work)
+                        s.work_id = new_work.id
+                        new_song.work_id = new_work.id
+                    db.commit()
+                    break
+
         # 5. MusicBrainzからクレジット情報を取得して補完 (ISRCが存在する場合)
         if skip_mb_lookup:
             db.commit()
