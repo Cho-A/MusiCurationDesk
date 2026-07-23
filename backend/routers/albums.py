@@ -178,9 +178,7 @@ def import_cd_album(
             album = models.Album(
                 main_title=request.title,
                 physical_release_date=request.release_date,
-                album_type=request.album_type,
-                total_tracks=len(request.tracks),
-                is_saved=True
+                album_type=request.album_type
             )
             db.add(album)
             db.commit()

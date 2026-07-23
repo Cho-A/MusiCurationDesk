@@ -352,7 +352,6 @@ class SongDetail(BaseModel):
 class SongSearchResult(BaseModel):
     id: int
     title: str
-    release_date: date | None
     role_category: str  # このアーティストがその曲で果たした役割の大分類
     role_detail: str | None = None
 

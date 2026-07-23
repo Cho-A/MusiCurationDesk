@@ -288,7 +288,7 @@ def _insert_setlist_data(setlist_data: dict, setlist_id: str, db: Session) -> in
     if tour_name:
         tour = db.query(models.Tour).filter(models.Tour.name == tour_name).first()
         if not tour:
-            tour = models.Tour(name=tour_name, main_artist_id=artist.id)
+            tour = models.Tour(name=tour_name)
             db.add(tour)
             db.commit()
             db.refresh(tour)

@@ -132,13 +132,11 @@ def get_artist_contributions(
     results = query.all()
 
     # 6. Pydanticスキーマに合わせた最終的なデータ整形
-    # SongSearchResultスキーマの要求に合わせて、Songオブジェクトとroleを統合します
     output_list = []
     for song, role in results:
         output_list.append(schemas.SongSearchResult(
             id=song.id,
             title=song.title,
-            release_date=song.release_date,
             role=role # ★ SongArtistLinkから取得したroleを付与
         ))
         

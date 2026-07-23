@@ -30,15 +30,8 @@ class MusicImporter:
             release_date_str += "-01-01"
         elif len(release_date_str) == 7:
             release_date_str += "-01"
-            
-        try:
-            release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
-        except:
-            release_date = None
-
         new_song = models.Song(
             title=track_data['name'],
-            release_date=release_date,
             spotify_song_id=spotify_track_id,
             spotify_song_title=track_data['name']
         )
