@@ -2,40 +2,78 @@
 
 本ドキュメントでは、MusiCuration Desk のローカル環境でのセットアップおよびサーバー（バックエンド・フロントエンド）の起動方法について説明します。
 
-## 1. バックエンド (FastAPI) の起動
+## 1. 推奨の起動方法 (Docker Compose)
 
-バックエンドは Python の FastAPI を使用して構築されています。サーバーは `uvicorn` を使用して立ち上げます。
+開発環境は **Docker** を使用して一元管理されています。この方法を使うと、コマンド1つでバックエンドとフロントエンドの両方が自動的に起動します。
+
+### 前提条件
+- 実行環境に **Docker** と **Docker Compose** がインストールされていること
+  （インストールされていない場合は `sudo apt install docker.io docker-compose-v2` 等でインストールしてください）
 
 ### 起動コマンド
 プロジェクトルートディレクトリ（`MusiCurationDesk/`）で以下のコマンドを実行してください。
 
 ```bash
-uvicorn app.main:app --reload
+docker compose up -d --build
 ```
 
-- `--reload` オプションをつけることで、コードを変更した際に自動でサーバーが再起動されます。
-- デフォルトでは `http://127.0.0.1:8000` でサーバーが起動します。
-- APIドキュメント（Swagger UI）には `http://127.0.0.1:8000/docs` からアクセスできます。
+これだけで以下のサービスが立ち上がります：
+- **バックエンド (FastAPI)**: `http://localhost:8000`
+  （APIドキュメント: `http://localhost:8000/docs`）
+- **フロントエンド (React)**: `http://localhost:5173` もしくは `http://localhost:3000`
 
-## 2. フロントエンド (React + Vite) の起動
-
-フロントエンドは Vite を使用した React アプリケーションです。
-
-### 起動コマンド
-プロジェクトのルートから `frontend` ディレクトリに移動し、開発サーバーを起動します。
-
+ログを確認したい場合は：
 ```bash
-cd frontend
-npm run dev
+docker compose logs -f
 ```
 
-- 初回起動時や依存パッケージを追加した場合は、事前に `npm install` を実行してください。
-- 起動すると、ターミナルにアクセス用URL（通常は `http://localhost:5173`）が表示されます。ブラウザでそのURLを開いてください。
+コンテナを停止する場合は：
+```bash
+docker compose down
+```
+
+---
+
+## 2. 手動での起動方法 (非推奨)
+
+Dockerを使用せず、直接ローカルで動かす場合の手順です。
+
+### バックエンド (FastAPI) の起動
+1. Python 3.11以上の仮想環境を作成し有効化します。
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+2. 依存パッケージをインストールします。
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. サーバーを起動します。
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+### フロントエンド (React + Vite) の起動
+1. 別のターミナルを開き、`frontend` ディレクトリに移動します。
+   ```bash
+   cd frontend
+   ```
+2. （初回のみ）依存パッケージをインストールします。
+   ```bash
+   npm install
+   ```
+3. 開発サーバーを起動します。
+   ```bash
+   npm run dev
+   ```
+
+---
 
 ## 3. テストデータの投入（オプション）
 
-データベース（SQLite: `music_curation_desk.db`）が空の状態からテストデータを流し込む場合は、バックエンドサーバーを起動した状態で以下のスクリプトを実行してください。
+データベース（SQLite: `music_curation_desk.db`）が空の状態からテストデータを流し込む場合は、バックエンドサーバーを起動した状態で以下のスクリプトを実行してください。（※Docker起動時でもホスト側で実行可能です）
 
 ```bash
+source .venv/bin/activate
 python3 app/insert_test_data.py
 ```
