@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from .. import models, schemas  # 先ほど作成したファイルをインポート
 
 # --- 1. APIRouter のインスタンスを作成 ---
+router = APIRouter()
 # --- ★公演登録APIエンドポイント★ ---
 #
 # [POST] /performances/
@@ -421,8 +422,6 @@ def copy_setlist(
     return target_perf
 
 from pydantic import BaseModel
-
-router = APIRouter()
 
 
 class BulkUpdateTourRequest(BaseModel):
