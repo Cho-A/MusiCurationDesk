@@ -51,7 +51,8 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
 
         // まずはアーティストID＋タイトルで検索（サジェスト）
         // もしユーザーが明示的に検索ワードを変えた場合（初期値と違う）は、アーティスト縛りを外す
-        const isInitialSuggest = searchQuery.includes(currentSong.title.split(/[\(\[-]/)[0].trim());
+        const baseTitle = currentSong.title.split(/[\(\[-]/)[0].trim() || currentSong.title;
+        const isInitialSuggest = searchQuery === baseTitle;
         let url = `http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}&limit=50`;
         
         if (isInitialSuggest && mainArtistId) {

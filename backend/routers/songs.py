@@ -249,12 +249,18 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
                 other_versions.append(s)
                 
         # 自身のみのアルバムリストを、合算したアルバムリストで上書き
-        db_song.album_links = combined_albums
-        db_song.other_versions = other_versions
+        # SQLAlchemyのリレーション(db_song.album_links)を直接上書きすると
+        # track.song が db_song に書き換わってしまい、すべてのアルバムが
+        # 同じ曲名（現在表示中の曲の曲名）になってしまうバグを防ぐため、
+        # Pydanticモデルに変換してから上書きする。
+        song_model = schemas.SongDetail.model_validate(db_song)
+        song_model.albums = [schemas.AlbumTrackInfo.model_validate(t) for t in combined_albums]
+        song_model.other_versions = [schemas.SongMini.model_validate(s) for s in other_versions]
+        return song_model
     else:
-        db_song.other_versions = []
-
-    return db_song
+        song_model = schemas.SongDetail.model_validate(db_song)
+        song_model.other_versions = []
+        return song_model
 
 @router.patch("/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
 def patch_song(

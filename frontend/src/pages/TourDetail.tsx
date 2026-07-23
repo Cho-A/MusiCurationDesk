@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useNavigationHistory } from '../context/NavigationHistoryContext';
 import { ArrowLeft, Calendar, Plus, MapPin, Users } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -34,7 +35,7 @@ interface TourDetail {
 
 const TourDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const { goBack } = useNavigationHistory();
   const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -105,7 +106,7 @@ const TourDetail = () => {
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 16px', paddingBottom: '60px' }}>
       {/* 戻るボタン */}
       <button 
-        onClick={() => navigate(-1)}
+        onClick={() => goBack()}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import Artists from '../Artists';
 
-global.fetch = vi.fn() as any;
+globalThis.fetch = vi.fn() as any;
 
 describe('Artists Page', () => {
   beforeEach(() => {

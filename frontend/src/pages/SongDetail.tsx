@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useNavigationHistory } from '../context/NavigationHistoryContext';
 import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film } from 'lucide-react';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
@@ -83,13 +84,23 @@ interface SongDetailData {
   work?: { 
     id: number; 
     title: string;
+    jasrac_code?: string;
+    iswc_code?: string;
     artist_links: WorkArtistLink[];
   };
 }
 
 const SongDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { goBack } = useNavigationHistory();
+  
+  // バージョン切り替えはローカルステートのみで管理し、URLは一切変更しない（履歴汚染を防ぐため）
+  const [activeSongId, setActiveSongId] = useState<string>(id || "");
+
+  // URLのidが変わった場合（別の曲ページに飛んだ場合）はステートをリセット
+  useEffect(() => {
+    if (id) setActiveSongId(id);
+  }, [id]);
   
   // Base data fetched from API
   const [baseSong, setBaseSong] = useState<SongDetailData | null>(null);
@@ -109,6 +120,8 @@ const SongDetail = () => {
   const [editStreamingValue, setEditStreamingValue] = useState(true);
   const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [isEditingWorkTitle, setIsEditingWorkTitle] = useState(false);
+  const [editWorkTitleValue, setEditWorkTitleValue] = useState("");
 
   const fetchBaseSong = async (songIdToFetch: string) => {
     try {
@@ -128,28 +141,16 @@ const SongDetail = () => {
   };
 
   useEffect(() => {
-    if (id) fetchBaseSong(id);
-  }, [id]);
+    if (activeSongId) fetchBaseSong(activeSongId);
+  }, [activeSongId]);
 
   // Handle switching tabs
   const handleVersionSelect = async (versionId: number) => {
-    if (versionId === selectedVersionId) return;
+    const vid = versionId.toString();
+    if (vid === activeSongId) return;
     
-    // We need to fetch the full details for the selected version because `other_versions` 
-    // doesn't contain credits and tie-ups for those versions.
-    try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${versionId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setBaseSong(data);
-        setSelectedVersionId(versionId);
-        setActiveCategory(data.is_video ? 'video' : 'audio');
-        // URLは変えない（ブラウザバック時の挙動を維持しつつ、ハブとしての体験を向上）
-        // history.replaceState(null, '', `/songs/${versionId}`);
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    // URLは一切操作せず、画面の描画だけを更新する
+    setActiveSongId(vid);
   };
 
   const handleAddCredit = async (artistName: string, category: string, detail?: string) => {
@@ -163,7 +164,7 @@ const SongDetail = () => {
       
       const res = await fetch(url, { method: 'DELETE' });
       if (res.ok) {
-        if (selectedVersionId) handleVersionSelect(selectedVersionId);
+        if (selectedVersionId) fetchBaseSong(selectedVersionId.toString());
       } else {
         alert("クレジットの削除に失敗しました");
       }
@@ -187,6 +188,37 @@ const SongDetail = () => {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+
+  const handleUpdateWorkTitle = async () => {
+    if (!baseSong?.work) return;
+    const work = baseSong.work;
+    
+    // ダイアログで警告を出す
+    const confirmed = window.confirm(`【警告】\nこの楽曲名(Work名)を変更すると、このWorkに紐づく他のすべてのバージョン（全${(baseSong.other_versions?.length || 0) + 1}曲）のWork名も同時に変更されます。\n\n本当に変更してもよろしいですか？`);
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/works/${work.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: editWorkTitleValue,
+          jasrac_code: work.jasrac_code,
+          iswc_code: work.iswc_code
+        })
+      });
+      if (res.ok) {
+        if (id) fetchBaseSong(activeSongId || id);
+        setIsEditingWorkTitle(false);
+      } else {
+        alert("更新に失敗しました");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("更新エラーが発生しました");
     }
   };
 
@@ -294,7 +326,7 @@ const SongDetail = () => {
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' }}>
       {/* 戻るボタン */}
       <button 
-        onClick={() => navigate(-1)}
+        onClick={() => goBack()}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',
@@ -313,9 +345,35 @@ const SongDetail = () => {
         <div style={{ fontSize: '0.9rem', color: 'var(--spotify-color)', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.1em' }}>
           楽曲 (WORK)
         </div>
-        <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: '0 0 16px 0', letterSpacing: '-0.02em' }}>
-          {baseSong.work?.title || baseSong.title}
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+          {isEditingWorkTitle ? (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                value={editWorkTitleValue} 
+                onChange={(e) => setEditWorkTitleValue(e.target.value)}
+                style={{ fontSize: '1.5rem', padding: '8px', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+              />
+              <button onClick={handleUpdateWorkTitle} style={{ background: 'var(--success-color)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>保存</button>
+              <button onClick={() => setIsEditingWorkTitle(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>キャンセル</button>
+            </div>
+          ) : (
+            <>
+              <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+                {baseSong.work?.title || baseSong.title}
+              </h1>
+              {baseSong.work && (
+                <button 
+                  onClick={() => { setEditWorkTitleValue(baseSong.work!.title); setIsEditingWorkTitle(true); }}
+                  style={{ background: 'var(--bg-tertiary)', border: 'none', padding: '8px', borderRadius: '50%', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  title="Work名を編集"
+                >
+                  <Edit2 size={20} />
+                </button>
+              )}
+            </>
+          )}
+        </div>
         
         {/* 作詞・作曲クレジット */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: 'var(--text-secondary)' }}>

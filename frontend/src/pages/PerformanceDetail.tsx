@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useNavigationHistory } from '../context/NavigationHistoryContext';
 import { ArrowLeft, Edit3, Save, X, ListMusic, ArrowUp, ArrowDown, Search, Link2Off, Copy, Users, Trash2 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -53,10 +54,14 @@ interface PerformanceDetail {
 
 const PerformanceDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const { goBack } = useNavigationHistory();
   const [performance, setPerformance] = useState<PerformanceDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'setlist' | 'roster'>('setlist');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'setlist' | 'roster') || 'setlist';
+  const setActiveTab = (tab: 'setlist' | 'roster') => {
+    setSearchParams({ tab }, { replace: true });
+  };
 
   // 編集モード用State
   const [isEditing, setIsEditing] = useState(false);
@@ -356,7 +361,7 @@ const PerformanceDetail = () => {
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 16px' }}>
 
       <button 
-        onClick={() => navigate(-1)}
+        onClick={() => goBack()}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',

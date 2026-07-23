@@ -18,6 +18,7 @@ import AlbumDetail from './pages/AlbumDetail';
 import MusicBrainzImport from './pages/MusicBrainzImport';
 import Terms from './pages/Terms';
 import { AuthProvider } from './context/AuthContext';
+import { NavigationHistoryProvider } from './context/NavigationHistoryContext';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
     <AuthProvider>
       <Toaster position="top-right" />
       <BrowserRouter>
+        <NavigationHistoryProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -50,6 +52,7 @@ function App() {
           <Route path="*" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>ページが見つかりません (404)</div>} />
         </Route>
       </Routes>
+      </NavigationHistoryProvider>
     </BrowserRouter>
     </AuthProvider>
   );

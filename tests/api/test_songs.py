@@ -124,3 +124,27 @@ class TestSongsAPI:
         assert data[0]["title"] == "Mocked Song"
         assert data[0]["spotify_id"] == "test_spotify_id"
 
+    def test_attach_song_to_song(self, client):
+        """未統合の楽曲同士を結合した際、新しいMusicalWorkが自動作成されること"""
+        song1_res = client.post("/songs/", json={"title": "Standalone 1"})
+        song1_id = song1_res.json()["id"]
+
+        song2_res = client.post("/songs/", json={"title": "Standalone 2"})
+        song2_id = song2_res.json()["id"]
+
+        # attach_to_songを実行
+        attach_res = client.post(f"/songs/{song1_id}/attach_to_song?target_song_id={song2_id}")
+        assert attach_res.status_code == 200
+        data = attach_res.json()
+        work_id = data["work_id"]
+        assert work_id is not None
+
+        # 両方の曲が同じwork_idを持っているか確認
+        s1 = client.get(f"/songs/{song1_id}").json()
+        s2 = client.get(f"/songs/{song2_id}").json()
+        assert s1["work_id"] == work_id
+        assert s2["work_id"] == work_id
+        
+        # 楽曲詳細取得APIが500エラーを出さずに、other_versionsが含まれるか確認
+        assert len(s1["other_versions"]) == 1
+        assert s1["other_versions"][0]["id"] == song2_id

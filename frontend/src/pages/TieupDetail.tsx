@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useNavigationHistory } from '../context/NavigationHistoryContext';
 import { ChevronRight, Folder, Music, ArrowLeft, Music2 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -27,7 +28,7 @@ interface Song {
 
 const TieupDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { goBack } = useNavigationHistory();
   
   const [tieup, setTieup] = useState<TieupDetailData | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
@@ -71,7 +72,7 @@ const TieupDetail = () => {
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' }}>
       {/* 戻るボタン */}
       <button 
-        onClick={() => navigate(-1)}
+        onClick={() => goBack()}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',

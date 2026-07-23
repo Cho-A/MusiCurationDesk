@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useNavigationHistory } from '../context/NavigationHistoryContext';
 import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -11,6 +12,8 @@ interface SongMini {
   title: string;
   spotify_song_id?: string | null;
   is_video?: boolean;
+  version_name?: string;
+  is_streaming_available?: boolean;
 }
 
 interface AlbumDisc {
@@ -55,7 +58,7 @@ interface AlbumDetailData {
 
 const AlbumDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { goBack } = useNavigationHistory();
   const [album, setAlbum] = useState<AlbumDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
@@ -185,7 +188,7 @@ const AlbumDetail = () => {
     <div style={{ padding: '32px', maxWidth: '1000px', margin: '0 auto', color: 'var(--text-primary)' }}>
       {/* 戻るボタン */}
       <button 
-        onClick={() => navigate(-1)}
+        onClick={() => goBack()}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',

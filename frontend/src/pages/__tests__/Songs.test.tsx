@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import Songs from '../Songs';
 
 // fetchをモック化
-global.fetch = vi.fn() as any;
+globalThis.fetch = vi.fn() as any;
 
 describe('Songs Page', () => {
   beforeEach(() => {
