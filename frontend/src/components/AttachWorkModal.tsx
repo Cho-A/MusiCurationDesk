@@ -62,13 +62,17 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
         if (res.ok) {
           const data: SongData[] = await res.json();
           
-          // 名寄せ処理 (同じ work_id のものは1つにまとめる)
+          // 名寄せ処理 (同じ work_id のものは1つにまとめる。work_idが無いものはidで)
           const uniqueWorks = new Map<number, SongData>();
           data.forEach(song => {
-            if (song.work_id && song.work_id !== currentSong.work_id) {
-              if (!uniqueWorks.has(song.work_id)) {
-                uniqueWorks.set(song.work_id, song);
-              }
+            if (song.id === currentSong.id) return;
+            const key = song.work_id ? song.work_id : -song.id;
+            
+            // 既に同じ work_id に属している場合はスキップ
+            if (song.work_id && song.work_id === currentSong.work_id) return;
+
+            if (!uniqueWorks.has(key)) {
+              uniqueWorks.set(key, song);
             }
           });
 
@@ -169,7 +173,7 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
                     </div>
                   </div>
                   <button 
-                    onClick={() => song.work_id && onAttach(song.work_id)}
+                    onClick={() => onAttach(song.id)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
                       padding: '8px 16px', backgroundColor: 'var(--spotify-color)', color: '#000',

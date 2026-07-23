@@ -204,16 +204,16 @@ const SongDetail = () => {
   };
 
   const handleAttachWork = async (targetId: number) => {
-    if (!window.confirm(`このバージョンを Work ID: ${targetId} に結合しますか？`)) return;
+    if (!window.confirm(`このバージョンを対象の楽曲(ID: ${targetId})の作品に統合しますか？`)) return;
     
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/attach?target_work_id=${targetId}`, { method: 'POST' });
+      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/attach_to_song?target_song_id=${targetId}`, { method: 'POST' });
       if (res.ok) {
         alert("結合が完了しました");
         setIsAttachModalOpen(false);
         if (selectedVersionId) handleVersionSelect(selectedVersionId);
       } else {
-        alert("結合に失敗しました。対象のWork IDが存在しない可能性があります。");
+        alert("結合に失敗しました。");
       }
     } catch (err) {
       console.error(err);

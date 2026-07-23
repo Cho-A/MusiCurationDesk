@@ -546,24 +546,37 @@ def detach_song_from_work(song_id: int, db: Session = Depends(models.get_db)):
     return {"message": "Successfully detached and created a new MusicalWork.", "new_work_id": new_work.id}
 
 
-@router.post("/{song_id}/attach", tags=["Songs"])
-def attach_song_to_work(song_id: int, target_work_id: int = Query(...), db: Session = Depends(models.get_db)):
+@router.post("/{song_id}/attach_to_song", tags=["Songs"])
+def attach_song_to_song(song_id: int, target_song_id: int = Query(...), db: Session = Depends(models.get_db)):
     """
-    指定された Song を別の既存の MusicalWork に結合 (Merge) します。
+    指定された Song を、別の Song (target_song_id) と同じ作品 (MusicalWork) に結合します。
+    対象の Song がまだ作品に属していない場合は、新しい MusicalWork を作成して両方を紐付けます。
     """
     song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if not song:
         raise HTTPException(status_code=404, detail="対象の楽曲(Song)が見つかりません。")
 
-    target_work = db.query(models.MusicalWork).filter(models.MusicalWork.id == target_work_id).first()
-    if not target_work:
-        raise HTTPException(status_code=404, detail="対象の作品(MusicalWork)が見つかりません。")
+    target_song = db.query(models.Song).filter(models.Song.id == target_song_id).first()
+    if not target_song:
+        raise HTTPException(status_code=404, detail="結合先の楽曲が見つかりません。")
+
+    if target_song.work_id:
+        target_work_id = target_song.work_id
+    else:
+        # 新しいMusicalWorkを作成
+        new_work = models.MusicalWork(title=target_song.title)
+        db.add(new_work)
+        db.commit()
+        db.refresh(new_work)
+        target_song.work_id = new_work.id
+        target_work_id = new_work.id
+        db.commit()
 
     song.work_id = target_work_id
     db.commit()
     db.refresh(song)
 
-    return {"message": "Successfully attached to the specified MusicalWork.", "work_id": target_work_id}
+    return {"message": "Successfully attached to the specified song's work.", "work_id": target_work_id}
 
 
 @router.post("/{song_id}/merge", tags=["Songs"])
