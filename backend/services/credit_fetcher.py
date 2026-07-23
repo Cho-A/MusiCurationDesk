@@ -30,10 +30,16 @@ class MusicImporter:
             release_date_str += "-01-01"
         elif len(release_date_str) == 7:
             release_date_str += "-01"
+        is_streaming = track_data.get('is_playable')
+        if is_streaming is None:
+            markets = track_data.get('available_markets', [])
+            is_streaming = 'JP' in markets if markets else True
+
         new_song = models.Song(
             title=track_data['name'],
             spotify_song_id=spotify_track_id,
-            spotify_song_title=track_data['name']
+            spotify_song_title=track_data['name'],
+            is_streaming_available=is_streaming
         )
         db.add(new_song)
         db.commit()
@@ -155,7 +161,10 @@ class MusicImporter:
 
             # 3. アルバムのトラックを取得して保存
             tracks = self.spotify.get_album_tracks(album['id'], limit=50)
-            for track in tracks:
+            total_tracks = len(tracks)
+            for j, track in enumerate(tracks):
+                track_prog = 10 + int(85 * (i/total_albums)) + int((85/total_albums) * (j/total_tracks))
+                if progress_callback: progress_callback(track_prog, f"[{album['name']}] Importing track {j+1}/{total_tracks}")
                 try:
                     song = self.import_track_from_spotify(track['id'], db, skip_mb_lookup=True)
                     imported_tracks += 1

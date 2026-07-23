@@ -331,11 +331,13 @@ const ArtistDetail = () => {
       {activeTab === 'albums' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
           {(artist.albums || []).map(album => (
-            <Link key={album.id} to={`/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+            <Link key={album.id} to={`/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
               <div style={{
+                height: '100%',
                 background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
                 border: '1px solid var(--border-color)', transition: 'transform 0.2s, box-shadow 0.2s',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center'
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                boxSizing: 'border-box'
               }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
