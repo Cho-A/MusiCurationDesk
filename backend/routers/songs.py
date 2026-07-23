@@ -244,10 +244,6 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
         other_versions = []
         for s in all_songs_in_work:
             for track in s.album_links:
-                # SQLAlchemyのオブジェクトに一時的な属性を付与
-                setattr(track, "song_title", s.title)
-                setattr(track, "song_id", s.id)
-                setattr(track, "is_video", s.is_video)
                 combined_albums.append(track)
             if s.id != db_song.id:
                 other_versions.append(s)

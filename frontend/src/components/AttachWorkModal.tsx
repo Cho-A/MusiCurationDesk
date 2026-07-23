@@ -169,7 +169,7 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {song.artist_links && song.artist_links.length > 0 ? song.artist_links.map(a => a.artist_name).join(', ') : 'Unknown Artist'}
                       <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.2)' }}>|</span>
-                      Work ID: {song.work_id}
+                      Work ID: {song.work_id || '(未統合)'}
                     </div>
                   </div>
                   <button 
