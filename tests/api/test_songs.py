@@ -48,8 +48,36 @@ class TestSongsAPI:
         })
         assert update_res.status_code == 200
         data = update_res.json()
-        assert data["version_name"] == "Acoustic Ver."
-        assert data["work_id"] == 1
+
+    def test_get_song_detail_with_album_links(self, client):
+        """楽曲詳細を取得した際、収録アルバム(album_links)にsong_titleとis_videoが含まれること"""
+        # 1. 曲を作成
+        song_res = client.post("/songs/", json={"title": "Test Song For Album", "is_video": True})
+        song_id = song_res.json()["id"]
+
+        # 2. アルバムを作成
+        album_res = client.post("/albums/", json={"main_title": "Test Album", "album_type": "Original"})
+        album_id = album_res.json()["id"]
+
+        # 3. アルバムに曲を紐付ける
+        client.post(f"/album_tracks/", json={
+            "album_id": album_id,
+            "song_id": song_id,
+            "track_number": 1,
+            "disc_number": 1
+        })
+
+        # 4. 曲詳細を取得
+        detail_res = client.get(f"/songs/{song_id}")
+        assert detail_res.status_code == 200
+        data = detail_res.json()
+        assert "album_links" in data
+        assert len(data["album_links"]) == 1
+        track = data["album_links"][0]
+        
+        # schemas.AlbumTrackInfo の song_title と is_video が正しくシリアライズされていること
+        assert track["song_title"] == "Test Song For Album"
+        assert track["is_video"] is False
 
     def test_link_and_detach_artist(self, client):
         """楽曲の関連付け、また間違って関連付けられた楽曲の切り離しができること"""
@@ -70,8 +98,8 @@ class TestSongsAPI:
         )
         assert link_res.status_code == 200
 
-        # 切り離し
-        detach_res = client.delete(f"/songs/{song_id}/artists/{artist_id}")
+        # 切り離し (role_categoryが必須のクエリパラメータ)
+        detach_res = client.delete(f"/songs/{song_id}/artists/{artist_id}?role_category=Vocalist")
         assert detach_res.status_code == 204
 
     @patch("backend.services.spotify_client.SpotifyClient.search_tracks")

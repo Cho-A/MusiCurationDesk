@@ -562,6 +562,14 @@ class AlbumTrack(Base):
     album = relationship("Album", back_populates="album_tracks")
     song = relationship("Song", back_populates="album_links")
 
+    @property
+    def song_title(self):
+        return self.song.title if self.song else None
+
+    @property
+    def is_video(self):
+        return self.song.is_video if self.song else False
+
 
 class AlbumRelationship(Base):
     """アルバム同士の関連 (初回盤/通常盤, 特典DVD)"""
