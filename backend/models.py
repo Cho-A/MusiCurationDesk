@@ -453,6 +453,7 @@ class Performance(Base):
         primaryjoin="Performance.artist_id == Artist.id",
         uselist=False,
         back_populates="performances",
+        overlaps="artist"
     )
     tour = relationship("Tour", back_populates="performances")
     setlist_entries = relationship("SetlistEntry", back_populates="performance")
