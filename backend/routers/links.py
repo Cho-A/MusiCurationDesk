@@ -4,20 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import models , schemas # 先ほど作成したファイルをインポート
 
+router = APIRouter()
+
+
 # --- 1. APIRouter のインスタンスを作成 ---
-song_artist_router = APIRouter(
-    prefix="/song_artist_links", # このファイル内のAPIはすべて "/songs" で始まる
-    tags=["Links"]   # Swagger UIでのグループ名
-)
-
-song_tieup_router = APIRouter(
-    prefix="/song_tieup_links", # このファイル内のAPIはすべて "/songs" で始まる
-    tags=["Links"]   # Swagger UIでのグループ名
-)
-
 # [POST] /song_artist_links/
 # ----------------------------------------------------
-@song_artist_router.post("/", response_model=schemas.SongArtistLink, tags=["Links"])
+@router.post("/song_artist_links", response_model=schemas.SongArtistLink, tags=["Links"])
 def link_song_to_artist(
     link: schemas.SongArtistLinkCreate, 
     db: Session = Depends(models.get_db)
@@ -68,7 +61,7 @@ def link_song_to_artist(
 #
 # [POST] /song_tieups_links/
 # ----------------------------------------------------
-@song_tieup_router.post("/", response_model=schemas.SongTieupLink, tags=["Links"])
+@router.post("/song_tieup_links", response_model=schemas.SongTieupLink, tags=["Links"])
 def link_song_to_tieup(
     link: schemas.SongTieupLinkCreate, 
     db: Session = Depends(models.get_db)

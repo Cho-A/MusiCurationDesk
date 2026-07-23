@@ -6,27 +6,11 @@ from sqlalchemy.orm import Session, joinedload
 from .. import models, schemas  # 先ほど作成したファイルをインポート
 
 # --- 1. APIRouter のインスタンスを作成 ---
-performance_router = APIRouter(
-    prefix="/performances",
-    tags=["Performances"],
-)
-
-performance_roster_router = APIRouter(
-    prefix="/performance_roster",
-    tags=["Performances"],
-)
-
-setlist_entries_router = APIRouter(
-    prefix="/setlist_entries",
-    tags=["Performances"],
-)
-
-
 # --- ★公演登録APIエンドポイント★ ---
 #
 # [POST] /performances/
 # ----------------------------------------------------
-@performance_router.post("/", response_model=schemas.Performance, tags=["Performances"])
+@router.post("/performances", response_model=schemas.Performance, tags=["Performances"])
 def create_performance(
     performance: schemas.PerformanceCreate,
     db: Session = Depends(models.get_db),
@@ -73,7 +57,7 @@ def create_performance(
 
     return new_performance
 
-@performance_router.get("/", response_model=list[schemas.Performance], tags=["Performances"])
+@router.get("/performances", response_model=list[schemas.Performance], tags=["Performances"])
 def get_performances(
     tour_id: int = Query(None, description="Filter by Tour ID"),
     skip: int = 0, 
@@ -92,7 +76,7 @@ def get_performances(
     performances = query.order_by(models.Performance.date.desc()).offset(skip).limit(limit).all()
     return performances
 
-@performance_router.get("/{performance_id}", response_model=schemas.PerformanceDetail, tags=["Performances"])
+@router.get("/performances/{performance_id}", response_model=schemas.PerformanceDetail, tags=["Performances"])
 def get_performance(performance_id: int, db: Session = Depends(models.get_db)):
     """指定されたIDの公演詳細（セットリスト、参加メンバー等含む）を取得します。"""
     performance = (
@@ -116,8 +100,7 @@ def get_performance(performance_id: int, db: Session = Depends(models.get_db)):
 #
 # [POST] /performance_roster/
 # ----------------------------------------------------
-@performance_roster_router.post(
-    "/", response_model=schemas.PerformanceRoster, tags=["Performances"]
+@router.post("/performance_roster", response_model=schemas.PerformanceRoster, tags=["Performances"]
 )
 def add_performance_roster_entry(
     roster_entry: schemas.PerformanceRosterCreate,
@@ -180,8 +163,7 @@ def add_performance_roster_entry(
 
 # [GET] /performances/
 # ----------------------------------------------------
-@performance_router.get(
-    "/", response_model=list[schemas.PerformanceSummary], tags=["Performances"]
+@router.get("/performances", response_model=list[schemas.PerformanceSummary], tags=["Performances"]
 )
 def get_all_performances(
     # クエリパラメータを定義
@@ -226,8 +208,7 @@ def get_all_performances(
 
 # [GET] /performances/{performance_id}
 # ----------------------------------------------------
-@performance_router.get(
-    "/{performance_id}", response_model=schemas.Performance, tags=["Performances"]
+@router.get("/performances/{performance_id}", response_model=schemas.Performance, tags=["Performances"]
 )
 def get_performance_by_id(
     performance_id: int,
@@ -258,8 +239,7 @@ def get_performance_by_id(
     return db_performance
 
 
-@performance_router.put(
-    "/{performance_id}/setlist",
+@router.put("/performances/{performance_id}/setlist",
     response_model=list[schemas.SetlistEntry],
     tags=["Performances"]
 )
@@ -315,8 +295,7 @@ def update_setlist(
 #
 # [POST] /setlist_entries/
 # ----------------------------------------------------
-@setlist_entries_router.post(
-    "/", response_model=schemas.SetlistEntry, tags=["Performances"]
+@router.post("/setlist_entries", response_model=schemas.SetlistEntry, tags=["Performances"]
 )
 def create_setlist_entry(
     entry: schemas.SetlistEntryCreate,
@@ -370,8 +349,7 @@ def create_setlist_entry(
 
     return new_entry
 
-@performance_router.put(
-    "/{performance_id}", response_model=schemas.PerformanceDetail, tags=["Performances"]
+@router.put("/performances/{performance_id}", response_model=schemas.PerformanceDetail, tags=["Performances"]
 )
 def update_performance(
     performance_id: int,
@@ -398,8 +376,7 @@ def update_performance(
     return db_performance
 
 
-@performance_router.post(
-    "/{performance_id}/copy-setlist", response_model=schemas.PerformanceDetail, tags=["Performances"]
+@router.post("/performances/{performance_id}/copy-setlist", response_model=schemas.PerformanceDetail, tags=["Performances"]
 )
 def copy_setlist(
     performance_id: int,
@@ -445,11 +422,14 @@ def copy_setlist(
 
 from pydantic import BaseModel
 
+router = APIRouter()
+
+
 class BulkUpdateTourRequest(BaseModel):
     performance_ids: List[int]
     tour_id: int | None
 
-@performance_router.post("/bulk-update-tour")
+@router.post("/performances/bulk-update-tour")
 def bulk_update_tour(req: BulkUpdateTourRequest, db: Session = Depends(models.get_db)):
     perfs = db.query(models.Performance).filter(models.Performance.id.in_(req.performance_ids)).all()
     for perf in perfs:
@@ -461,7 +441,7 @@ class BulkCopySetlistRequest(BaseModel):
     target_performance_ids: List[int]
     source_performance_id: int
 
-@performance_router.post("/bulk-copy-setlist")
+@router.post("/performances/bulk-copy-setlist")
 def bulk_copy_setlist(req: BulkCopySetlistRequest, db: Session = Depends(models.get_db)):
     source_perf = db.query(models.Performance).filter(models.Performance.id == req.source_performance_id).first()
     if not source_perf:

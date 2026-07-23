@@ -67,7 +67,7 @@ Dockerを使用せず、直接ローカルで動かす場合の手順です。
    ```
 3. サーバーを起動します。
    ```bash
-   uvicorn app.main:app --reload
+   uvicorn backend.main:app --reload
    ```
 
 ### フロントエンド (React + Vite) の起動
@@ -92,5 +92,5 @@ Dockerを使用せず、直接ローカルで動かす場合の手順です。
 
 ```bash
 source .venv/bin/activate
-python3 app/insert_test_data.py
+python3 backend/insert_test_data.py
 ```

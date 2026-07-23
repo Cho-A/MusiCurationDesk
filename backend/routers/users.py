@@ -4,27 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import models , schemas , auth_utils , dependencies# 先ほど作成したファイルをインポート
 
-user_router = APIRouter(
-    prefix="/users", 
-    tags=["Users"] 
-)
-
-user_possessions_router = APIRouter(
-    prefix="/user_possessions", 
-    tags=["Users"] 
-)
-
-user_attendance_router = APIRouter(
-    prefix="/user_attendance", 
-    tags=["Users"] 
-)
+router = APIRouter()
 
 
 # --- ★ユーザー登録APIエンドポイント★ ---
 #
 # [POST] /users/
 # ----------------------------------------------------
-@user_router.post("/", response_model=schemas.User, tags=["Users"])
+@router.post("/users", response_model=schemas.User, tags=["Users"])
 def create_user(
     user: schemas.UserCreate, 
     db: Session = Depends(models.get_db)
@@ -65,7 +52,7 @@ def create_user(
     return new_user
 
 # --- ★ユーザーの所有物登録API★ ---
-@user_possessions_router.post("/user_possessions/", response_model=schemas.UserPossession, tags=["Users"])
+@router.post("/user_possessions/user_possessions/", response_model=schemas.UserPossession, tags=["Users"])
 def create_user_possession(
     possession: schemas.UserPossessionInput, # 👈 Input用スキーマに変更
     db: Session = Depends(models.get_db),
@@ -100,7 +87,7 @@ def create_user_possession(
     return new_possession
 
 # --- ★ユーザーの参加履歴登録API (保護版)★ ---
-@user_attendance_router.post("/user_attendance/", response_model=schemas.UserAttendance, tags=["Users"])
+@router.post("/user_attendance/user_attendance/", response_model=schemas.UserAttendance, tags=["Users"])
 def create_user_attendance(
     attendance: schemas.UserAttendanceInput, # 👈 Input用スキーマに変更
     db: Session = Depends(models.get_db),
@@ -130,7 +117,7 @@ def create_user_attendance(
 
 # --- ★★★ 新規実装: マイページ情報取得 (保護されたAPI) ★★★ ---
 # GET /users/me
-@user_router.get("/me", response_model=schemas.User)
+@router.get("/users/me", response_model=schemas.User)
 def get_current_user_profile(
     # ★ ここで門番 (get_current_user) を使う！
     current_user: models.User = Depends(dependencies.get_current_user)

@@ -6,7 +6,7 @@ import SongDetail from './pages/SongDetail';
 import TieupDetail from './pages/TieupDetail';
 import PerformanceDetail from './pages/PerformanceDetail';
 import TourDetail from './pages/TourDetail';
-import Concerts from './pages/Concerts';
+import Performances from './pages/Performances';
 import Login from './pages/Login';
 import Legal from './pages/Legal';
 import Register from './pages/Register';
@@ -39,7 +39,7 @@ function App() {
           <Route path="artists/:id" element={<ArtistDetail />} />
           <Route path="albums" element={<Albums />} />
           <Route path="albums/:id" element={<AlbumDetail />} />
-          <Route path="concerts" element={<Concerts />} />
+          <Route path="performances" element={<Performances />} />
           <Route path="merchandise" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>グッズページ (準備中)</div>} />
           <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>分析ページ (準備中)</div>} />
           <Route path="admin" element={<Admin />} />

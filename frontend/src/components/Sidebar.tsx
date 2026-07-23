@@ -16,7 +16,7 @@ const Sidebar = () => {
     { name: '楽曲', icon: <Music size={20} />, path: '/songs' },
     { name: 'アルバム', icon: <Disc3 size={20} />, path: '/albums' },
     { name: 'アーティスト', icon: <Users size={20} />, path: '/artists' },
-    { name: 'ライブ・公演', icon: <CalendarDays size={20} />, path: '/concerts' },
+    { name: 'ライブ・公演', icon: <CalendarDays size={20} />, path: '/performances' },
     { name: 'グッズ', icon: <ShoppingBag size={20} />, path: '/merchandise' },
     { name: 'MusicBrainz', icon: <Download size={20} />, path: '/musicbrainz' },
     { name: '分析', icon: <BarChart3 size={20} />, path: '/analytics' },

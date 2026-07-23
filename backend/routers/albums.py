@@ -4,27 +4,14 @@ from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload, aliased
 from .. import models , schemas # 先ほど作成したファイルをインポート
 
-album_router = APIRouter(
-    prefix="/albums", 
-    tags=["Albums"] 
-)
-
-album_track_router = APIRouter(
-    prefix="/album_tracks", 
-    tags=["Albums"] 
-)
-
-album_relatinship_router = APIRouter(
-    prefix="/album_relationships", 
-    tags=["Albums"] 
-)
+router = APIRouter()
 
 
 # --- ★アルバムマスター登録APIエンドポイント★ ---
 #
 # [POST] /albums/
 # ----------------------------------------------------
-@album_router.post("/", response_model=schemas.Album, tags=["Albums"])
+@router.post("/albums", response_model=schemas.Album, tags=["Albums"])
 def create_album(
     album: schemas.AlbumCreate, 
     db: Session = Depends(models.get_db)
@@ -62,7 +49,7 @@ def create_album(
 
 # [GET] /albums/
 # ----------------------------------------------------
-@album_router.get("/", response_model=list[schemas.Album], tags=["Albums"])
+@router.get("/albums", response_model=list[schemas.Album], tags=["Albums"])
 def get_all_albums(
     skip: int = 0, 
     limit: int = 100, 
@@ -75,7 +62,7 @@ def get_all_albums(
 
 # [GET] /albums/{album_id}
 # ----------------------------------------------------
-@album_router.get("/{album_id}", response_model=schemas.AlbumDetail, tags=["Albums"])
+@router.get("/albums/{album_id}", response_model=schemas.AlbumDetail, tags=["Albums"])
 def get_album_by_id(album_id: int, db: Session = Depends(models.get_db)):
     """
     指定されたIDのアルバム詳細情報を取得します。
@@ -95,7 +82,7 @@ def get_album_by_id(album_id: int, db: Session = Depends(models.get_db)):
 
 # [POST] /album_tracks/
 # ----------------------------------------------------
-@album_track_router.post("/", response_model=schemas.AlbumTrack, tags=["Albums"])
+@router.post("/album_tracks", response_model=schemas.AlbumTrack, tags=["Albums"])
 def link_song_to_album(
     track: schemas.AlbumTrackCreate, 
     db: Session = Depends(models.get_db)
@@ -133,7 +120,7 @@ def link_song_to_album(
 #
 # [POST] /album_relationships/
 # ----------------------------------------------------
-@album_relatinship_router.post("/", response_model=schemas.AlbumRelationship, tags=["Albums"])
+@router.post("/album_relationships", response_model=schemas.AlbumRelationship, tags=["Albums"])
 def create_album_relationship(
     link: schemas.AlbumRelationshipCreate, 
     db: Session = Depends(models.get_db)
@@ -174,7 +161,7 @@ def create_album_relationship(
 
 # [POST] /albums/import-cd
 # ----------------------------------------------------
-@album_router.post("/import-cd", response_model=schemas.Album, tags=["Albums"])
+@router.post("/albums/import-cd", response_model=schemas.Album, tags=["Albums"])
 def import_cd_album(
     request: schemas.CDImportRequest,
     db: Session = Depends(models.get_db)
@@ -266,7 +253,7 @@ def import_cd_album(
 
 # [PUT] /albums/{album_id}/tracks/{track_id}
 # ----------------------------------------------------
-@album_router.put("/{album_id}/tracks/{track_id}", response_model=schemas.AlbumTrack, tags=["Albums"])
+@router.put("/albums/{album_id}/tracks/{track_id}", response_model=schemas.AlbumTrack, tags=["Albums"])
 def update_album_track(
     album_id: int,
     track_id: int,

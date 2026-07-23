@@ -6,24 +6,12 @@ from datetime import timedelta, datetime
 from sqlalchemy.orm import Session
 from .. import auth_utils, models,schemas,dependencies
 
-token_router = APIRouter(
-    prefix="/token", 
-    tags=["Auth"] 
-)
+router = APIRouter()
 
-refresh_router = APIRouter(
-    prefix="/refresh", 
-    tags=["Auth"] 
-)
-
-logout_router = APIRouter(
-    prefix="/logout", 
-    tags=["Auth"] 
-)
 
 # --- ★ ログインAPI (トークン発行) ★ ---
 # POST /token
-@token_router.post("/", tags=["Auth"])
+@router.post("/token", tags=["Auth"])
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), 
     db: Session = Depends(models.get_db)
@@ -72,7 +60,7 @@ def login_for_access_token(
 
 # --- ★★★ 新規追加: トークン再発行 (リフレッシュ) API ★★★ ---
 # POST /refresh
-@refresh_router.post("/", response_model=schemas.Token, tags=["Auth"])
+@router.post("/refresh", response_model=schemas.Token, tags=["Auth"])
 def refresh_token(
     refresh_token: str = Body(..., embed=True), # JSON body: { "refresh_token": "..." }
     db: Session = Depends(dependencies.get_db)
@@ -119,7 +107,7 @@ def refresh_token(
         "token_type": "bearer"
     }
 
-@logout_router.post("/", tags=["Auth"])
+@router.post("/logout", tags=["Auth"])
 def logout(
     refresh_token: str = Body(..., embed=True),
     db: Session = Depends(dependencies.get_db),

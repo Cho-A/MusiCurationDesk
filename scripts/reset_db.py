@@ -5,7 +5,7 @@ import argparse
 # PYTHONPATHをルートに通すため、1つ上の階層（プロジェクトルート）を追加
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.models import engine, Base
+from backend.models import engine, Base
 
 def reset_database(force=False):
     print("==================================================")

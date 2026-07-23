@@ -1,8 +1,8 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from app.services.credit_fetcher import MusicImporter
-from app.models import SessionLocal, Song
+from backend.services.credit_fetcher import MusicImporter
+from backend.models import SessionLocal, Song
 
 def test():
     db = SessionLocal()

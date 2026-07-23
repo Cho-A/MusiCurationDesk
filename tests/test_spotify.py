@@ -4,7 +4,7 @@ import os
 # プロジェクトルートにパスを通す
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.services.spotify_client import SpotifyClient
+from backend.services.spotify_client import SpotifyClient
 
 def main():
     client = SpotifyClient()

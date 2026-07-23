@@ -5,27 +5,13 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas  # 先ほど作成したファイルをインポート
 
-merchandise_router = APIRouter(
-    prefix="/merchandises",
-    tags=["Goods & Stores"],
-)
-
-stores_router = APIRouter(
-    prefix="/stores",
-    tags=["Goods & Stores"],
-)
-
-merchandice_relationship_router = APIRouter(
-    prefix="/merchandice_relationships",
-    tags=["Goods & Stores"],
-)
+router = APIRouter()
 
 
 # --- ★グッズマスター登録API★ ---
 # [POST] /merchandise/
 # ----------------------------------------------------
-@merchandise_router.post(
-    "/",
+@router.post("/merchandises",
     response_model=schemas.Merchandise,
     tags=["Goods & Stores"],
 )
@@ -59,7 +45,7 @@ def create_merchandise(
 # --- ★店舗マスター登録API★ ---
 # [POST] /stores/
 # ----------------------------------------------------
-@stores_router.post("/", response_model=schemas.Store, tags=["Goods & Stores"])
+@router.post("/stores", response_model=schemas.Store, tags=["Goods & Stores"])
 def create_store(
     store: schemas.StoreCreate,
     db: Session = Depends(models.get_db),
@@ -87,8 +73,7 @@ def create_store(
 #
 # [POST] /merchandise_relationships/
 # ----------------------------------------------------
-@merchandice_relationship_router.post(
-    "/",
+@router.post("/merchandise_relationships",
     response_model=schemas.MerchandiseRelationship,
     tags=["Goods & Stores"],
 )
