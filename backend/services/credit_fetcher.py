@@ -174,8 +174,12 @@ class MusicImporter:
         albums = self.spotify.get_artist_albums(spotify_artist_id, limit=50)
         
         total_albums = len(albums)
+        if total_albums == 0:
+            if progress_callback: progress_callback(95, "No albums found. Finalizing import...")
+            return {"imported_albums": 0, "imported_tracks": 0}
+            
         for i, album in enumerate(albums):
-            if progress_callback: progress_callback(10 + int(40 * (i/total_albums)), f"Processing album {i+1}/{total_albums}: {album['name']}")
+            if progress_callback: progress_callback(10 + int(85 * (i/total_albums)), f"Processing album {i+1}/{total_albums}: {album['name']}")
             # Album を DB に登録
             db_album = db.query(models.Album).filter(models.Album.spotify_album_id == album['id']).first()
             if not db_album:
