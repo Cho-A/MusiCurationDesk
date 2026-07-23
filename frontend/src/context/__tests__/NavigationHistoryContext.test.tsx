@@ -31,6 +31,7 @@ const PageC = () => {
   return (
     <div>
       <h1>Page C</h1>
+      <Link to="/page-a">Go to A</Link>
       <button onClick={() => goBack()}>戻る</button>
     </div>
   );
@@ -43,6 +44,7 @@ const TestApp = ({ initialPath = '/' }: { initialPath?: string }) => (
         <Route path="/" element={<PageA />} />
         <Route path="/page-b" element={<PageB />} />
         <Route path="/page-c" element={<PageC />} />
+        <Route path="/page-a" element={<PageA />} />
       </Routes>
     </NavigationHistoryProvider>
   </MemoryRouter>
@@ -64,7 +66,7 @@ describe('NavigationHistoryContext', () => {
     expect(screen.getByText('Page A')).toBeInTheDocument();
   });
 
-  it('A→B→Cの遷移後にgoBack()でBに戻れること', () => {
+  it('A→B→Cの遷移後にgoBack()でB→Aと正しく遡れること', () => {
     render(<TestApp />);
     
     // A → B → C
@@ -77,26 +79,41 @@ describe('NavigationHistoryContext', () => {
     // 戻るボタンで B に戻る
     fireEvent.click(screen.getByText('戻る'));
     expect(screen.getByText('Page B')).toBeInTheDocument();
+    
+    // もう一度戻るボタンで A に戻る
+    fireEvent.click(screen.getByText('戻る'));
+    expect(screen.getByText('Page A')).toBeInTheDocument();
   });
 
-  it('同じパス内でクエリパラメータだけ変わっても、goBack()は前の別パスに戻ること', () => {
-    // このテストはNavigationHistoryProviderがパス部分のみを追跡し、
-    // クエリパラメータの変化を無視することを確認する。
-    // MemoryRouterではクエリパラメータのテストが難しいため、
-    // 直接パスが変わらない限り前のパスが保持されることを確認する。
+  it('goBack()を連打してもA↔Bのループが発生しないこと', () => {
     render(<TestApp />);
     
-    // Page A が表示されている
-    expect(screen.getByText('Page A')).toBeInTheDocument();
-    
-    // Page B に遷移
+    // A → B
     fireEvent.click(screen.getByText('Go to B'));
     expect(screen.getByText('Page B')).toBeInTheDocument();
     
-    // ここで Page B 内でのタブ切り替え等（URLパスは変わらない操作）をシミュレート
-    // → 何も変わらないはず
+    // 1回目の戻る → Aに戻る
+    fireEvent.click(screen.getByText('戻る'));
+    expect(screen.getByText('Page A')).toBeInTheDocument();
     
-    // 戻るボタンを押すと A に戻る（B内の操作に影響されない）
+    // 2回目の戻る → スタックは空なのでループしない
+    // (navigate(-1)にフォールバックするが、MemoryRouterでは何も起きない = Aのまま)
+    fireEvent.click(screen.getByText('戻る'));
+    // ループしていないこと: まだ Page A にいるはず（Page B に飛ばないこと）
+    expect(screen.getByText('Page A')).toBeInTheDocument();
+  });
+
+  it('同じパス内でクエリパラメータだけ変わっても、goBack()は前の別パスに戻ること', () => {
+    render(<TestApp />);
+    
+    expect(screen.getByText('Page A')).toBeInTheDocument();
+    
+    fireEvent.click(screen.getByText('Go to B'));
+    expect(screen.getByText('Page B')).toBeInTheDocument();
+    
+    // Page B 内でのタブ切り替え等（URLパスは変わらない操作）をシミュレート
+    // → スタックに影響しないはず
+    
     fireEvent.click(screen.getByText('戻る'));
     expect(screen.getByText('Page A')).toBeInTheDocument();
   });
