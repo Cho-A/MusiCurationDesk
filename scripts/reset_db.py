@@ -5,7 +5,8 @@ import argparse
 # PYTHONPATHをルートに通すため、1つ上の階層（プロジェクトルート）を追加
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from backend.models import engine, Base
+from backend.models import engine, Base, SessionLocal, User
+from backend.auth_utils import get_password_hash
 
 def reset_database(force=False):
     print("==================================================")
@@ -23,6 +24,22 @@ def reset_database(force=False):
     
     print("全テーブルを再構築しています...")
     Base.metadata.create_all(bind=engine)
+    
+    print("デフォルトユーザーを作成しています...")
+    db = SessionLocal()
+    try:
+        default_user = User(
+            username="admin",
+            email="admin@example.com",
+            hashed_password=get_password_hash("password")
+        )
+        db.add(default_user)
+        db.commit()
+        print("✅ デフォルトユーザー (admin / password) を作成しました。")
+    except Exception as e:
+        print(f"❌ デフォルトユーザーの作成に失敗しました: {e}")
+    finally:
+        db.close()
     
     print("✅ データベースの初期化が完了しました。")
 
