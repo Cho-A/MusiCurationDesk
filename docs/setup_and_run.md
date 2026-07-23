@@ -32,6 +32,23 @@ docker compose logs -f
 docker compose down
 ```
 
+### 便利なエイリアス設定（任意）
+毎回コマンドを入力する手間を省くため、ご使用のシェルの設定ファイル（`~/.bashrc` や `~/.zshrc` など）に以下のエイリアスを追記しておくと便利です。
+
+```bash
+# MusiCurationDesk Shortcuts
+alias mcd='cd /home/takanoryo/MusiCurationDesk'
+alias dc='docker compose'
+alias dcu='docker compose up'
+alias dcd='docker compose down'
+
+# どこからでも一発で起動・停止・ログ確認ができるエイリアス
+alias mcd-start='cd /home/takanoryo/MusiCurationDesk && docker compose up -d'
+alias mcd-stop='cd /home/takanoryo/MusiCurationDesk && docker compose down'
+alias mcd-logs='cd /home/takanoryo/MusiCurationDesk && docker compose logs -f'
+```
+
+
 ---
 
 ## 2. 手動での起動方法 (非推奨)
