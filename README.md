@@ -23,7 +23,7 @@ A web application for curating music data (JASRAC, Spotify, LiveFans) and creati
 **クイックスタート:**
 1. バックエンドの起動 (プロジェクトルートで実行)
    ```bash
-   uvicorn app.main:app --reload
+   uvicorn backend.main:app --reload
    ```
 2. フロントエンドの起動 (`frontend` ディレクトリで実行)
    ```bash
