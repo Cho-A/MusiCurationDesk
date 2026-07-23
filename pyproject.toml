@@ -1,0 +1,33 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "migrations",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"] # pycodestyle, pyflakes, isort, warnings, pyupgrade
+ignore = ["E501"] # line too long (handled by formatter)
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=backend"
+testpaths = [
+    "tests",
+]
+pythonpath = [
+    ".",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = [
+    "^tests/",
+    "^migrations/"
+]
