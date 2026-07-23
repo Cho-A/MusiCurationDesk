@@ -34,7 +34,7 @@ class SpotifyClient:
 
     def get_artist_albums(self, artist_id: str, limit: int = 50):
         """特定のアーティストのアルバム一覧を取得する"""
-        results = self.sp.artist_albums(artist_id, album_type='album,single', limit=limit, market='JP')
+        results = self.sp.artist_albums(artist_id, album_type='album,single', limit=limit, country='JP')
         return results['items']
 
     def get_album_tracks(self, album_id: str, limit: int = 50):
