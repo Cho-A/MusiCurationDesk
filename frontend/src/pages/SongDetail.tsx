@@ -136,11 +136,10 @@ const SongDetail = () => {
     if (id) fetchBaseSong(id);
   }, [id]);
 
-  // バージョン切り替え：APIコールなし、表示するバージョンIDを変えるだけ
+  // バージョン切り替え：URLをreplaceしてAPIから完全なデータを再取得する（履歴は積まない）
   const handleVersionSelect = (versionId: number) => {
-    if (versionId === selectedVersionId) return;
-    setSelectedVersionId(versionId);
-    // baseSongはallVersionsのどれかを参照するため、baseSong自体は更新不要
+    if (versionId.toString() === id) return;
+    navigate(`/songs/${versionId}`, { replace: true });
   };
 
   const handleAddCredit = async (artistName: string, category: string, detail?: string) => {
@@ -518,6 +517,7 @@ const SongDetail = () => {
                 Spotifyで開く
               </a>
               <iframe 
+                key={displaySong.spotify_song_id}
                 src={`https://open.spotify.com/embed/track/${displaySong.spotify_song_id}`} 
                 width="100%" 
                 height="152" 
