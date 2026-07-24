@@ -65,6 +65,15 @@ const AlbumDetail = () => {
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
   const [, setIsSearchingSong] = useState(false);
 
+  // For Album Artist Edit
+  const [isEditingArtist, setIsEditingArtist] = useState(false);
+  const [artistSearchQuery, setArtistSearchQuery] = useState('');
+  const [artistSearchResults, setArtistSearchResults] = useState<{id: number, name: string}[]>([]);
+  
+  // For Disc Title Edit
+  const [editingDiscId, setEditingDiscId] = useState<number | null>(null);
+  const [discTitleForm, setDiscTitleForm] = useState('');
+
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
   };
@@ -136,6 +145,67 @@ const AlbumDetail = () => {
       console.error(err);
     } finally {
       setIsSearchingSong(false);
+    }
+  };
+
+  const handleArtistSearch = async (query: string) => {
+    setArtistSearchQuery(query);
+    if (query.length < 2) {
+      setArtistSearchResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
+      if (res.ok) {
+        const data = await res.json();
+        setArtistSearchResults(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveArtist = async (artistId: number) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/albums/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ artist_id: artistId })
+      });
+      if (res.ok) {
+        toast.success("アーティストを更新しました");
+        setIsEditingArtist(false);
+        fetchAlbum();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("更新に失敗しました");
+    }
+  };
+
+  const handleSaveDiscTitle = async (discId: number) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/albums/${id}/discs/${discId}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ title: discTitleForm })
+      });
+      if (res.ok) {
+        toast.success("ディスク名を更新しました");
+        setEditingDiscId(null);
+        fetchAlbum();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("更新に失敗しました");
     }
   };
 
@@ -240,10 +310,41 @@ const AlbumDetail = () => {
           )}
           
           {album.artist && (
-            <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              <Link to={`/artists/${album.artist.id}`} style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>
-                {album.artist.name}
-              </Link>
+            <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {!isEditingArtist ? (
+                <>
+                  <Link to={`/artists/${album.artist.id}`} style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>
+                    {album.artist.name}
+                  </Link>
+                  <button onClick={() => setIsEditingArtist(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>
+                    <Edit2 size={16} />
+                  </button>
+                </>
+              ) : (
+                <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      value={artistSearchQuery}
+                      onChange={(e) => handleArtistSearch(e.target.value)}
+                      placeholder="アーティスト名で検索..."
+                      style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }}
+                    />
+                    <button onClick={() => setIsEditingArtist(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      <X size={20} />
+                    </button>
+                  </div>
+                  {artistSearchResults.length > 0 && (
+                    <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '4px', listStyle: 'none', padding: 0, margin: '4px 0', zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      {artistSearchResults.map(a => (
+                        <li key={a.id} onClick={() => handleSaveArtist(a.id)} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                          {a.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           )}
           
@@ -294,15 +395,40 @@ const AlbumDetail = () => {
                     const icon = discInfo?.media_format && discInfo.media_format !== 'CD' ? '📺' : '💿';
                     return (
                       <>
-                        <span>{icon} Disc {discNum}{titleStr}{formatStr}</span>
-                        {discInfo?.edition && (
-                          <span style={{ 
-                            fontSize: '0.75rem', backgroundColor: 'var(--accent-primary)', 
-                            color: '#000', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px',
-                            fontWeight: 'bold'
-                          }}>
-                            {discInfo.edition}
-                          </span>
+                        {editingDiscId === discInfo?.id ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                            <input 
+                              type="text" 
+                              value={discTitleForm}
+                              onChange={(e) => setDiscTitleForm(e.target.value)}
+                              placeholder="ディスク名を入力..."
+                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', width: '200px', fontSize: '0.9rem' }}
+                            />
+                            <button onClick={() => handleSaveDiscTitle(discInfo!.id)} style={{ background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>
+                              <Save size={14} />
+                            </button>
+                            <button onClick={() => setEditingDiscId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span>{icon} Disc {discNum}{titleStr}{formatStr}</span>
+                            {discInfo?.edition && (
+                              <span style={{ 
+                                fontSize: '0.75rem', backgroundColor: 'var(--accent-primary)', 
+                                color: '#000', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px',
+                                fontWeight: 'bold'
+                              }}>
+                                {discInfo.edition}
+                              </span>
+                            )}
+                            {discInfo && (
+                              <button onClick={() => { setEditingDiscId(discInfo.id); setDiscTitleForm(discInfo.title || ''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', marginLeft: '8px' }}>
+                                <Edit2 size={16} />
+                              </button>
+                            )}
+                          </>
                         )}
                       </>
                     );

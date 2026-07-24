@@ -40,3 +40,36 @@ class TestAlbumsAPI:
         data = response.json()
         assert data["main_title"] == "Detail Album"
         assert data["id"] == album_id
+
+    def test_update_album(self, client):
+        """アルバム情報（タイトルなど）が更新できること"""
+        create_response = client.post("/albums/", json={"main_title": "Before Update"})
+        album_id = create_response.json()["id"]
+
+        update_response = client.put(f"/albums/{album_id}", json={"main_title": "After Update", "artist_id": 999})
+        assert update_response.status_code == 200
+        data = update_response.json()
+        assert data["main_title"] == "After Update"
+        assert data["artist_id"] == 999
+
+    def test_update_album_disc(self, client, db_session):
+        """ディスク情報が更新できること"""
+        from backend.models import Album, AlbumDisc
+        
+        album = Album(main_title="Album For Disc Update")
+        db_session.add(album)
+        db_session.commit()
+        db_session.refresh(album)
+        
+        disc = AlbumDisc(album_id=album.id, disc_number=1, title="Original Disc Name")
+        db_session.add(disc)
+        db_session.commit()
+        db_session.refresh(disc)
+        
+        update_response = client.put(
+            f"/albums/{album.id}/discs/{disc.id}",
+            json={"title": "Updated Disc Name"}
+        )
+        assert update_response.status_code == 200
+        data = update_response.json()
+        assert data["title"] == "Updated Disc Name"

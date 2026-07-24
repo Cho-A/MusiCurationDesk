@@ -167,6 +167,11 @@ const MusicBrainzImport = () => {
         setTimeout(() => pollBulkProgress(jobId), 1000);
       } else {
         setLoading(false);
+        if (data.status === 'completed') {
+          alert('すべてのインポートが完了しました');
+        } else if (data.status === 'failed') {
+          alert(`インポート中にエラーが発生しました: ${data.message || '不明なエラー'}`);
+        }
       }
     } catch (err: any) {
       console.error(err);

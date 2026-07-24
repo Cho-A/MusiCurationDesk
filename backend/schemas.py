@@ -584,6 +584,16 @@ class AlbumCreate(BaseModel):
     album_type: str | None = None
 
 
+class AlbumUpdate(BaseModel):
+    main_title: str | None = None
+    version_title: str | None = None
+    artist_id: int | None = None
+    physical_release_date: date | None = None
+    digital_release_date: date | None = None
+    spotify_album_id: str | None = None
+    cover_image_url: str | None = None
+    album_type: str | None = None
+
 class Album(BaseModel):
     id: int
     main_title: str
@@ -597,6 +607,11 @@ class Album(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AlbumDiscUpdate(BaseModel):
+    title: str | None = None
+    media_format: str | None = None
+    edition: str | None = None
 
 class AlbumDiscBase(BaseModel):
     id: int

@@ -291,3 +291,60 @@ def update_album_track(
     db.commit()
     db.refresh(track)
     return track
+
+# [PUT] /albums/{album_id}
+# ----------------------------------------------------
+@router.put("/albums/{album_id}", response_model=schemas.Album, tags=["Albums"])
+def update_album(
+    album_id: int,
+    request: schemas.AlbumUpdate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    アルバムメタデータを更新します。
+    """
+    album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    if not album:
+        raise HTTPException(status_code=404, detail="対象のアルバムが見つかりません。")
+        
+    if request.main_title is not None: album.main_title = request.main_title
+    if request.version_title is not None: album.version_title = request.version_title
+    if request.artist_id is not None: album.artist_id = request.artist_id
+    if request.physical_release_date is not None: album.physical_release_date = request.physical_release_date
+    if request.digital_release_date is not None: album.digital_release_date = request.digital_release_date
+    if request.spotify_album_id is not None: album.spotify_album_id = request.spotify_album_id
+    if request.cover_image_url is not None: album.cover_image_url = request.cover_image_url
+    if request.album_type is not None: album.album_type = request.album_type
+    
+    db.commit()
+    db.refresh(album)
+    return album
+
+
+# [PUT] /albums/{album_id}/discs/{disc_id}
+# ----------------------------------------------------
+@router.put("/albums/{album_id}/discs/{disc_id}", response_model=schemas.AlbumDiscBase, tags=["Albums"])
+def update_album_disc(
+    album_id: int,
+    disc_id: int,
+    request: schemas.AlbumDiscUpdate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    ディスク情報を更新します（主にタイトル名）。
+    """
+    disc = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.id == disc_id,
+        models.AlbumDisc.album_id == album_id
+    ).first()
+    
+    if not disc:
+        raise HTTPException(status_code=404, detail="対象のディスクが見つかりません。")
+        
+    if request.title is not None: disc.title = request.title
+    if request.media_format is not None: disc.media_format = request.media_format
+    if request.edition is not None: disc.edition = request.edition
+    
+    db.commit()
+    db.refresh(disc)
+    return disc
