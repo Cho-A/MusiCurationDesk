@@ -277,3 +277,113 @@ class MusicImporter:
             "imported_albums": total_imported_albums, 
             "imported_tracks": total_imported_tracks
         }
+
+
+    def import_mb_releases_bulk(self, release_ids: list[str], db: Session, progress_callback=None) -> dict:
+        from .musicbrainz_fetcher import get_release_details
+        
+        imported_albums = 0
+        imported_tracks = 0
+        total_releases = len(release_ids)
+        
+        for i, release_id in enumerate(release_ids):
+            if progress_callback: progress_callback(int(i / total_releases * 100), f"Fetching release {i+1}/{total_releases}")
+            
+            try:
+                details = get_release_details(release_id)
+            except Exception as e:
+                print(f"Failed to fetch MB release {release_id}: {e}")
+                continue
+                
+            # 1. アルバム作成
+            album_title = details.get("title", "Unknown Album")
+            artist_name = details.get("artist", "Unknown Artist")
+            
+            db_album = models.Album(
+                main_title=album_title,
+                physical_release_date=details.get("date"),
+                album_type="album"
+            )
+            db.add(db_album)
+            db.commit()
+            db.refresh(db_album)
+            imported_albums += 1
+            
+            # アーティスト取得
+            artist_id = self._get_or_create_artist("mb_" + artist_name, artist_name, db)
+            
+            # 2. ディスクとトラック作成
+            media = details.get("media", [])
+            for m in media:
+                disc_num = m.get("position", 1)
+                db_disc = models.AlbumDisc(
+                    album_id=db_album.id,
+                    disc_number=disc_num,
+                    title=m.get("title") or f"Disc {disc_num}",
+                    media_format=m.get("format") or "CD"
+                )
+                db.add(db_disc)
+                db.commit()
+                db.refresh(db_disc)
+                
+                tracks = m.get("tracks", [])
+                for track in tracks:
+                    track_title = track.get("title", "Unknown Track")
+                    track_num = track.get("number", "1")
+                    try:
+                        track_num_int = int(track_num)
+                    except ValueError:
+                        track_num_int = track.get("position", 1)
+                        
+                    # 楽曲の作成または名寄せ
+                    new_song = models.Song(
+                        title=track_title,
+                        is_streaming_available=False
+                    )
+                    db.add(new_song)
+                    db.commit()
+                    db.refresh(new_song)
+                    imported_tracks += 1
+                    
+                    # アーティストリンク
+                    link = models.SongArtistLink(song_id=new_song.id, artist_id=artist_id, role_category="Artist")
+                    db.add(link)
+                    
+                    # 同名楽曲の名寄せ
+                    same_title_songs = db.query(models.Song).filter(
+                        models.Song.title == track_title,
+                        models.Song.id != new_song.id
+                    ).all()
+                    
+                    for s in same_title_songs:
+                        first_artist_link = db.query(models.SongArtistLink).filter(
+                            models.SongArtistLink.song_id == s.id,
+                            models.SongArtistLink.role_category == "Artist"
+                        ).first()
+                        
+                        if first_artist_link and first_artist_link.artist_id == artist_id:
+                            if s.work_id:
+                                new_song.work_id = s.work_id
+                            else:
+                                new_work = models.MusicalWork(title=track_title)
+                                db.add(new_work)
+                                db.commit()
+                                db.refresh(new_work)
+                                s.work_id = new_work.id
+                                new_song.work_id = new_work.id
+                            db.commit()
+                            break
+                            
+                    # AlbumTrackの作成
+                    album_track = models.AlbumTrack(
+                        album_id=db_album.id,
+                        song_id=new_song.id,
+                        track_number=track_num_int,
+                        disc_number=disc_num,
+                        duration_ms=track.get("length")
+                    )
+                    db.add(album_track)
+                    db.commit()
+                    
+        if progress_callback: progress_callback(100, "Done")
+        return {"imported_albums": imported_albums, "imported_tracks": imported_tracks}

@@ -87,5 +87,6 @@ def get_release_details(release_id: str) -> dict[str, Any]:
         "title": data.get("title"),
         "date": data.get("date"),
         "barcode": data.get("barcode"),
+        "artist": data.get("artist-credit", [{"name": "Unknown"}])[0].get("name", "Unknown"),
         "media": media
     }
