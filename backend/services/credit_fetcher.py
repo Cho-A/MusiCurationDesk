@@ -347,9 +347,13 @@ class MusicImporter:
                         track_num_int = track.get("position", 1)
                         
                     # 楽曲の作成または名寄せ
+                    media_format = (m.get("format") or "").lower()
+                    is_video = "dvd" in media_format or "blu-ray" in media_format or "video" in media_format or "vhs" in media_format
+                    
                     new_song = models.Song(
                         title=track_title,
-                        is_streaming_available=False
+                        is_streaming_available=False,
+                        is_video=is_video
                     )
                     db.add(new_song)
                     db.commit()

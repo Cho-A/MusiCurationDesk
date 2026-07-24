@@ -70,6 +70,7 @@ def get_album_by_id(album_id: int, db: Session = Depends(models.get_db)):
     """
     album = db.query(models.Album)\
         .options(
+            joinedload(models.Album.artist),
             joinedload(models.Album.album_tracks)\
             .joinedload(models.AlbumTrack.song)
         )\

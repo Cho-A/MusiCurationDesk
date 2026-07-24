@@ -299,7 +299,7 @@ const AlbumDetail = () => {
   };
 
   const handleTrackArtistSearch = async (query: string) => {
-    setEditForm(prev => ({ ...prev, main_artist_name: query }));
+    setEditForm(prev => ({ ...prev, main_artist_id: null, main_artist_name: query }));
     if (query.length < 2) {
       setTrackArtistSearchResults([]);
       return;
@@ -625,7 +625,7 @@ const AlbumDetail = () => {
                                     placeholder="メインアーティストを変更 (任意)"
                                     style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                   />
-                                  {(trackArtistSearchResults.length > 0 || editForm.main_artist_name.length >= 2) && (
+                                  {editForm.main_artist_id === null && (trackArtistSearchResults.length > 0 || editForm.main_artist_name.length >= 2) && (
                                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
                                       {trackArtistSearchResults.map(a => (
                                         <div 

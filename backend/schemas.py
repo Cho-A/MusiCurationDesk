@@ -643,6 +643,7 @@ class AlbumTrackForAlbum(BaseModel):
         from_attributes = True
 
 class AlbumDetail(Album):
+    artist: ArtistMini | None = None
     discs: list[AlbumDiscBase] = []
     album_tracks: list[AlbumTrackForAlbum] = []
 
