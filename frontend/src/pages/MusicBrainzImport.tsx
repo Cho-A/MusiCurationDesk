@@ -53,7 +53,12 @@ const MusicBrainzImport = () => {
     if (!query) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/search?q=${encodeURIComponent(query)}&limit=50`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/search?q=${encodeURIComponent(query)}&limit=50`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
       
       if (!res.ok) {
@@ -74,7 +79,12 @@ const MusicBrainzImport = () => {
   const handleSelectForDetail = async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/releases/${id}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/releases/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
       
       if (!res.ok) {
@@ -121,9 +131,13 @@ const MusicBrainzImport = () => {
     if (selectedForBulk.size === 0) return;
     setLoading(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch('http://127.0.0.1:8000/musicbrainz/import/bulk', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ release_ids: Array.from(selectedForBulk) })
       });
       const data = await res.json();
@@ -139,7 +153,12 @@ const MusicBrainzImport = () => {
 
   const pollBulkProgress = async (jobId: string) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/import/bulk/progress/${jobId}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/import/bulk/progress/${jobId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) throw new Error('Failed to fetch job progress');
       const data = await res.json();
       setBulkProgress(data);

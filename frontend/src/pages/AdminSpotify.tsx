@@ -12,7 +12,12 @@ const AdminSpotify = () => {
   // ジョブ進捗のポーリング関数
   const pollJobProgress = async (jobId: string) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/search/external/import/progress/${jobId}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://127.0.0.1:8000/search/external/import/progress/${jobId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) throw new Error('Failed to fetch job progress');
       const data = await res.json();
       setJobProgress(data);
@@ -39,8 +44,12 @@ const AdminSpotify = () => {
     setJobProgress(null);
 
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`http://127.0.0.1:8000/search/external/import/artist/${artistId}`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (!res.ok) throw new Error('Artist import request failed');
       const data = await res.json();
@@ -62,8 +71,12 @@ const AdminSpotify = () => {
     setJobProgress(null);
 
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`http://127.0.0.1:8000/search/external/import/playlist/${playlistId}`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (!res.ok) throw new Error('Playlist import request failed');
       const data = await res.json();

@@ -133,7 +133,12 @@ const Concerts = () => {
   const handleSearchSetlist = async (page: number = 1) => {
     if (!importQuery.trim()) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}&p=${page}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://127.0.0.1:8000/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}&p=${page}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         const results = data.setlist || [];
@@ -150,9 +155,13 @@ const Concerts = () => {
   const handleImportSetlist = async (setlistId: string) => {
     setImporting(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch('http://127.0.0.1:8000/external/setlistfm/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ setlist_id: setlistId })
       });
       if (res.ok) {
@@ -229,9 +238,13 @@ const Concerts = () => {
     if (selectedSetlists.size === 0) return;
     setImporting(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch('http://127.0.0.1:8000/external/setlistfm/bulk-import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ setlist_ids: Array.from(selectedSetlists) })
       });
       if (res.ok) {
@@ -263,14 +276,14 @@ const Concerts = () => {
 
     setImporting(true);
     try {
-      const payload: any = { artist_name: artistName || query };
-      if (artistMbid) {
-        payload.artist_mbid = artistMbid;
-      }
+      const token = localStorage.getItem('token');
       const res = await fetch('http://127.0.0.1:8000/external/setlistfm/full-sync-artist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ artist_name: artistName || query, artist_mbid: artistMbid })
       });
       if (res.ok) {
         const data = await res.json();
