@@ -58,7 +58,7 @@ def create_performance(
 
     return new_performance
 
-@router.get("/performances", response_model=list[schemas.Performance], tags=["Performances"])
+@router.get("/performances", response_model=List[schemas.Performance], tags=["Performances"])
 def get_performances(
     tour_id: int = Query(None, description="Filter by Tour ID"),
     skip: int = 0, 
@@ -164,7 +164,7 @@ def add_performance_roster_entry(
 
 # [GET] /performances/
 # ----------------------------------------------------
-@router.get("/performances", response_model=list[schemas.PerformanceSummary], tags=["Performances"]
+@router.get("/performances", response_model=List[schemas.PerformanceSummary], tags=["Performances"]
 )
 def get_all_performances(
     # クエリパラメータを定義
@@ -241,7 +241,7 @@ def get_performance_by_id(
 
 
 @router.put("/performances/{performance_id}/setlist",
-    response_model=list[schemas.SetlistEntry],
+    response_model=List[schemas.SetlistEntry],
     tags=["Performances"]
 )
 def update_setlist(

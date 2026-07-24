@@ -9,7 +9,7 @@ router = APIRouter(
     tags=["MusicalWorks"]
 )
 
-@router.get("/", response_model=list[schemas.MusicalWork])
+@router.get("/", response_model=List[schemas.MusicalWork])
 def search_works(
     q: str | None = Query(None, description="楽曲名検索キーワード"),
     limit: int = 50,

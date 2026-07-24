@@ -53,7 +53,7 @@ const MusicBrainzImport = () => {
     if (!query) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch(`http://127.0.0.1:8000/musicbrainz/search?q=${encodeURIComponent(query)}&limit=50`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -79,7 +79,7 @@ const MusicBrainzImport = () => {
   const handleSelectForDetail = async (id: string) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch(`http://127.0.0.1:8000/musicbrainz/releases/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -131,7 +131,7 @@ const MusicBrainzImport = () => {
     if (selectedForBulk.size === 0) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch('http://127.0.0.1:8000/musicbrainz/import/bulk', {
         method: 'POST',
         headers: { 
@@ -153,7 +153,7 @@ const MusicBrainzImport = () => {
 
   const pollBulkProgress = async (jobId: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch(`http://127.0.0.1:8000/musicbrainz/import/bulk/progress/${jobId}`, {
         headers: {
           'Authorization': `Bearer ${token}`

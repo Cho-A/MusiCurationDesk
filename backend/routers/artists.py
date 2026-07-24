@@ -12,7 +12,7 @@ router = APIRouter(
 
 # [GET] /artists/
 # ----------------------------------------------------
-@router.get("/", response_model=list[schemas.ArtistDetail], tags=["Artists"])
+@router.get("/", response_model=List[schemas.ArtistDetail], tags=["Artists"])
 def get_all_artists(skip: int = 0, limit: int = 100, db: Session = Depends(models.get_db)):
     """全アーティストのリストを取得する"""
     artists = db.query(models.Artist).order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
@@ -93,7 +93,7 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(models.get_db)):
 #
 # [GET] /artists/{artist_id}/songs
 # ----------------------------------------------------
-@router.get("/{artist_id}/songs", response_model=list[schemas.SongSearchResult], tags=["Artists"])
+@router.get("/{artist_id}/songs", response_model=List[schemas.SongSearchResult], tags=["Artists"])
 def get_artist_contributions(
     artist_id: int,
     # カンマ区切りの文字列でroleを受け取る (例: Composer,Lyricist)

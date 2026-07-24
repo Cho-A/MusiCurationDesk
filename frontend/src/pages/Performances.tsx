@@ -133,7 +133,7 @@ const Concerts = () => {
   const handleSearchSetlist = async (page: number = 1) => {
     if (!importQuery.trim()) return;
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch(`http://127.0.0.1:8000/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}&p=${page}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -155,7 +155,7 @@ const Concerts = () => {
   const handleImportSetlist = async (setlistId: string) => {
     setImporting(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch('http://127.0.0.1:8000/external/setlistfm/import', {
         method: 'POST',
         headers: { 
@@ -238,7 +238,7 @@ const Concerts = () => {
     if (selectedSetlists.size === 0) return;
     setImporting(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch('http://127.0.0.1:8000/external/setlistfm/bulk-import', {
         method: 'POST',
         headers: { 
@@ -276,7 +276,7 @@ const Concerts = () => {
 
     setImporting(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await fetch('http://127.0.0.1:8000/external/setlistfm/full-sync-artist', {
         method: 'POST',
         headers: { 

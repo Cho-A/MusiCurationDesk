@@ -33,7 +33,7 @@ class SpotifyTrackResult(BaseModel):
 class ImportRequest(BaseModel):
     spotify_track_id: str
 
-@router.get("/spotify/search", response_model=list[SpotifyTrackResult])
+@router.get("/spotify/search", response_model=List[SpotifyTrackResult])
 def search_spotify_tracks(q: str):
     """Spotify APIを使って楽曲を検索する"""
     if not q:
@@ -164,7 +164,7 @@ class SetlistImportRequest(BaseModel):
 
 
 class BulkImportRequest(BaseModel):
-    setlist_ids: list[str]
+    setlist_ids: List[str]
 
 class FullSyncRequest(BaseModel):
     artist_name: str

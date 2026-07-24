@@ -42,7 +42,7 @@ def create_tag(
     
     return new_tag
 
-@router.get("/", response_model=list[schemas.Tag])
+@router.get("/", response_model=List[schemas.Tag])
 def get_tags(db: Session = Depends(models.get_db)):
     """
     登録されているすべてのタグを取得します。

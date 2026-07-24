@@ -73,7 +73,7 @@ def add_song_alias(
         
     return new_alias
 
-@router.get("/recent", response_model=list[schemas.Song], tags=["Songs"])
+@router.get("/recent", response_model=List[schemas.Song], tags=["Songs"])
 def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
     """
     最近追加された楽曲を取得します。
@@ -85,7 +85,7 @@ def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
 # 
 # [GET] /songs/
 # ----------------------------------------------------
-@router.get("/", response_model=list[schemas.Song], tags=["Songs"])
+@router.get("/", response_model=List[schemas.Song], tags=["Songs"])
 def get_all_songs(
     skip: int = 0,
     limit: int = 100,
@@ -452,7 +452,7 @@ def link_song_to_tag(
 
 # (POST /songs/generate-spotify-ids)
 # ----------------------------------------------------
-@router.post("/generate-spotify-ids", response_model=list[str], tags=["Playlists"])
+@router.post("/generate-spotify-ids", response_model=List[str], tags=["Playlists"])
 def generate_spotify_ids_from_search(
     # read_songs と同じ検索条件を「リクエストボディ」として受け取る
     search_params: schemas.SongSearch, # 👈 ★新しいスキーマ
