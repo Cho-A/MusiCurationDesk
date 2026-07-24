@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film } from 'lucide-react';
+import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film, X } from 'lucide-react';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
 import AttachWorkModal from '../components/AttachWorkModal';
@@ -114,6 +114,10 @@ const SongDetail = () => {
   const [isEditingWorkTitle, setIsEditingWorkTitle] = useState(false);
   const [editWorkTitleValue, setEditWorkTitleValue] = useState("");
 
+  const [isEditingMainArtist, setIsEditingMainArtist] = useState(false);
+  const [mainArtistSearchQuery, setMainArtistSearchQuery] = useState("");
+  const [mainArtistSearchResults, setMainArtistSearchResults] = useState<{id: number, name: string}[]>([]);
+
   const fetchBaseSong = async (songIdToFetch: string) => {
     setLoading(true);
     try {
@@ -140,6 +144,61 @@ const SongDetail = () => {
   const handleVersionSelect = (versionId: number) => {
     if (versionId.toString() === id) return;
     navigate(`/songs/${versionId}`, { replace: true });
+  };
+
+  const handleMainArtistSearch = async (query: string) => {
+    setMainArtistSearchQuery(query);
+    if (query.length < 2) {
+      setMainArtistSearchResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
+      if (res.ok) {
+        const data = await res.json();
+        setMainArtistSearchResults(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveMainArtist = async (artistId: number) => {
+    if (!selectedVersionId) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/main_artist`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ artist_id: artistId })
+      });
+      if (res.ok) {
+        setIsEditingMainArtist(false);
+        if (id) fetchBaseSong(id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateMainArtist = async (name: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/artists/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        handleSaveMainArtist(data.id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleAddCredit = async (artistName: string, category: string, detail?: string) => {
@@ -279,6 +338,7 @@ const SongDetail = () => {
 
   // selectedVersionIdに対応するデータ（APIコールなし、baseSongのother_versionsから取る）
   const displaySong = uniqueVersions.find(v => v.id === selectedVersionId) ?? baseSong;
+  const mainArtists = (displaySong.artist_links || []).filter((l: ArtistLink) => l.role_category === 'Main Artist');
 
   const handleCategorySwitch = (cat: 'audio' | 'video') => {
     setActiveCategory(cat);
@@ -487,6 +547,61 @@ const SongDetail = () => {
                   {displaySong.version_name}
                 </div>
               )}
+              {/* Main Artist Display and Edit */}
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {isEditingMainArtist ? (
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '250px' }}>
+                    <input 
+                      type="text"
+                      value={mainArtistSearchQuery}
+                      onChange={(e) => handleMainArtistSearch(e.target.value)}
+                      placeholder="メインアーティストを変更 (任意)"
+                      style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                    />
+                    <button onClick={() => setIsEditingMainArtist(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      <X size={20} />
+                    </button>
+                    {(mainArtistSearchResults.length > 0 || mainArtistSearchQuery.length >= 2) && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', marginTop: '4px' }}>
+                        {mainArtistSearchResults.map(a => (
+                          <div 
+                            key={a.id} 
+                            onClick={() => handleSaveMainArtist(a.id)}
+                            style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            {a.name}
+                          </div>
+                        ))}
+                        {mainArtistSearchQuery.length >= 2 && !mainArtistSearchResults.find(a => a.name.toLowerCase() === mainArtistSearchQuery.toLowerCase()) && (
+                          <div 
+                            onClick={() => handleCreateMainArtist(mainArtistSearchQuery)}
+                            style={{ padding: '10px 12px', color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 500 }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            + 「{mainArtistSearchQuery}」を新しく追加
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                      {mainArtists.length > 0 ? mainArtists.map((ma: any) => ma.artist_name).join(', ') : 'アーティスト未設定'}
+                    </span>
+                    <button 
+                      onClick={() => { setMainArtistSearchQuery(""); setIsEditingMainArtist(true); setMainArtistSearchResults([]); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                      title="メインアーティストを編集"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             
             {/* 種別変更トグル */}

@@ -216,6 +216,26 @@ const AlbumDetail = () => {
     }
   };
 
+  const handleCreateArtistForAlbum = async (name: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/artists/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        handleSaveArtist(data.id);
+      } else {
+        toast.error('アーティストの作成に失敗しました');
+      }
+    } catch(err) {
+      console.error(err);
+      toast.error('アーティストの作成に失敗しました');
+    }
+  };
+
   const handleSaveDiscTitle = async (discId: number) => {
     try {
       const token = localStorage.getItem('access_token');
@@ -292,6 +312,28 @@ const AlbumDetail = () => {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleCreateArtistForTrack = async (name: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/artists/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEditForm(prev => ({ ...prev, main_artist_id: data.id, main_artist_name: data.name }));
+        setTrackArtistSearchResults([]);
+        toast.success(`新しいアーティスト「${name}」を作成しました`);
+      } else {
+        toast.error('アーティストの作成に失敗しました');
+      }
+    } catch(err) {
+      console.error(err);
+      toast.error('アーティストの作成に失敗しました');
     }
   };
 
@@ -393,19 +435,24 @@ const AlbumDetail = () => {
                     value={artistSearchQuery}
                     onChange={(e) => handleArtistSearch(e.target.value)}
                     placeholder="アーティスト名で検索..."
-                    style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }}
+                    style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                   />
                   <button onClick={() => setIsEditingArtist(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                     <X size={20} />
                   </button>
                 </div>
                 {artistSearchResults.length > 0 && (
-                  <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '4px', listStyle: 'none', padding: 0, margin: '4px 0', zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                  <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', listStyle: 'none', padding: 0, margin: '4px 0', zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
                     {artistSearchResults.map(a => (
                       <li key={a.id} onClick={() => handleSaveArtist(a.id)} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
                         {a.name}
                       </li>
                     ))}
+                    {artistSearchQuery.length >= 2 && !artistSearchResults.find(a => a.name.toLowerCase() === artistSearchQuery.toLowerCase()) && (
+                      <li onClick={() => handleCreateArtistForAlbum(artistSearchQuery)} style={{ padding: '10px 12px', color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 500 }}>
+                        + 「{artistSearchQuery}」を新しく追加
+                      </li>
+                    )}
                   </ul>
                 )}
               </div>
@@ -578,8 +625,8 @@ const AlbumDetail = () => {
                                     placeholder="メインアーティストを変更 (任意)"
                                     style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                   />
-                                  {trackArtistSearchResults.length > 0 && (
-                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto' }}>
+                                  {(trackArtistSearchResults.length > 0 || editForm.main_artist_name.length >= 2) && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
                                       {trackArtistSearchResults.map(a => (
                                         <div 
                                           key={a.id} 
@@ -594,6 +641,16 @@ const AlbumDetail = () => {
                                           {a.name}
                                         </div>
                                       ))}
+                                      {editForm.main_artist_name.length >= 2 && !trackArtistSearchResults.find(a => a.name.toLowerCase() === editForm.main_artist_name.toLowerCase()) && (
+                                        <div 
+                                          onClick={() => handleCreateArtistForTrack(editForm.main_artist_name)}
+                                          style={{ padding: '8px', color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 500 }}
+                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
+                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          + 「{editForm.main_artist_name}」を新しく追加
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
