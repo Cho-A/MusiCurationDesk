@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { useNavigationHistory } from '../context/NavigationHistoryContext';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPin, Music, Disc3 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -70,7 +69,7 @@ const ArtistDetail = () => {
   const setActiveTab = (tab: 'albums' | 'performances' | 'songs') => {
     setSearchParams({ tab }, { replace: true });
   };
-  const { goBack } = useNavigationHistory();
+  const navigate = useNavigate();
 
 
   const [isEditing, setIsEditing] = useState(false);
@@ -208,7 +207,7 @@ const ArtistDetail = () => {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 16px', paddingBottom: '60px' }}>
       <button 
-        onClick={() => goBack()}
+        onClick={() => navigate(-1)}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',

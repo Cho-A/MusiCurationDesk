@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useNavigationHistory } from '../context/NavigationHistoryContext';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -58,7 +57,7 @@ interface AlbumDetailData {
 
 const AlbumDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { goBack } = useNavigationHistory();
+  const navigate = useNavigate();
   const [album, setAlbum] = useState<AlbumDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
@@ -188,7 +187,7 @@ const AlbumDetail = () => {
     <div style={{ padding: '32px', maxWidth: '1000px', margin: '0 auto', color: 'var(--text-primary)' }}>
       {/* 戻るボタン */}
       <button 
-        onClick={() => goBack()}
+        onClick={() => navigate(-1)}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',

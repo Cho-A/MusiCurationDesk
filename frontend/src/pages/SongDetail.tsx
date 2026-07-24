@@ -92,19 +92,11 @@ interface SongDetailData {
 const SongDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  // バージョン切り替えはローカルステートのみで管理し、URLは一切変更しない（履歴汚染を防ぐため）
-  const [activeSongId, setActiveSongId] = useState<string>(id || "");
 
-  // URLのidが変わった場合（別の曲ページに飛んだ場合）はステートをリセット
-  useEffect(() => {
-    if (id) setActiveSongId(id);
-  }, [id]);
-  
-  // Base data fetched from API
+  // Base data fetched from API（URLのidが変わった時だけAPIを叩く）
   const [baseSong, setBaseSong] = useState<SongDetailData | null>(null);
   
-  // 状態管理によるハブの実現
+  // 現在表示中のバージョンID（APIコールは発生しない、表示の切り替えのみ）
   const [selectedVersionId, setSelectedVersionId] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<'audio' | 'video'>('audio');
   
@@ -123,12 +115,12 @@ const SongDetail = () => {
   const [editWorkTitleValue, setEditWorkTitleValue] = useState("");
 
   const fetchBaseSong = async (songIdToFetch: string) => {
+    setLoading(true);
     try {
       const res = await fetch(`http://127.0.0.1:8000/songs/${songIdToFetch}`);
       if (res.ok) {
         const data = await res.json();
         setBaseSong(data);
-        // fetch完了時に、初期選択としてこの曲のIDをセット
         setSelectedVersionId(Number(songIdToFetch));
         setActiveCategory(data.is_video ? 'video' : 'audio');
       }
@@ -139,17 +131,16 @@ const SongDetail = () => {
     }
   };
 
+  // URLのidが変わった時だけAPIを叩く（バージョン切り替えではここは発火しない）
   useEffect(() => {
-    if (activeSongId) fetchBaseSong(activeSongId);
-  }, [activeSongId]);
+    if (id) fetchBaseSong(id);
+  }, [id]);
 
-  // Handle switching tabs
-  const handleVersionSelect = async (versionId: number) => {
-    const vid = versionId.toString();
-    if (vid === activeSongId) return;
-    
-    // URLは一切操作せず、画面の描画だけを更新する
-    setActiveSongId(vid);
+  // バージョン切り替え：APIコールなし、表示するバージョンIDを変えるだけ
+  const handleVersionSelect = (versionId: number) => {
+    if (versionId === selectedVersionId) return;
+    setSelectedVersionId(versionId);
+    // baseSongはallVersionsのどれかを参照するため、baseSong自体は更新不要
   };
 
   const handleAddCredit = async (artistName: string, category: string, detail?: string) => {
@@ -174,7 +165,7 @@ const SongDetail = () => {
 
   const handleToggleIsVideo = async () => {
     if (!baseSong) return;
-    const nextVal = !baseSong.is_video;
+    const nextVal = !displaySong.is_video;
     if (!window.confirm(`このバージョンを「${nextVal ? '映像' : '音源'}」に変更しますか？`)) return;
     try {
       const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}`, {
@@ -183,7 +174,7 @@ const SongDetail = () => {
         body: JSON.stringify({ is_video: nextVal })
       });
       if (res.ok) {
-        if (selectedVersionId) handleVersionSelect(selectedVersionId);
+        if (id) fetchBaseSong(id);
       }
     } catch (err) {
       console.error(err);
@@ -210,7 +201,7 @@ const SongDetail = () => {
         })
       });
       if (res.ok) {
-        if (id) fetchBaseSong(activeSongId || id);
+        if (id) fetchBaseSong(id);
         setIsEditingWorkTitle(false);
       } else {
         alert("更新に失敗しました");
@@ -227,7 +218,7 @@ const SongDetail = () => {
       const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/detach`, { method: 'POST' });
       if (res.ok) {
         alert("切り離しが完了しました");
-        if (selectedVersionId) handleVersionSelect(selectedVersionId);
+        if (id) fetchBaseSong(id);
       }
     } catch (err) {
       console.error(err);
@@ -242,7 +233,7 @@ const SongDetail = () => {
       if (res.ok) {
         alert("結合が完了しました");
         setIsAttachModalOpen(false);
-        if (selectedVersionId) handleVersionSelect(selectedVersionId);
+        if (id) fetchBaseSong(id);
       } else {
         alert("結合に失敗しました。");
       }
@@ -287,6 +278,9 @@ const SongDetail = () => {
   const audioVersions = uniqueVersions.filter(v => !v.is_video);
   const videoVersions = uniqueVersions.filter(v => v.is_video);
 
+  // selectedVersionIdに対応するデータ（APIコールなし、baseSongのother_versionsから取る）
+  const displaySong = uniqueVersions.find(v => v.id === selectedVersionId) ?? baseSong;
+
   const handleCategorySwitch = (cat: 'audio' | 'video') => {
     setActiveCategory(cat);
     const targetList = cat === 'audio' ? audioVersions : videoVersions;
@@ -295,9 +289,9 @@ const SongDetail = () => {
     }
   };
 
-  // クレジットのソートロジック
+  // クレジットのソートロジック（displaySongのデータを使用）
   const roleOrder = ['Artist', 'Composer', 'Lyricist', 'Producer', 'Arranger'];
-  const sortedCredits = [...(baseSong.artist_links || [])].sort((a, b) => {
+  const sortedCredits = [...(displaySong.artist_links || [])].sort((a, b) => {
     const indexA = roleOrder.indexOf(a.role_category);
     const indexB = roleOrder.indexOf(b.role_category);
     if (indexA !== -1 && indexB !== -1) return indexA - indexB;
@@ -311,13 +305,12 @@ const SongDetail = () => {
   // アルバム表示用のデータ作成
   let displayAlbums: AlbumTrackInfo[] = [];
   if (showAllAlbums) {
-    displayAlbums = baseSong.album_links || [];
+    displayAlbums = displaySong.album_links || [];
   } else {
-    // Song IDで厳密にフィルタリング
-    displayAlbums = (baseSong.album_links || []).filter((a: AlbumTrackInfo) => a.song_id === baseSong.id);
+    displayAlbums = (displaySong.album_links || []).filter((a: AlbumTrackInfo) => a.song_id === displaySong.id);
   }
 
-  // Workクレジット
+  // Workクレジット（baseSongのwork情報を使用）
   const lyricists = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Lyricist').map((l: WorkArtistLink) => l.artist_name);
   const composers = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Composer').map((l: WorkArtistLink) => l.artist_name);
 
@@ -466,8 +459,8 @@ const SongDetail = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '300px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  {baseSong.title}
-                  {!baseSong.is_video && baseSong.is_streaming_available === false && (
+                  {displaySong.title}
+                  {!displaySong.is_video && displaySong.is_streaming_available === false && (
                     <span style={{color: 'var(--error-color)', fontSize: '0.9rem', border: '1px solid #ff4d4d', padding: '2px 6px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
                       サブスク未解禁
                     </span>
@@ -475,9 +468,9 @@ const SongDetail = () => {
                 </h2>
                 <button 
                   onClick={() => { 
-                    setEditTitleValue(baseSong.title); 
-                    setEditVersionNameValue(baseSong.version_name || "");
-                    setEditStreamingValue(baseSong.is_streaming_available !== false);
+                    setEditTitleValue(displaySong.title); 
+                    setEditVersionNameValue(displaySong.version_name || "");
+                    setEditStreamingValue(displaySong.is_streaming_available !== false);
                     setIsEditingTitle(true); 
                   }}
                   style={{
@@ -490,9 +483,9 @@ const SongDetail = () => {
                   <Edit2 size={14} />
                 </button>
               </div>
-              {baseSong.version_name && (
+              {displaySong.version_name && (
                 <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: '1.4', marginTop: '4px' }}>
-                  {baseSong.version_name}
+                  {displaySong.version_name}
                 </div>
               )}
             </div>
@@ -503,29 +496,29 @@ const SongDetail = () => {
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '6px 12px', borderRadius: '8px', border: '1px solid',
-                borderColor: baseSong.is_video ? 'var(--accent-primary)' : 'var(--accent-primary)',
+                borderColor: displaySong.is_video ? 'var(--accent-primary)' : 'var(--accent-primary)',
                 background: 'var(--bg-tertiary)',
-                color: baseSong.is_video ? '#ff4d4d' : '#1DB954',
+                color: displaySong.is_video ? '#ff4d4d' : '#1DB954',
                 fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginLeft: 'auto'
               }}
               title="クリックで音源/映像を切り替え"
             >
-              {baseSong.is_video ? <Film size={14} /> : <Music size={14} />}
-              種別: {baseSong.is_video ? '映像' : '音源'}
+              {displaySong.is_video ? <Film size={14} /> : <Music size={14} />}
+              種別: {displaySong.is_video ? '映像' : '音源'}
             </button>
           </div>
           
           {/* Spotify Embed & Link */}
-          {baseSong.spotify_song_id && (
+          {displaySong.spotify_song_id && (
             <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-              <a href={`https://open.spotify.com/track/${baseSong.spotify_song_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '12px', width: 'fit-content' }}>
+              <a href={`https://open.spotify.com/track/${displaySong.spotify_song_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '12px', width: 'fit-content' }}>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                   <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.56.3z" />
                 </svg>
                 Spotifyで開く
               </a>
               <iframe 
-                src={`https://open.spotify.com/embed/track/${baseSong.spotify_song_id}`} 
+                src={`https://open.spotify.com/embed/track/${displaySong.spotify_song_id}`} 
                 width="100%" 
                 height="152" 
                 frameBorder="0" 
@@ -559,7 +552,7 @@ const SongDetail = () => {
                   borderRadius: '4px', padding: '8px 12px', width: '250px', outline: 'none'
                 }}
               />
-              {!baseSong.is_video && (
+              {!displaySong.is_video && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', cursor: 'pointer' }}>
                   <input 
                     type="checkbox" 
@@ -574,7 +567,7 @@ const SongDetail = () => {
                 const payload = {
                   title: editTitleValue,
                   version_name: editVersionNameValue.trim() || null,
-                  is_streaming_available: baseSong.is_video ? true : editStreamingValue
+                  is_streaming_available: displaySong.is_video ? true : editStreamingValue
                 };
                 const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}`, {
                   method: 'PATCH',
@@ -583,7 +576,7 @@ const SongDetail = () => {
                 });
                 if (res.ok) {
                   setIsEditingTitle(false);
-                  if (selectedVersionId) handleVersionSelect(selectedVersionId);
+                  if (id) fetchBaseSong(id);
                 }
               }} style={{ background: 'var(--spotify-color)', color: '#000', border: 'none', borderRadius: '4px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600 }}>
                 保存
@@ -595,8 +588,8 @@ const SongDetail = () => {
           )}
 
           <SongTagEditor 
-            songId={baseSong.id} 
-            existingTags={baseSong.tags || []} 
+            songId={displaySong.id} 
+            existingTags={displaySong.tags || []} 
             onTagsChange={(newTags) => setBaseSong({...baseSong, tags: newTags})} 
           />
         </div>
@@ -607,7 +600,7 @@ const SongDetail = () => {
             バージョンごとのクレジット (編曲・演奏)
           </h3>
           <SongCreditEditor 
-            songId={baseSong.id} 
+            songId={displaySong.id} 
             existingCredits={sortedCredits} 
             onAddCredit={handleAddCredit}
             onRemoveCredit={handleRemoveCredit}
@@ -721,7 +714,7 @@ const SongDetail = () => {
             タイアップ
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-            {(baseSong.tieup_links || []).map((tieup: TieupLink, idx: number) => (
+            {(displaySong.tieup_links || []).map((tieup: TieupLink, idx: number) => (
               <Link key={idx} to={`/tieups/${tieup.tieup_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
                   background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px',
@@ -736,7 +729,7 @@ const SongDetail = () => {
                 </div>
               </Link>
             ))}
-            {(!baseSong.tieup_links || baseSong.tieup_links.length === 0) && (
+            {(!displaySong.tieup_links || displaySong.tieup_links.length === 0) && (
               <p style={{ color: 'var(--text-secondary)' }}>タイアップ情報はありません。</p>
             )}
           </div>
@@ -748,7 +741,7 @@ const SongDetail = () => {
             楽曲・原曲との紐付け管理
           </h3>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
-            現在の原曲 ID: <strong>{baseSong.work_id || '未設定'}</strong><br />
+            現在の原曲 ID: <strong>{displaySong.work_id || '未設定'}</strong><br />
             <span style={{ fontSize: '0.85rem' }}>
               ※同名異曲を別の楽曲として独立させたり、誤って別々に登録されたバージョンを同じ原曲にまとめることができます。
             </span>
@@ -796,7 +789,7 @@ const SongDetail = () => {
       <AttachWorkModal
         isOpen={isAttachModalOpen}
         onClose={() => setIsAttachModalOpen(false)}
-        currentSong={baseSong}
+        currentSong={displaySong}
         onAttach={handleAttachWork}
       />
 
