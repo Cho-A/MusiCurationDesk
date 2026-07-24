@@ -391,17 +391,17 @@ def update_song_main_artist(
     if not db_song:
         raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
 
-    # 既存のMain Artistリンクを削除
+    # 既存のArtistリンクを削除
     db.query(models.SongArtistLink).filter(
         models.SongArtistLink.song_id == song_id,
-        models.SongArtistLink.role_category == "Main Artist"
+        models.SongArtistLink.role_category == "Artist"
     ).delete()
 
-    # 新しいMain Artistを追加
+    # 新しいArtistを追加
     new_link = models.SongArtistLink(
         song_id=song_id,
         artist_id=request.artist_id,
-        role_category="Main Artist"
+        role_category="Artist"
     )
     db.add(new_link)
     db.commit()

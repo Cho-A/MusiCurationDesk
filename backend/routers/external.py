@@ -125,7 +125,7 @@ def import_spotify_track(req: ImportRequest, db: Session = Depends(models.get_db
             link = models.SongArtistLink(
                 song_id=db_song.id,
                 artist_id=db_artist.id,
-                role_category="Main Artist"
+                role_category="Artist"
             )
             db.add(link)
             

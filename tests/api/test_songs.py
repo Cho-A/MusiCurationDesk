@@ -167,7 +167,7 @@ class TestSongsAPI:
 
         # 4. 確認
         song_detail = client.get(f"/songs/{song_id}").json()
-        main_artists = [l for l in song_detail.get("artist_links", []) if l["role_category"] == "Main Artist"]
+        main_artists = [l for l in song_detail.get("artist_links", []) if l["role_category"] == "Artist"]
         assert len(main_artists) == 1
         assert main_artists[0]["artist_id"] == artist1_id
 
@@ -176,6 +176,6 @@ class TestSongsAPI:
 
         # 6. 確認 (上書きされていること)
         song_detail_updated = client.get(f"/songs/{song_id}").json()
-        main_artists_updated = [l for l in song_detail_updated.get("artist_links", []) if l["role_category"] == "Main Artist"]
+        main_artists_updated = [l for l in song_detail_updated.get("artist_links", []) if l["role_category"] == "Artist"]
         assert len(main_artists_updated) == 1
         assert main_artists_updated[0]["artist_id"] == artist2_id

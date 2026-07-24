@@ -338,7 +338,7 @@ const SongDetail = () => {
 
   // selectedVersionIdに対応するデータ（APIコールなし、baseSongのother_versionsから取る）
   const displaySong = uniqueVersions.find(v => v.id === selectedVersionId) ?? baseSong;
-  const mainArtists = (displaySong.artist_links || []).filter((l: ArtistLink) => l.role_category === 'Main Artist');
+  const mainArtists = (displaySong.artist_links || []).filter((l: ArtistLink) => l.role_category === 'Artist');
 
   const handleCategorySwitch = (cat: 'audio' | 'video') => {
     setActiveCategory(cat);
