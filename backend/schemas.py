@@ -162,6 +162,9 @@ class Song(BaseModel):
 
 
 # --- SongArtistLink (アーティスト紐付け) ---
+class SongMainArtistUpdate(BaseModel):
+    artist_id: int
+
 class SongArtistLinkCreate(BaseModel):
     song_id: int
     artist_id: int

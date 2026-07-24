@@ -148,3 +148,34 @@ class TestSongsAPI:
         # 楽曲詳細取得APIが500エラーを出さずに、other_versionsが含まれるか確認
         assert len(s1["other_versions"]) == 1
         assert s1["other_versions"][0]["id"] == song2_id
+
+    def test_update_song_main_artist(self, client):
+        """Main Artistが一括更新できること"""
+        # 1. 曲を作成
+        song_res = client.post("/songs/", json={"title": "Song with Artist"})
+        song_id = song_res.json()["id"]
+
+        # 2. アーティストを作成
+        artist1_res = client.post("/artists/", json={"name": "Artist 1"})
+        artist1_id = artist1_res.json()["id"]
+        
+        artist2_res = client.post("/artists/", json={"name": "Artist 2"})
+        artist2_id = artist2_res.json()["id"]
+
+        # 3. Main Artistを設定
+        client.put(f"/songs/{song_id}/main_artist", json={"artist_id": artist1_id})
+
+        # 4. 確認
+        song_detail = client.get(f"/songs/{song_id}").json()
+        main_artists = [l for l in song_detail.get("artist_links", []) if l["role_category"] == "Main Artist"]
+        assert len(main_artists) == 1
+        assert main_artists[0]["artist_id"] == artist1_id
+
+        # 5. 別のMain Artistに上書き更新
+        client.put(f"/songs/{song_id}/main_artist", json={"artist_id": artist2_id})
+
+        # 6. 確認 (上書きされていること)
+        song_detail_updated = client.get(f"/songs/{song_id}").json()
+        main_artists_updated = [l for l in song_detail_updated.get("artist_links", []) if l["role_category"] == "Main Artist"]
+        assert len(main_artists_updated) == 1
+        assert main_artists_updated[0]["artist_id"] == artist2_id

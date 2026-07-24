@@ -375,6 +375,38 @@ def add_credit_to_song(
     db.refresh(new_link)
     return new_link
 
+# [PUT] /songs/{song_id}/main_artist
+# ----------------------------------------------------
+@router.put("/{song_id}/main_artist", tags=["Songs", "Artists"])
+def update_song_main_artist(
+    song_id: int,
+    request: schemas.SongMainArtistUpdate,
+    db: Session = Depends(models.get_db)
+):
+    """
+    楽曲の「Main Artist」を上書き更新します。
+    既存の Main Artist の紐付けを削除し、新しいアーティストを Main Artist として紐付けます。
+    """
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not db_song:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+
+    # 既存のMain Artistリンクを削除
+    db.query(models.SongArtistLink).filter(
+        models.SongArtistLink.song_id == song_id,
+        models.SongArtistLink.role_category == "Main Artist"
+    ).delete()
+
+    # 新しいMain Artistを追加
+    new_link = models.SongArtistLink(
+        song_id=song_id,
+        artist_id=request.artist_id,
+        role_category="Main Artist"
+    )
+    db.add(new_link)
+    db.commit()
+    return {"message": "メインアーティストを更新しました"}
+
 # [DELETE] /songs/{song_id}/artists/{artist_id}
 # ----------------------------------------------------
 @router.delete("/{song_id}/artists/{artist_id}", status_code=204, tags=["Songs", "Artists"])

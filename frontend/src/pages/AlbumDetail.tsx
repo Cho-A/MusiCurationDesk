@@ -6,6 +6,32 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
 
+const generateGradient = (text: string) => {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const c1 = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+  const c2 = ((hash >> 4) & 0x00FFFFFF).toString(16).toUpperCase();
+  return `linear-gradient(135deg, #${'00000'.substring(0, 6 - c1.length) + c1}, #${'00000'.substring(0, 6 - c2.length) + c2})`;
+};
+
+const FallbackCoverDetail = ({ title, size }: { title: string; size: string | number }) => (
+  <div style={{
+    width: size,
+    height: size,
+    background: generateGradient(title),
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
+    flexShrink: 0
+  }}>
+    <Disc3 color="rgba(255,255,255,0.7)" size={typeof size === 'number' ? size * 0.4 : 100} />
+  </div>
+);
+
 interface SongMini {
   id: number;
   title: string;
@@ -61,9 +87,10 @@ const AlbumDetail = () => {
   const [album, setAlbum] = useState<AlbumDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, is_unreleased: boolean}>({ display_title: '', notes: '', song_id: null, song_title: '', is_unreleased: false });
+  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, is_unreleased: boolean, main_artist_id: number | null, main_artist_name: string}>({ display_title: '', notes: '', song_id: null, song_title: '', is_unreleased: false, main_artist_id: null, main_artist_name: '' });
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
   const [, setIsSearchingSong] = useState(false);
+  const [trackArtistSearchResults, setTrackArtistSearchResults] = useState<{id: number, name: string}[]>([]);
 
   // For Album Artist Edit
   const [isEditingArtist, setIsEditingArtist] = useState(false);
@@ -116,7 +143,9 @@ const AlbumDetail = () => {
       notes: track.notes || '',
       song_id: track.song.id,
       song_title: track.song.title,
-      is_unreleased: track.is_unreleased || false
+      is_unreleased: track.is_unreleased || false,
+      main_artist_id: null,
+      main_artist_name: ''
     });
     setSongSearchResults([]);
   };
@@ -213,6 +242,7 @@ const AlbumDetail = () => {
     e.preventDefault();
     e.stopPropagation();
     try {
+      const token = localStorage.getItem('access_token');
       const res = await fetch(`http://127.0.0.1:8000/albums/${id}/tracks/${track.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -223,16 +253,45 @@ const AlbumDetail = () => {
           is_unreleased: editForm.is_unreleased
         })
       });
+      
+      if (!res.ok) throw new Error("Failed to update track");
+
+      // Save Main Artist if provided
+      if (editForm.main_artist_id && editForm.song_id) {
+        const artistRes = await fetch(`http://127.0.0.1:8000/songs/${editForm.song_id}/main_artist`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ artist_id: editForm.main_artist_id })
+        });
+        if (!artistRes.ok) throw new Error("Failed to update main artist");
+      }
+
+      fetchAlbum();
+      setEditingTrackId(null);
+      toast.success('トラック情報を更新しました');
+    } catch (err) {
+      console.error(err);
+      toast.error('保存に失敗しました');
+    }
+  };
+
+  const handleTrackArtistSearch = async (query: string) => {
+    setEditForm(prev => ({ ...prev, main_artist_name: query }));
+    if (query.length < 2) {
+      setTrackArtistSearchResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
       if (res.ok) {
-        fetchAlbum();
-        setEditingTrackId(null);
-        toast.success('トラック情報を更新しました');
-      } else {
-        toast.error('保存に失敗しました');
+        const data = await res.json();
+        setTrackArtistSearchResults(data);
       }
     } catch (err) {
       console.error(err);
-      toast.error('ネットワークエラーが発生しました');
     }
   };
 
@@ -280,17 +339,20 @@ const AlbumDetail = () => {
             allow="encrypted-media"
             style={{ borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.15)', flexShrink: 0 }}
           ></iframe>
+        ) : album.cover_image_url ? (
+          <img 
+            src={album.cover_image_url} 
+            alt={album.main_title} 
+            style={{ 
+              width: '280px', height: '280px', 
+              borderRadius: '12px',
+              objectFit: 'cover',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
+              flexShrink: 0
+            }} 
+          />
         ) : (
-          <div style={{ 
-            width: '280px', height: '280px', 
-            backgroundColor: 'var(--bg-tertiary)',
-            borderRadius: '12px',
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
-            flexShrink: 0
-          }}>
-            <Disc3 size={80} color="var(--text-tertiary)" />
-          </div>
+          <FallbackCoverDetail title={album.main_title} size={280} />
         )}
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '16px' }}>
@@ -309,44 +371,46 @@ const AlbumDetail = () => {
             </h2>
           )}
           
-          {album.artist && (
-            <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {!isEditingArtist ? (
-                <>
+          <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {!isEditingArtist ? (
+              <>
+                {album.artist ? (
                   <Link to={`/artists/${album.artist.id}`} style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>
                     {album.artist.name}
                   </Link>
-                  <button onClick={() => setIsEditingArtist(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>
-                    <Edit2 size={16} />
+                ) : (
+                  <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>アーティスト未設定</span>
+                )}
+                <button onClick={() => setIsEditingArtist(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>
+                  <Edit2 size={16} />
+                </button>
+              </>
+            ) : (
+              <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    value={artistSearchQuery}
+                    onChange={(e) => handleArtistSearch(e.target.value)}
+                    placeholder="アーティスト名で検索..."
+                    style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }}
+                  />
+                  <button onClick={() => setIsEditingArtist(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                    <X size={20} />
                   </button>
-                </>
-              ) : (
-                <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input 
-                      type="text" 
-                      value={artistSearchQuery}
-                      onChange={(e) => handleArtistSearch(e.target.value)}
-                      placeholder="アーティスト名で検索..."
-                      style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }}
-                    />
-                    <button onClick={() => setIsEditingArtist(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                      <X size={20} />
-                    </button>
-                  </div>
-                  {artistSearchResults.length > 0 && (
-                    <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '4px', listStyle: 'none', padding: 0, margin: '4px 0', zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                      {artistSearchResults.map(a => (
-                        <li key={a.id} onClick={() => handleSaveArtist(a.id)} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
-                          {a.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
-              )}
-            </div>
-          )}
+                {artistSearchResults.length > 0 && (
+                  <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '4px', listStyle: 'none', padding: 0, margin: '4px 0', zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    {artistSearchResults.map(a => (
+                      <li key={a.id} onClick={() => handleSaveArtist(a.id)} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                        {a.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
           
           {album.spotify_album_id && (
             <a href={`https://open.spotify.com/album/${album.spotify_album_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
@@ -503,6 +567,36 @@ const AlbumDetail = () => {
                                   placeholder="備考(例: Live)"
                                   style={{ width: '120px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                 />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px' }}>アーティスト:</span>
+                                <div style={{ position: 'relative', flex: 1 }}>
+                                  <input 
+                                    type="text"
+                                    value={editForm.main_artist_name}
+                                    onChange={(e) => handleTrackArtistSearch(e.target.value)}
+                                    placeholder="メインアーティストを変更 (任意)"
+                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                                  />
+                                  {trackArtistSearchResults.length > 0 && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto' }}>
+                                      {trackArtistSearchResults.map(a => (
+                                        <div 
+                                          key={a.id} 
+                                          onClick={() => {
+                                            setEditForm(prev => ({ ...prev, main_artist_id: a.id, main_artist_name: a.name }));
+                                            setTrackArtistSearchResults([]);
+                                          }}
+                                          style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
+                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
+                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          {a.name}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', paddingLeft: '88px', justifyContent: 'space-between' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>

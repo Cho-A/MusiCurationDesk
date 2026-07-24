@@ -1,5 +1,31 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Disc } from 'lucide-react';
+
+const generateGradient = (text: string) => {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const c1 = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+  const c2 = ((hash >> 4) & 0x00FFFFFF).toString(16).toUpperCase();
+  return `linear-gradient(135deg, #${'00000'.substring(0, 6 - c1.length) + c1}, #${'00000'.substring(0, 6 - c2.length) + c2})`;
+};
+
+const FallbackCover = ({ title, size }: { title: string; size: string | number }) => (
+  <div style={{
+    width: size,
+    height: size,
+    background: generateGradient(title),
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.2)'
+  }}>
+    <Disc color="rgba(255,255,255,0.7)" size={typeof size === 'number' ? size * 0.4 : 40} />
+  </div>
+);
 
 export interface Album {
   id: number;
@@ -29,11 +55,15 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical' }) => 
           padding: '16px', borderRadius: '12px', display: 'flex', gap: '16px', 
           transition: 'transform 0.2s', alignItems: 'center' 
         }}>
-          <img 
-            src={album.cover_image_url || '/placeholder.png'} 
-            alt={displayTitle} 
-            style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} 
-          />
+          {album.cover_image_url ? (
+            <img 
+              src={album.cover_image_url} 
+              alt={displayTitle} 
+              style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} 
+            />
+          ) : (
+            <FallbackCover title={displayTitle} size="80px" />
+          )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ 
               fontSize: '1.1rem', fontWeight: 600, marginBottom: '4px',
@@ -72,11 +102,17 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical' }) => 
         display: 'flex', flexDirection: 'column', gap: '12px',
         height: '100%', boxSizing: 'border-box'
       }}>
-        <img 
-          src={album.cover_image_url || '/placeholder.png'} 
-          alt={displayTitle} 
-          style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '8px' }}
-        />
+        {album.cover_image_url ? (
+          <img 
+            src={album.cover_image_url} 
+            alt={displayTitle} 
+            style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '8px' }}
+          />
+        ) : (
+          <div style={{ width: '100%', aspectRatio: '1/1' }}>
+            <FallbackCover title={displayTitle} size="100%" />
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {displayTitle}
