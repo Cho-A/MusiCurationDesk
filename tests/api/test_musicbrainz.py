@@ -49,3 +49,25 @@ class TestMusicBrainzAPI:
         progress_res = admin_client.get(f"/musicbrainz/import/bulk/progress/{job_id}")
         assert progress_res.status_code == 200
         assert progress_res.json()["status"] == "queued"
+
+    @patch('backend.services.musicbrainz_fetcher.get_release_details')
+    def test_import_mb_releases_bulk_date_parsing(self, mock_get_release, db_session):
+        """日付文字列が正しく datetime.date にパースされること（デグレ防止テスト）"""
+        from backend.services.credit_fetcher import MusicImporter
+        import datetime
+        
+        mock_get_release.return_value = {
+            "title": "Date Parsing Test Album",
+            "artist": "Test Artist",
+            "date": "2019-07",
+            "media": []
+        }
+        
+        importer = MusicImporter()
+        res = importer.import_mb_releases_bulk(["dummy_id"], db_session)
+        assert res["imported_albums"] == 1
+        
+        from backend.models import Album
+        album = db_session.query(Album).filter_by(main_title="Date Parsing Test Album").first()
+        assert album is not None
+        assert album.physical_release_date == datetime.date(2019, 7, 1)

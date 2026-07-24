@@ -299,9 +299,20 @@ class MusicImporter:
             album_title = details.get("title", "Unknown Album")
             artist_name = details.get("artist", "Unknown Artist")
             
+            date_str = details.get("date")
+            parsed_date = None
+            if date_str:
+                if len(date_str) == 4: date_str += "-01-01"
+                elif len(date_str) == 7: date_str += "-01"
+                try:
+                    from datetime import datetime
+                    parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    parsed_date = None
+            
             db_album = models.Album(
                 main_title=album_title,
-                physical_release_date=details.get("date"),
+                physical_release_date=parsed_date,
                 album_type="album"
             )
             db.add(db_album)
