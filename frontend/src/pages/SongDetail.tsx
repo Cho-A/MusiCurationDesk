@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useNavigationHistory } from '../context/NavigationHistoryContext';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film } from 'lucide-react';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
@@ -92,7 +91,7 @@ interface SongDetailData {
 
 const SongDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { goBack } = useNavigationHistory();
+  const navigate = useNavigate();
   
   // バージョン切り替えはローカルステートのみで管理し、URLは一切変更しない（履歴汚染を防ぐため）
   const [activeSongId, setActiveSongId] = useState<string>(id || "");
@@ -315,18 +314,18 @@ const SongDetail = () => {
     displayAlbums = baseSong.album_links || [];
   } else {
     // Song IDで厳密にフィルタリング
-    displayAlbums = (baseSong.album_links || []).filter(a => a.song_id === baseSong.id);
+    displayAlbums = (baseSong.album_links || []).filter((a: AlbumTrackInfo) => a.song_id === baseSong.id);
   }
 
   // Workクレジット
-  const lyricists = (baseSong.work?.artist_links ?? []).filter(l => l.role_category === 'Lyricist').map(l => l.artist_name);
-  const composers = (baseSong.work?.artist_links ?? []).filter(l => l.role_category === 'Composer').map(l => l.artist_name);
+  const lyricists = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Lyricist').map((l: WorkArtistLink) => l.artist_name);
+  const composers = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Composer').map((l: WorkArtistLink) => l.artist_name);
 
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' }}>
       {/* 戻るボタン */}
       <button 
-        onClick={() => goBack()}
+        onClick={() => navigate(-1)}
         style={{
           display: 'flex', alignItems: 'center', gap: '8px', 
           background: 'none', border: 'none', color: 'var(--text-secondary)',
@@ -722,7 +721,7 @@ const SongDetail = () => {
             タイアップ
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-            {(baseSong.tieup_links || []).map((tieup, idx) => (
+            {(baseSong.tieup_links || []).map((tieup: TieupLink, idx: number) => (
               <Link key={idx} to={`/tieups/${tieup.tieup_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
                   background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px',
