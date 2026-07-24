@@ -7,9 +7,12 @@ from ..services.credit_fetcher import MusicImporter
 from typing import List, Dict, Any
 import uuid
 
+from .. import models, dependencies
+
 router = APIRouter(
     prefix="/search/external",
-    tags=["External Search"]
+    tags=["External Search"],
+    dependencies=[Depends(dependencies.get_current_admin_user)]
 )
 
 spotify_client = SpotifyClient()

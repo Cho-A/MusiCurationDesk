@@ -7,6 +7,7 @@ import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 
 interface Tour {
   id: number;
@@ -37,6 +38,7 @@ const Concerts = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'tours' | 'singles'>('tours');
   const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
 
   const [showTourModal, setShowTourModal] = useState(false);
   const [newTourName, setNewTourName] = useState("");
@@ -364,17 +366,19 @@ const Concerts = () => {
             <Plus size={18} />
             {activeTab === 'tours' ? '新規ツアー登録' : '新規ライブ登録'}
           </button>
-          <button
-            onClick={() => { setShowSetlistImportModal(true); setImportMode('single'); }}
-            style={{
-              background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
-              padding: '10px 20px', borderRadius: '24px', fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '8px'
-            }}
-          >
-            <Download size={18} />
-            インポート
-          </button>
+          {user?.is_admin && (
+            <button
+              onClick={() => { setShowSetlistImportModal(true); setImportMode('single'); }}
+              style={{
+                background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+                padding: '10px 20px', borderRadius: '24px', fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '8px'
+              }}
+            >
+              <Download size={18} />
+              インポート
+            </button>
+          )}
         </div>
       </div>
 

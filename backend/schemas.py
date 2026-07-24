@@ -737,6 +737,7 @@ class User(BaseModel):
     id: int
     username: str
     email: EmailStr
+    is_admin: bool = False
     created_at: datetime
 
     class Config:

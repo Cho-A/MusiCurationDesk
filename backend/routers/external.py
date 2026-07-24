@@ -8,7 +8,7 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Any
 
-from .. import models, schemas
+from .. import models, schemas, dependencies
 from ..services.spotify_client import SpotifyClient
 from ..services.setlistfm_client import SetlistFMClient
 import datetime
@@ -16,6 +16,7 @@ import datetime
 router = APIRouter(
     prefix="/external",
     tags=["External APIs"],
+    dependencies=[Depends(dependencies.get_current_admin_user)]
 )
 
 # Spotifyクライアントのインスタンス化 (本番環境ではDIを推奨しますが、今はモジュールレベルで保持)

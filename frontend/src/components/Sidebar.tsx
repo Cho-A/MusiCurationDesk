@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, Download, User, LogOut, LogIn, UserPlus, Database, Shield } from 'lucide-react';
+import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, User, LogOut, LogIn, UserPlus, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
@@ -18,7 +18,6 @@ const Sidebar = () => {
     { name: 'アーティスト', icon: <Users size={20} />, path: '/artists' },
     { name: 'ライブ・公演', icon: <CalendarDays size={20} />, path: '/performances' },
     { name: 'グッズ', icon: <ShoppingBag size={20} />, path: '/merchandise' },
-    { name: 'MusicBrainz', icon: <Download size={20} />, path: '/musicbrainz' },
     { name: '分析', icon: <BarChart3 size={20} />, path: '/analytics' },
     { name: '設定', icon: <Settings size={20} />, path: '/settings' },
   ];
@@ -76,18 +75,22 @@ const Sidebar = () => {
           </NavLink>
         ))}
 
-        {/* Developer Tools (Always show for now to ensure user can click it) */}
-        <NavLink to="/admin" style={({ isActive }) => ({
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '12px 16px', borderRadius: '12px',
-          color: isActive ? '#ff6b6b' : 'var(--text-secondary)',
-          backgroundColor: isActive ? 'rgba(255,50,50,0.1)' : 'transparent',
-          fontWeight: isActive ? 600 : 500,
-          transition: 'all 0.2s ease'
-        })}>
-          <Database size={20} color={window.location.pathname === '/admin' ? '#ff6b6b' : undefined} />
-          <span style={{ fontWeight: 500 }}>開発者ツール</span>
-        </NavLink>
+        {/* Developer Tools (Admin Only) */}
+        {user?.is_admin && (
+          <NavLink to="/admin" style={({ isActive }) => ({
+            display: 'flex', alignItems: 'center', gap: '12px',
+            padding: '12px 16px', borderRadius: '12px',
+            color: isActive ? '#ff6b6b' : 'var(--text-secondary)',
+            backgroundColor: isActive ? 'rgba(255,50,50,0.1)' : 'transparent',
+            fontWeight: isActive ? 600 : 500,
+            transition: 'all 0.2s ease',
+            marginTop: '16px',
+            border: '1px solid rgba(255,107,107,0.3)'
+          })}>
+            <Shield size={20} color={window.location.pathname.startsWith('/admin') ? '#ff6b6b' : undefined} />
+            <span style={{ fontWeight: 500 }}>開発者ツール</span>
+          </NavLink>
+        )}
       </nav>
 
       {/* User Profile / Auth Area */}

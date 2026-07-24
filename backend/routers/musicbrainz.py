@@ -4,7 +4,13 @@ from typing import List, Dict, Any
 from ..services import musicbrainz_fetcher
 import traceback
 
-router = APIRouter(prefix="/musicbrainz", tags=["musicbrainz"])
+from .. import dependencies
+
+router = APIRouter(
+    prefix="/musicbrainz", 
+    tags=["musicbrainz"],
+    dependencies=[Depends(dependencies.get_current_admin_user)]
+)
 
 @router.get("/search")
 def search_mb_release(q: str, limit: int = 10):

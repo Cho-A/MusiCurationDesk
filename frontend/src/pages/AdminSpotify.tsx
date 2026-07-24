@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Database, UserCheck, ListMusic, DownloadCloud, AlertTriangle } from 'lucide-react';
+import { UserCheck, ListMusic, DownloadCloud } from 'lucide-react';
 
-const Admin = () => {
-  const { isAuthenticated, user } = useAuth();
+const AdminSpotify = () => {
   
   const [artistId, setArtistId] = useState('');
   const [playlistId, setPlaylistId] = useState('');
@@ -30,16 +28,7 @@ const Admin = () => {
     }
   };
 
-  // 簡易的な権限チェック（本来はバックエンドでロールチェックすべき）
-  if (!isAuthenticated) {
-    return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <AlertTriangle size={48} color="#ff6b6b" style={{ marginBottom: '16px' }} />
-        <h2>アクセス拒否</h2>
-        <p>開発者ツールにアクセスするにはログインが必要です。</p>
-      </div>
-    );
-  }
+  // (Auth logic removed since it is now protected by layout/route)
 
   const handleArtistImport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,18 +77,7 @@ const Admin = () => {
   };
 
   return (
-    <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-        <div style={{ background: 'var(--error-bg)', padding: '12px', borderRadius: '12px' }}>
-          <Database size={32} color="#ff6b6b" />
-        </div>
-        <div>
-          <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: 700 }}>開発者ツール (Dev Tools)</h1>
-          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-            データの一括インポート・管理ユーティリティ。ログインユーザー: <span style={{ color: 'var(--text-primary)' }}>{user?.username}</span>
-          </p>
-        </div>
-      </div>
+    <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '60px' }}>
 
       {error && (
         <div style={{ padding: '16px', background: 'var(--error-bg)', border: '1px solid rgba(255, 50, 50, 0.3)', borderRadius: '8px', color: 'var(--error-color)', marginBottom: '24px' }}>
@@ -187,4 +165,4 @@ const Admin = () => {
   );
 };
 
-export default Admin;
+export default AdminSpotify;

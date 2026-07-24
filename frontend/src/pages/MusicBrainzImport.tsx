@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Disc, Download, PlusCircle } from 'lucide-react';
+import { Search, Disc, PlusCircle } from 'lucide-react';
 import CDImportBuilderModal from '../components/CDImportBuilderModal';
 
 interface MBRelease {
@@ -94,14 +94,6 @@ const MusicBrainzImport = () => {
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '60px' }}>
-      <h1 style={{ fontSize: '2rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Download size={32} color="#1DB954" />
-        MusicBrainz インポート (β)
-      </h1>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>
-        MusicBrainzから物理CDやDVDの情報を検索し、MusiCurationDeskにインポートします。
-      </p>
-
       {/* 検索バー */}
       <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
         <div style={{ 

@@ -755,6 +755,7 @@ class User(Base):
     )  # ログインID
     email = Column(String(255), nullable=False, unique=True, index=True)
     hashed_password = Column(String(255), nullable=False)  # ハッシュ化されたパスワード
+    is_admin = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     # このユーザーの所有物・参加履歴へのリレーション

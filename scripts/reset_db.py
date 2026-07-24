@@ -31,7 +31,8 @@ def reset_database(force=False):
         default_user = User(
             username="admin",
             email="admin@example.com",
-            hashed_password=get_password_hash("password")
+            hashed_password=get_password_hash("password"),
+            is_admin=True
         )
         db.add(default_user)
         db.commit()
