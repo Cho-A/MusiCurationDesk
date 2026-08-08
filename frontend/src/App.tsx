@@ -16,7 +16,7 @@ import AdminLayout from './components/AdminLayout';
 import Artists from './pages/Artists';
 import ArtistDetail from './pages/ArtistDetail';
 import Albums from './pages/Albums';
-import AlbumDetail from './pages/AlbumDetail';
+import AlbumGroupDetail from './pages/AlbumGroupDetail';
 import MusicBrainzImport from './pages/MusicBrainzImport';
 import Terms from './pages/Terms';
 import { AuthProvider } from './context/AuthContext';
@@ -40,7 +40,7 @@ function App() {
           <Route path="artists" element={<Artists />} />
           <Route path="artists/:id" element={<ArtistDetail />} />
           <Route path="albums" element={<Albums />} />
-          <Route path="albums/:id" element={<AlbumDetail />} />
+          <Route path="album-groups/:id" element={<AlbumGroupDetail />} />
           <Route path="performances" element={<Performances />} />
           <Route path="merchandise" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>グッズページ (準備中)</div>} />
           <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>分析ページ (準備中)</div>} />

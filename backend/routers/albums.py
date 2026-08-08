@@ -33,8 +33,21 @@ def create_album(
             raise HTTPException(status_code=400, detail=f"Spotify Album ID '{album.spotify_album_id}' は既に使用されています。")
     
     # 3. データ作成
-    new_album = models.Album(**album.dict())
-    
+    album_data = album.dict()
+    if not album_data.get('album_group_id'):
+        db_album_group = models.AlbumGroup(
+            title=album.main_title,
+            artist_id=album.artist_id,
+            release_date=album.physical_release_date or album.digital_release_date,
+            album_type=album.album_type,
+            cover_image_url=album.cover_image_url
+        )
+        db.add(db_album_group)
+        db.commit()
+        db.refresh(db_album_group)
+        album_data['album_group_id'] = db_album_group.id
+        
+    new_album = models.Album(**album_data)
     db.add(new_album)
     
     try:
@@ -176,10 +189,20 @@ def import_cd_album(
         
         if not request.target_album_id:
             # 新規作成の場合
+            db_album_group = models.AlbumGroup(
+                title=request.title,
+                release_date=request.release_date,
+                album_type=request.album_type
+            )
+            db.add(db_album_group)
+            db.commit()
+            db.refresh(db_album_group)
+            
             album = models.Album(
                 main_title=request.title,
                 physical_release_date=request.release_date,
-                album_type=request.album_type
+                album_type=request.album_type,
+                album_group_id=db_album_group.id
             )
             db.add(album)
             db.commit()

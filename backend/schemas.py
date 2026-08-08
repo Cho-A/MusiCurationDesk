@@ -278,6 +278,7 @@ class AlbumMini(BaseModel):
     version_title: str | None = None
     cover_image_url: str | None = None
     album_type: str | None = None
+    album_group_id: int | None = None
 
     class Config:
         from_attributes = True
@@ -577,6 +578,7 @@ class TourDetail(Tour):
 
 # --- Album (アルバム・マスター) ---
 class AlbumCreate(BaseModel):
+    album_group_id: int | None = None
     main_title: str
     version_title: str | None = None
     artist_id: int | None = None  # メインアーティスト (コンピの場合はNULL)
@@ -588,6 +590,7 @@ class AlbumCreate(BaseModel):
 
 
 class AlbumUpdate(BaseModel):
+    album_group_id: int | None = None
     main_title: str | None = None
     version_title: str | None = None
     artist_id: int | None = None
@@ -599,6 +602,7 @@ class AlbumUpdate(BaseModel):
 
 class Album(BaseModel):
     id: int
+    album_group_id: int | None = None
     main_title: str
     version_title: str | None = None
     artist_id: int | None = None
@@ -646,6 +650,33 @@ class AlbumDetail(Album):
     artist: ArtistMini | None = None
     discs: list[AlbumDiscBase] = []
     album_tracks: list[AlbumTrackForAlbum] = []
+
+class AlbumGroupBase(BaseModel):
+    title: str
+    artist_id: int | None = None
+    release_date: date | None = None
+    album_type: str | None = None
+    cover_image_url: str | None = None
+
+class AlbumGroupCreate(AlbumGroupBase):
+    pass
+
+class AlbumGroupUpdate(BaseModel):
+    title: str | None = None
+    artist_id: int | None = None
+    release_date: date | None = None
+    album_type: str | None = None
+    cover_image_url: str | None = None
+
+class AlbumGroup(AlbumGroupBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class AlbumGroupDetail(AlbumGroup):
+    artist: ArtistMini | None = None
+    albums: list[AlbumDetail] = []
 
     class Config:
         from_attributes = True

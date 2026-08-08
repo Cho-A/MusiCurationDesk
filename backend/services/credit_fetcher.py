@@ -192,13 +192,32 @@ class MusicImporter:
                 except:
                     r_date = None
 
+                # Create or get AlbumGroup
+                artist_id = self._get_or_create_artist(album['artists'][0]['id'], album['artists'][0]['name'], db)
+                db_album_group = db.query(models.AlbumGroup).filter(
+                    models.AlbumGroup.title == album['name'],
+                    models.AlbumGroup.artist_id == artist_id
+                ).first()
+                if not db_album_group:
+                    db_album_group = models.AlbumGroup(
+                        title=album['name'],
+                        artist_id=artist_id,
+                        release_date=r_date,
+                        album_type=album.get('album_type'),
+                        cover_image_url=album['images'][0]['url'] if album['images'] else None
+                    )
+                    db.add(db_album_group)
+                    db.commit()
+                    db.refresh(db_album_group)
+
                 db_album = models.Album(
                     main_title=album['name'],
                     digital_release_date=r_date,
                     cover_image_url=album['images'][0]['url'] if album['images'] else None,
                     spotify_album_id=album['id'],
                     album_type=album.get('album_type'),
-                    artist_id=self._get_or_create_artist(album['artists'][0]['id'], album['artists'][0]['name'], db)
+                    artist_id=artist_id,
+                    album_group_id=db_album_group.id
                 )
                 db.add(db_album)
                 db.commit()
@@ -310,18 +329,37 @@ class MusicImporter:
                 except ValueError:
                     parsed_date = None
             
+            # アーティスト取得
+            artist_id = self._get_or_create_artist("mb_" + artist_name, artist_name, db)
+
+            # AlbumGroup取得または作成
+            db_album_group = db.query(models.AlbumGroup).filter(
+                models.AlbumGroup.title == album_title,
+                models.AlbumGroup.artist_id == artist_id
+            ).first()
+            
+            if not db_album_group:
+                db_album_group = models.AlbumGroup(
+                    title=album_title,
+                    artist_id=artist_id,
+                    release_date=parsed_date,
+                    album_type="album"
+                )
+                db.add(db_album_group)
+                db.commit()
+                db.refresh(db_album_group)
+
             db_album = models.Album(
                 main_title=album_title,
                 physical_release_date=parsed_date,
-                album_type="album"
+                album_type="album",
+                album_group_id=db_album_group.id,
+                artist_id=artist_id
             )
             db.add(db_album)
             db.commit()
             db.refresh(db_album)
             imported_albums += 1
-            
-            # アーティスト取得
-            artist_id = self._get_or_create_artist("mb_" + artist_name, artist_name, db)
             
             # 2. ディスクとトラック作成
             media = details.get("media", [])

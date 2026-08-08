@@ -25,6 +25,8 @@ interface AlbumMini {
   main_title: string;
   version_title?: string;
   cover_image_url?: string;
+  album_type?: string;
+  album_group_id?: number;
 }
 
 interface AlbumTrackInfo {
@@ -759,7 +761,7 @@ const SongDetail = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {displayAlbums.map((albumLink, idx) => (
-              <Link key={`${albumLink.album.id}-${idx}`} to={`/albums/${albumLink.album.id}#disc-${albumLink.disc_number || 1}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Link key={`${albumLink.album_id}-${albumLink.disc_number}-${albumLink.track_number}`} to={`/album-groups/${albumLink.album.album_group_id || albumLink.album_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
                   backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
                   border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)',

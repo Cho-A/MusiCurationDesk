@@ -162,6 +162,11 @@ class Artist(Base):
         back_populates="artist",
     )
 
+    album_groups = relationship(
+        "AlbumGroup",
+        back_populates="artist",
+    )
+
     # 4. Performance: 1対多 (メインアクトとしての公演)
     performances = relationship(
         "Performance",
@@ -484,9 +489,23 @@ class SetlistEntry(Base):
     song = relationship("Song", back_populates="setlist_entries")
 
 
+class AlbumGroup(Base):
+    __tablename__ = "album_groups"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    artist_id = Column(Integer, ForeignKey("artists.id"), nullable=True)
+    release_date = Column(Date, nullable=True)
+    album_type = Column(String(50), nullable=True)  # "album", "single", etc.
+    cover_image_url = Column(String(500), nullable=True)
+
+    artist = relationship("Artist", back_populates="album_groups")
+    albums = relationship("Album", back_populates="album_group", cascade="all, delete-orphan")
+
+
 class Album(Base):
     __tablename__ = "albums"
     id = Column(Integer, primary_key=True, index=True)
+    album_group_id = Column(Integer, ForeignKey("album_groups.id"), nullable=True)
     main_title = Column(String(255), nullable=False)
     version_title = Column(String(255), nullable=True)
     artist_id = Column(Integer, ForeignKey("artists.id"), nullable=True)
@@ -497,6 +516,7 @@ class Album(Base):
     album_type = Column(String(50), nullable=True)  # "album", "single", "compilation", "dvd", etc.
 
     artist = relationship("Artist", back_populates="albums")
+    album_group = relationship("AlbumGroup", back_populates="albums")
 
     album_tracks = relationship("AlbumTrack", back_populates="album", cascade="all, delete-orphan")
     discs = relationship("AlbumDisc", back_populates="album", cascade="all, delete-orphan")

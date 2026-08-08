@@ -88,15 +88,30 @@ def import_spotify_track(req: ImportRequest, db: Session = Depends(models.get_db
             db.refresh(db_artist)
             
         # 3. アルバムの登録 (大文字小文字区別なし検索)
-        db_album = db.query(models.Album).filter(
-            func.lower(models.Album.main_title) == func.lower(album_name)
+        db_album_group = db.query(models.AlbumGroup).filter(
+            func.lower(models.AlbumGroup.title) == func.lower(album_name)
         ).first()
         
         album_images = track['album'].get('images', [])
         cover_url = album_images[0]['url'] if album_images else None
+        
+        if not db_album_group:
+            db_album_group = models.AlbumGroup(title=album_name, artist_id=db_artist.id, cover_image_url=cover_url)
+            db.add(db_album_group)
+            db.commit()
+            db.refresh(db_album_group)
+
+        db_album = db.query(models.Album).filter(
+            func.lower(models.Album.main_title) == func.lower(album_name)
+        ).first()
 
         if not db_album:
-            db_album = models.Album(main_title=album_name, cover_image_url=cover_url)
+            db_album = models.Album(
+                main_title=album_name, 
+                cover_image_url=cover_url,
+                album_group_id=db_album_group.id,
+                artist_id=db_artist.id
+            )
             db.add(db_album)
             db.commit()
             db.refresh(db_album)
@@ -105,6 +120,10 @@ def import_spotify_track(req: ImportRequest, db: Session = Depends(models.get_db
             db_album.cover_image_url = cover_url
             db.commit()
             db.refresh(db_album)
+            
+        if db_album.album_group_id is None:
+            db_album.album_group_id = db_album_group.id
+            db.commit()
             
         # 4. 楽曲の登録 (簡易的な重複チェック: 同名楽曲があるか)
         db_song = db.query(models.Song).filter(

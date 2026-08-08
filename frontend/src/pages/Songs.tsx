@@ -9,6 +9,7 @@ interface AlbumMini {
   id: number;
   main_title: string;
   cover_image_url?: string;
+  album_group_id?: number;
 }
 
 interface Song {

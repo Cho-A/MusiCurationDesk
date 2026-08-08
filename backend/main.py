@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import models  # 先ほど作成したファイルをインポート
 from .routers import (
     albums,
+    album_groups,
     artists,
     auth,
     external,
@@ -47,6 +48,8 @@ app.include_router(tieups.router)
 app.include_router(tours.router)
 app.include_router(external.router)
 app.include_router(musicbrainz.router)
+app.include_router(works.router)
+app.include_router(album_groups.router)
 app.include_router(tags.router)
 app.include_router(venues.router)
 app.include_router(albums.router)
@@ -54,7 +57,6 @@ app.include_router(goods_and_stores.router)
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(external_search.router)
-app.include_router(works.router)
 app.include_router(dashboard.router)
 
 # ReactアプリのURL（開発中は http://localhost:3000）を許可リストに入れる

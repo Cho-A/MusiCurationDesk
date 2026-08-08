@@ -6,22 +6,21 @@ import AlbumCard from '../components/AlbumCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 
-interface Album {
+interface AlbumGroup {
   id: number;
-  main_title: string;
-  version_title?: string;
+  title: string;
   cover_image_url?: string;
-  physical_release_date?: string;
-  digital_release_date?: string;
+  release_date?: string;
+  album_type?: string;
 }
 
 const Albums = () => {
-  const [albums, setAlbums] = useState<Album[]>([]);
+  const [albums, setAlbums] = useState<AlbumGroup[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/albums/')
+    fetch('http://127.0.0.1:8000/album-groups/')
       .then(res => res.json())
       .then(data => {
         setAlbums(data);
@@ -36,7 +35,7 @@ const Albums = () => {
   if (loading) return <LoadingSpinner fullPage />;
 
   const filteredAlbums = albums.filter(album => 
-    album.main_title.toLowerCase().includes(searchQuery.toLowerCase())
+    album.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -61,8 +60,13 @@ const Albums = () => {
         <EmptyState icon={Disc3} title="アルバムが見つかりませんでした" description="別のキーワードで検索するか、新しくアルバムを追加してください。" />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px' }}>
-          {filteredAlbums.map((album) => (
-            <AlbumCard key={album.id} album={album} layout="vertical" />
+          {filteredAlbums.map((group) => (
+            <AlbumCard key={group.id} album={{
+              id: group.id,
+              main_title: group.title,
+              cover_image_url: group.cover_image_url,
+              physical_release_date: group.release_date
+            }} layout="vertical" to={`/album-groups/${group.id}`} />
           ))}
         </div>
       )}

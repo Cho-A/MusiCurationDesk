@@ -81,10 +81,25 @@ interface AlbumDetailData {
   album_tracks: AlbumTrack[];
 }
 
-const AlbumDetail = () => {
+interface AlbumGroupDetailData {
+  id: number;
+  title: string;
+  artist_id?: number;
+  release_date?: string;
+  cover_image_url?: string;
+  album_type?: string;
+  artist?: {
+    id: number;
+    name: string;
+  };
+  albums: AlbumDetailData[];
+}
+
+const AlbumGroupDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [album, setAlbum] = useState<AlbumDetailData | null>(null);
+  const [albumGroup, setAlbumGroup] = useState<AlbumGroupDetailData | null>(null);
+  const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, is_unreleased: boolean, main_artist_id: number | null, main_artist_name: string}>({ display_title: '', notes: '', song_id: null, song_title: '', is_unreleased: false, main_artist_id: null, main_artist_name: '' });
@@ -106,13 +121,16 @@ const AlbumDetail = () => {
   };
 
   const fetchAlbum = useCallback(() => {
-    fetch(`http://127.0.0.1:8000/albums/${id}`)
+    fetch(`http://127.0.0.1:8000/album-groups/${id}`)
       .then(res => {
-        if (!res.ok) throw new Error("Album not found");
+        if (!res.ok) throw new Error("Album group not found");
         return res.json();
       })
       .then(data => {
-        setAlbum(data);
+        setAlbumGroup(data);
+        if (data.albums && data.albums.length > 0) {
+          setSelectedAlbumId(data.albums[0].id);
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -125,14 +143,16 @@ const AlbumDetail = () => {
     fetchAlbum();
   }, [id]);
 
+  const album = albumGroup?.albums?.find(a => a.id === selectedAlbumId) || null;
+
   useEffect(() => {
-    if (!loading && album && window.location.hash) {
+    if (!loading && albumGroup && window.location.hash) {
       const element = document.getElementById(window.location.hash.slice(1));
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [loading, album]);
+  }, [loading, albumGroup]);
 
   const handleEditClick = (e: React.MouseEvent, track: any) => {
     e.preventDefault();
@@ -338,21 +358,21 @@ const AlbumDetail = () => {
   };
 
   if (loading) return <LoadingSpinner fullPage message="アルバムデータを読み込んでいます..." />;
-  if (!album) return <EmptyState title="アルバムが見つかりませんでした。" />;
+  if (!albumGroup) return <EmptyState title="アルバムが見つかりませんでした。" />;
 
-  const releaseDate = album.physical_release_date || album.digital_release_date || '発売日不明';
+  const releaseDate = albumGroup.release_date || '発売日不明';
 
-  const groupedTracks = album.album_tracks.reduce((acc, track) => {
+  const groupedTracks = album?.album_tracks?.reduce((acc, track) => {
     const disc = track.disc_number || 1;
     if (!acc[disc]) acc[disc] = [];
     acc[disc].push(track);
     return acc;
-  }, {} as Record<number, typeof album.album_tracks>);
+  }, {} as Record<number, typeof album.album_tracks>) || {};
 
   const uniqueDiscs = Object.keys(groupedTracks).map(Number).sort((a, b) => a - b);
   const isSingleDiscNoTitle = 
     uniqueDiscs.length === 1 && 
-    (!album.discs || album.discs.length === 0 || !album.discs[0].title);
+    (!album?.discs || album.discs.length === 0 || !album.discs[0].title);
 
   return (
     <div style={{ padding: '32px', maxWidth: '1000px', margin: '0 auto', color: 'var(--text-primary)' }}>
@@ -372,7 +392,7 @@ const AlbumDetail = () => {
 
       {/* ヘッダーエリア */}
       <div style={{ display: 'flex', gap: '40px', marginBottom: '48px', alignItems: 'flex-start' }}>
-        {album.spotify_album_id ? (
+        {album?.spotify_album_id ? (
           <iframe 
             src={`https://open.spotify.com/embed/album/${album.spotify_album_id}`} 
             width="300" 
@@ -381,10 +401,10 @@ const AlbumDetail = () => {
             allow="encrypted-media"
             style={{ borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.15)', flexShrink: 0 }}
           ></iframe>
-        ) : album.cover_image_url ? (
+        ) : albumGroup.cover_image_url ? (
           <img 
-            src={album.cover_image_url} 
-            alt={album.main_title} 
+            src={albumGroup.cover_image_url} 
+            alt={albumGroup.title} 
             style={{ 
               width: '280px', height: '280px', 
               borderRadius: '12px',
@@ -394,7 +414,7 @@ const AlbumDetail = () => {
             }} 
           />
         ) : (
-          <FallbackCoverDetail title={album.main_title} size={280} />
+          <FallbackCoverDetail title={albumGroup.title} size={280} />
         )}
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '16px' }}>
@@ -402,12 +422,12 @@ const AlbumDetail = () => {
             fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', 
             color: 'var(--text-secondary)', letterSpacing: '0.1em'
           }}>
-            {album.album_type === 'single' ? 'Single' : album.album_type === 'dvd' ? 'Video' : 'Album'}
+            {albumGroup.album_type === 'single' ? 'Single' : albumGroup.album_type === 'dvd' ? 'Video' : 'Album'}
           </span>
           <h1 style={{ fontSize: '3rem', fontWeight: 900, margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-            {album.main_title}
+            {albumGroup.title}
           </h1>
-          {album.version_title && (
+          {album?.version_title && (
             <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--accent-primary)', margin: 0 }}>
               {album.version_title}
             </h2>
@@ -416,9 +436,9 @@ const AlbumDetail = () => {
           <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             {!isEditingArtist ? (
               <>
-                {album.artist ? (
-                  <Link to={`/artists/${album.artist.id}`} style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>
-                    {album.artist.name}
+                {albumGroup.artist ? (
+                  <Link to={`/artists/${albumGroup.artist.id}`} style={{ color: 'var(--primary-color)', textDecoration: 'none' }}>
+                    {albumGroup.artist.name}
                   </Link>
                 ) : (
                   <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>アーティスト未設定</span>
@@ -459,7 +479,7 @@ const AlbumDetail = () => {
             )}
           </div>
           
-          {album.spotify_album_id && (
+          {album?.spotify_album_id && (
             <a href={`https://open.spotify.com/album/${album.spotify_album_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.56.3z" />
@@ -475,7 +495,7 @@ const AlbumDetail = () => {
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Disc3 size={18} />
-              {album.album_tracks.length} Tracks
+              {album?.album_tracks?.length || 0} Tracks
             </span>
           </div>
         </div>
@@ -500,13 +520,13 @@ const AlbumDetail = () => {
                   display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
                   {(() => {
-                    const discInfo = album.discs?.find(d => d.disc_number === discNum);
-                    const titleStr = discInfo?.title ? `: ${discInfo.title}` : '';
-                    const formatStr = discInfo?.media_format && discInfo.media_format !== 'CD' ? ` (${discInfo.media_format})` : '';
-                    const icon = discInfo?.media_format && discInfo.media_format !== 'CD' ? '📺' : '💿';
+                    const discData = album?.discs?.find(d => d.disc_number === discNum);
+                    const titleStr = discData?.title ? `: ${discData.title}` : '';
+                    const formatStr = discData?.media_format && discData.media_format !== 'CD' ? ` (${discData.media_format})` : '';
+                    const icon = discData?.media_format && discData.media_format !== 'CD' ? '📺' : '💿';
                     return (
                       <>
-                        {editingDiscId === discInfo?.id ? (
+                        {editingDiscId === discData?.id ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                             <input 
                               type="text" 
@@ -515,7 +535,7 @@ const AlbumDetail = () => {
                               placeholder="ディスク名を入力..."
                               style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', width: '200px', fontSize: '0.9rem' }}
                             />
-                            <button onClick={() => handleSaveDiscTitle(discInfo!.id)} style={{ background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>
+                            <button onClick={() => handleSaveDiscTitle(discData!.id)} style={{ background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>
                               <Save size={14} />
                             </button>
                             <button onClick={() => setEditingDiscId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
@@ -525,17 +545,17 @@ const AlbumDetail = () => {
                         ) : (
                           <>
                             <span>{icon} Disc {discNum}{titleStr}{formatStr}</span>
-                            {discInfo?.edition && (
+                            {discData?.edition && (
                               <span style={{ 
                                 fontSize: '0.75rem', backgroundColor: 'var(--accent-primary)', 
                                 color: '#000', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px',
                                 fontWeight: 'bold'
                               }}>
-                                {discInfo.edition}
+                                {discData.edition}
                               </span>
                             )}
-                            {discInfo && (
-                              <button onClick={() => { setEditingDiscId(discInfo.id); setDiscTitleForm(discInfo.title || ''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', marginLeft: '8px' }}>
+                            {discData && (
+                              <button onClick={() => { setEditingDiscId(discData.id); setDiscTitleForm(discData.title || ''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', marginLeft: '8px' }}>
                                 <Edit2 size={16} />
                               </button>
                             )}
@@ -729,7 +749,7 @@ const AlbumDetail = () => {
             </div>
           );
         })}
-        {album.album_tracks.length === 0 && (
+        {album?.album_tracks?.length === 0 && (
           <EmptyState title="収録曲が登録されていません" />
         )}
       </div>
@@ -737,4 +757,4 @@ const AlbumDetail = () => {
   );
 };
 
-export default AlbumDetail;
+export default AlbumGroupDetail;

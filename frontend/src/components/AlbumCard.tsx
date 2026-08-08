@@ -42,15 +42,16 @@ export interface Album {
 interface AlbumCardProps {
   album: Album;
   layout?: 'vertical' | 'horizontal';
+  to?: string;
 }
 
-const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical' }) => {
+const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical', to }) => {
   const displayTitle = album.title || album.main_title || 'Unknown Album';
   const displayDate = album.release_date || album.physical_release_date || album.digital_release_date || '不明なリリース日';
 
   if (layout === 'horizontal') {
     return (
-      <Link to={`/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <Link to={to || `/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
         <div className="glass-panel hover-scale" style={{ 
           padding: '16px', borderRadius: '12px', display: 'flex', gap: '16px', 
           transition: 'transform 0.2s', alignItems: 'center' 
@@ -91,7 +92,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical' }) => 
   }
 
   return (
-    <Link to={`/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Link to={to || `/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div className="hover-scale" style={{ 
         backgroundColor: 'var(--bg-secondary)', 
         borderRadius: '16px', 
