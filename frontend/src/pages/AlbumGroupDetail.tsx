@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X, GitMerge } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -70,6 +70,7 @@ interface AlbumDetailData {
   digital_release_date?: string;
   cover_image_url?: string;
   album_type?: string;
+  media_format?: string;
   total_tracks?: number;
   spotify_album_id?: string | null;
   artist?: {
@@ -116,6 +117,26 @@ const AlbumGroupDetail = () => {
   const [editingDiscId, setEditingDiscId] = useState<number | null>(null);
   const [discTitleForm, setDiscTitleForm] = useState('');
 
+  // For Edition Edit Modal
+  const [isEditionModalOpen, setIsEditionModalOpen] = useState(false);
+  const [editionForm, setEditionForm] = useState<{ version_title: string; album_group_id: number | null; media_format: string }>({ version_title: '', album_group_id: null, media_format: 'CD' });
+  const [albumGroupSearchQuery, setAlbumGroupSearchQuery] = useState('');
+  const [albumGroupSearchResults, setAlbumGroupSearchResults] = useState<{id: number, title: string, artist?: {name: string}}[]>([]);
+
+  // Bulk Merge States
+  const [isBulkMergeModalOpen, setIsBulkMergeModalOpen] = useState(false);
+  const [bulkMergeSourceDisc, setBulkMergeSourceDisc] = useState<{albumId: number, discNumber: number, title: string | null} | null>(null);
+  const [bulkMergeTargetAlbumId, setBulkMergeTargetAlbumId] = useState<number | null>(null);
+  const [bulkMergeTargetDisc, setBulkMergeTargetDisc] = useState<number | ''>('');
+  const [bulkMergeLoading, setBulkMergeLoading] = useState(false);
+
+  // Group Multi-Edition Merge States
+  const [isGroupMergeModalOpen, setIsGroupMergeModalOpen] = useState(false);
+  const [groupMergeTargetId, setGroupMergeTargetId] = useState<number | null>(null);
+  const [groupMergeSourceIds, setGroupMergeSourceIds] = useState<number[]>([]);
+
+
+
   const formatTime = (ms: number) => {
     return `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
   };
@@ -129,7 +150,21 @@ const AlbumGroupDetail = () => {
       .then(data => {
         setAlbumGroup(data);
         if (data.albums && data.albums.length > 0) {
-          setSelectedAlbumId(data.albums[0].id);
+          const getScore = (title?: string) => {
+            if (!title) return 1;
+            const lower = title.toLowerCase();
+            if (lower.includes('通常') || lower.includes('regular')) return 1;
+            if (lower.includes('初回') || lower.includes('first press')) return 2;
+            if (lower.includes('限定') || lower.includes('limited')) return 3;
+            return 4;
+          };
+          const sorted = [...data.albums].sort((a, b) => {
+            const scoreA = getScore(a.version_title);
+            const scoreB = getScore(b.version_title);
+            if (scoreA !== scoreB) return scoreA - scoreB;
+            return (a.version_title || '').localeCompare(b.version_title || '');
+          });
+          setSelectedAlbumId(sorted[0].id);
         }
         setLoading(false);
       })
@@ -142,6 +177,27 @@ const AlbumGroupDetail = () => {
   useEffect(() => {
     fetchAlbum();
   }, [id]);
+
+  const sortedAlbums = useMemo(() => {
+    if (!albumGroup?.albums) return [];
+    
+    return [...albumGroup.albums].sort((a, b) => {
+      const getScore = (title?: string) => {
+        if (!title) return 1;
+        const lower = title.toLowerCase();
+        if (lower.includes('通常') || lower.includes('regular')) return 1;
+        if (lower.includes('初回') || lower.includes('first press')) return 2;
+        if (lower.includes('限定') || lower.includes('limited')) return 3;
+        return 4;
+      };
+
+      const scoreA = getScore(a.version_title);
+      const scoreB = getScore(b.version_title);
+      
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return (a.version_title || '').localeCompare(b.version_title || '');
+    });
+  }, [albumGroup?.albums]);
 
   const album = albumGroup?.albums?.find(a => a.id === selectedAlbumId) || null;
 
@@ -283,7 +339,7 @@ const AlbumGroupDetail = () => {
     e.stopPropagation();
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/albums/${id}/tracks/${track.id}`, {
+      const res = await fetch(`http://127.0.0.1:8000/albums/${selectedAlbumId}/tracks/${track.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -357,6 +413,152 @@ const AlbumGroupDetail = () => {
     }
   };
 
+  const handleOpenEditionModal = () => {
+    if (!album) return;
+    setEditionForm({
+      version_title: album.version_title || '',
+      album_group_id: albumGroup?.id || null,
+      media_format: album.media_format || 'CD'
+    });
+    setAlbumGroupSearchQuery('');
+    setAlbumGroupSearchResults([]);
+    setIsEditionModalOpen(true);
+  };
+
+  const handleAlbumGroupSearch = async (query: string) => {
+    setAlbumGroupSearchQuery(query);
+    if (query.length < 2) {
+      setAlbumGroupSearchResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/album-groups/?q=${encodeURIComponent(query)}&limit=10`);
+      if (res.ok) {
+        const data = await res.json();
+        setAlbumGroupSearchResults(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleEditionSave = async () => {
+    if (!album || !editionForm.album_group_id) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/albums/${album.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          version_title: editionForm.version_title,
+          album_group_id: editionForm.album_group_id,
+          media_format: editionForm.media_format
+        })
+      });
+      if (!res.ok) throw new Error("Failed to update edition");
+      
+      toast.success('エディション情報を更新しました');
+      setIsEditionModalOpen(false);
+      
+      // If moved to another group, redirect
+      if (editionForm.album_group_id !== albumGroup?.id) {
+        navigate(`/album-groups/${editionForm.album_group_id}`);
+      } else {
+        fetchAlbum();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('エディションの更新に失敗しました');
+    }
+  };
+  const handleGroupMergeSubmit = async () => {
+    if (!groupMergeTargetId || groupMergeSourceIds.length === 0) return;
+    setBulkMergeLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/album-groups/${albumGroup?.id}/merge-editions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_album_id: groupMergeTargetId,
+          source_album_ids: groupMergeSourceIds
+        })
+      });
+      if (!res.ok) throw new Error('Group merge failed');
+      const data = await res.json();
+      if (data.skipped_count && data.skipped_count > 0) {
+        toast.success(`${data.merged_count}曲を統合し、${data.skipped_count}曲はバージョン違い等のためスキップしました`, { duration: 5000 });
+      } else {
+        toast.success(`選択したエディションの統合が完了しました（${data.merged_count}曲）`);
+      }
+      setIsGroupMergeModalOpen(false);
+      fetchAlbum();
+    } catch (err) {
+      console.error(err);
+      toast.error('エラーが発生しました');
+    } finally {
+      setBulkMergeLoading(false);
+    }
+  };
+
+  const handleBulkMergeSubmit = async () => {
+    if (!bulkMergeSourceDisc || !bulkMergeTargetAlbumId) return;
+    setBulkMergeLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/albums/${bulkMergeSourceDisc.albumId}/discs/${bulkMergeSourceDisc.discNumber}/merge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_album_id: bulkMergeTargetAlbumId,
+          target_disc_number: bulkMergeTargetDisc === '' ? null : bulkMergeTargetDisc
+        })
+      });
+      if (!res.ok) throw new Error('Bulk merge failed');
+      const data = await res.json();
+      if (data.skipped_count && data.skipped_count > 0) {
+        toast.success(`${data.merged_count}曲を統合し、${data.skipped_count}曲はバージョン違い等のためスキップしました`, { duration: 5000 });
+      } else {
+        toast.success(`ディスクの一括統合が完了しました（${data.merged_count}曲）`);
+      }
+      setIsBulkMergeModalOpen(false);
+      fetchAlbum(); // Reload group to reflect merged tracks
+    } catch (err) {
+      console.error(err);
+      alert('エラーが発生しました。');
+    } finally {
+      setBulkMergeLoading(false);
+    }
+  };
+
+  const handleEditionDelete = async () => {
+    if (!album) return;
+    if (!window.confirm(`このエディション（${album.version_title || '通常盤'}）を削除してもよろしいですか？\nこの操作は取り消せません。`)) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/albums/${album.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to delete edition");
+      
+      toast.success('エディションを削除しました');
+      setIsEditionModalOpen(false);
+      
+      // If the album group still has other albums, just reload it
+      // Otherwise, the album group was deleted and we should go back
+      if (albumGroup && albumGroup.albums && albumGroup.albums.length > 1) {
+        fetchAlbum();
+      } else {
+        navigate('/albums'); // Go back to album list
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('エディションの削除に失敗しました');
+    }
+  };
+
   if (loading) return <LoadingSpinner fullPage message="アルバムデータを読み込んでいます..." />;
   if (!albumGroup) return <EmptyState title="アルバムが見つかりませんでした。" />;
 
@@ -370,6 +572,7 @@ const AlbumGroupDetail = () => {
   }, {} as Record<number, typeof album.album_tracks>) || {};
 
   const uniqueDiscs = Object.keys(groupedTracks).map(Number).sort((a, b) => a - b);
+  const isDigital = album?.discs?.every(d => ['DIGITAL', 'STREAMING', 'Digital Media'].includes(d.media_format || ''));
   const isSingleDiscNoTitle = 
     uniqueDiscs.length === 1 && 
     (!album?.discs || album.discs.length === 0 || !album.discs[0].title);
@@ -392,18 +595,9 @@ const AlbumGroupDetail = () => {
 
       {/* ヘッダーエリア */}
       <div style={{ display: 'flex', gap: '40px', marginBottom: '48px', alignItems: 'flex-start' }}>
-        {album?.spotify_album_id ? (
-          <iframe 
-            src={`https://open.spotify.com/embed/album/${album.spotify_album_id}`} 
-            width="300" 
-            height="380" 
-            frameBorder="0" 
-            allow="encrypted-media"
-            style={{ borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.15)', flexShrink: 0 }}
-          ></iframe>
-        ) : albumGroup.cover_image_url ? (
+        {albumGroup.cover_image_url || album?.cover_image_url ? (
           <img 
-            src={albumGroup.cover_image_url} 
+            src={albumGroup.cover_image_url || album?.cover_image_url} 
             alt={albumGroup.title} 
             style={{ 
               width: '280px', height: '280px', 
@@ -427,11 +621,48 @@ const AlbumGroupDetail = () => {
           <h1 style={{ fontSize: '3rem', fontWeight: 900, margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
             {albumGroup.title}
           </h1>
-          {album?.version_title && (
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--accent-primary)', margin: 0 }}>
-              {album.version_title}
-            </h2>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {albumGroup.albums && albumGroup.albums.length > 1 ? (
+                <select
+                  value={selectedAlbumId || ''}
+                  onChange={(e) => setSelectedAlbumId(Number(e.target.value))}
+                  style={{
+                    fontSize: '1.2rem', fontWeight: 500, color: 'var(--accent-primary)', 
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', 
+                    borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', outline: 'none',
+                    width: 'fit-content'
+                  }}
+                >
+                  {sortedAlbums.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.version_title || '通常盤'}
+                    </option>
+                  ))}
+                </select>
+            ) : (
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--accent-primary)', margin: 0 }}>
+                {album?.version_title || '通常盤'}
+              </h2>
+            )}
+            {album && (
+              <button 
+                onClick={handleOpenEditionModal} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-tertiary)', borderRadius: '50%' }}
+                title="エディション情報を編集"
+              >
+                <Edit2 size={18} />
+              </button>
+            )}
+            {albumGroup.albums && albumGroup.albums.length > 1 && (
+              <button
+                onClick={() => setIsGroupMergeModalOpen(true)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)', borderRadius: '20px', marginLeft: '8px', fontSize: '0.9rem', fontWeight: 600 }}
+                title="複数のエディションを一括で統合"
+              >
+                <GitMerge size={16} /> 複数統合
+              </button>
+            )}
+          </div>
           
           <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             {!isEditingArtist ? (
@@ -480,11 +711,11 @@ const AlbumGroupDetail = () => {
           </div>
           
           {album?.spotify_album_id && (
-            <a href={`https://open.spotify.com/album/${album.spotify_album_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <a href={`https://open.spotify.com/album/${album.spotify_album_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--spotify-color, #1DB954)', color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '0.95rem', padding: '10px 16px', borderRadius: '20px', marginBottom: '16px', width: 'fit-content', boxShadow: '0 4px 12px rgba(29, 185, 84, 0.3)', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(29, 185, 84, 0.4)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(29, 185, 84, 0.3)'; }}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.479.659.24 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.56.3z" />
               </svg>
-              Spotifyで開く
+              Spotifyで聴く
             </a>
           )}
           
@@ -513,7 +744,7 @@ const AlbumGroupDetail = () => {
           
           return (
             <div key={discNum} id={`disc-${discNum}`} style={{ marginBottom: '32px', scrollMarginTop: '80px' }}>
-              {!isSingleDiscNoTitle && (
+              {(!isSingleDiscNoTitle && !isDigital) && (
                 <h3 style={{ 
                   margin: '0 0 16px 0', fontSize: '1.2rem', color: 'var(--text-secondary)',
                   borderBottom: '1px solid var(--border-color)', paddingBottom: '8px',
@@ -521,7 +752,6 @@ const AlbumGroupDetail = () => {
                 }}>
                   {(() => {
                     const discData = album?.discs?.find(d => d.disc_number === discNum);
-                    const titleStr = discData?.title ? `: ${discData.title}` : '';
                     const formatStr = discData?.media_format && discData.media_format !== 'CD' ? ` (${discData.media_format})` : '';
                     const icon = discData?.media_format && discData.media_format !== 'CD' ? '📺' : '💿';
                     return (
@@ -544,7 +774,7 @@ const AlbumGroupDetail = () => {
                           </div>
                         ) : (
                           <>
-                            <span>{icon} Disc {discNum}{titleStr}{formatStr}</span>
+                            <span>{icon} Disc {discNum}{formatStr}</span>
                             {discData?.edition && (
                               <span style={{ 
                                 fontSize: '0.75rem', backgroundColor: 'var(--accent-primary)', 
@@ -554,11 +784,16 @@ const AlbumGroupDetail = () => {
                                 {discData.edition}
                               </span>
                             )}
-                            {discData && (
-                              <button onClick={() => { setEditingDiscId(discData.id); setDiscTitleForm(discData.title || ''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', marginLeft: '8px' }}>
-                                <Edit2 size={16} />
-                              </button>
-                            )}
+                            <button 
+                              onClick={() => {
+                                setBulkMergeSourceDisc({albumId: album!.id, discNumber: discNum, title: discData?.title || null});
+                                setIsBulkMergeModalOpen(true);
+                              }} 
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', marginLeft: 'auto', padding: '4px' }} 
+                              title="ディスクの一括統合 (開発者用)"
+                            >
+                              <GitMerge size={16} />
+                            </button>
                           </>
                         )}
                       </>
@@ -753,6 +988,259 @@ const AlbumGroupDetail = () => {
           <EmptyState title="収録曲が登録されていません" />
         )}
       </div>
+      {isEditionModalOpen && album && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'var(--bg-primary)', padding: '32px', borderRadius: '16px', width: '100%', maxWidth: '500px', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>エディション情報の編集</h2>
+              <button onClick={() => setIsEditionModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>バージョン名 (Edition Name)</label>
+                <input 
+                  type="text" 
+                  value={editionForm.version_title}
+                  onChange={(e) => setEditionForm({...editionForm, version_title: e.target.value})}
+                  placeholder="例: 初回限定盤A (CD+DVD)"
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>メディアフォーマット (Media Format)</label>
+                <select
+                  value={editionForm.media_format}
+                  onChange={(e) => setEditionForm({...editionForm, media_format: e.target.value})}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                >
+                  <option value="CD">CD (Physical)</option>
+                  <option value="Digital">Digital (配信 / Streaming)</option>
+                  <option value="Vinyl">Vinyl (アナログ盤)</option>
+                  <option value="Cassette">Cassette (カセット)</option>
+                  <option value="DVD/BD">DVD / Blu-ray</option>
+                  <option value="Other">Other (その他)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>所属アルバムグループ (統合先)</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type="text" 
+                    value={albumGroupSearchQuery}
+                    onChange={(e) => handleAlbumGroupSearch(e.target.value)}
+                    placeholder="アルバム名を検索して移動..."
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                  />
+                  {albumGroupSearchResults.length > 0 && (
+                    <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', listStyle: 'none', padding: 0, margin: '8px 0', zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 12px 32px rgba(0,0,0,0.3)' }}>
+                      {albumGroupSearchResults.map(ag => (
+                        <li 
+                          key={ag.id} 
+                          onClick={() => {
+                            setEditionForm({...editionForm, album_group_id: ag.id});
+                            setAlbumGroupSearchQuery(`${ag.title} (${ag.artist?.name || '不明'})`);
+                            setAlbumGroupSearchResults([]);
+                          }} 
+                          style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px' }}
+                        >
+                          <span style={{ fontWeight: 600 }}>{ag.title}</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{ag.artist?.name || 'アーティスト不明'}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {editionForm.album_group_id && editionForm.album_group_id !== albumGroup?.id && (
+                  <div style={{ marginTop: '12px', padding: '12px', backgroundColor: 'rgba(255,165,0,0.1)', borderLeft: '4px solid orange', borderRadius: '4px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    <AlertCircle size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom', color: 'orange' }} />
+                    保存すると、このエディションは別のアルバムグループへ移動します。
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '32px' }}>
+              <button 
+                onClick={handleEditionDelete}
+                style={{ 
+                  background: 'none', border: '1px solid var(--danger-color)', color: 'var(--danger-color)',
+                  padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
+                }}
+              >
+                このエディションを削除
+              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <Button onClick={() => setIsEditionModalOpen(false)} variant="secondary">キャンセル</Button>
+                <Button onClick={handleEditionSave} variant="primary">保存する</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBulkMergeModalOpen && bulkMergeSourceDisc && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
+          <div style={{ backgroundColor: 'var(--bg-primary)', padding: '32px', borderRadius: '16px', width: '100%', maxWidth: '500px', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GitMerge size={24} /> ディスクの一括統合
+              </h2>
+              <button onClick={() => setIsBulkMergeModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '24px' }}>
+              このディスク（Disc {bulkMergeSourceDisc.discNumber}）のすべての楽曲を、別エディションの指定ディスクに一括で統合します。<br />
+              <b>※元の楽曲データは削除され、取り消しできません。</b>
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のエディション (Target Edition)</label>
+                <select 
+                  value={bulkMergeTargetAlbumId || ''} 
+                  onChange={(e) => setBulkMergeTargetAlbumId(Number(e.target.value))}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                >
+                  <option value="">選択してください...</option>
+                  {albumGroup?.albums.filter(a => a.id !== bulkMergeSourceDisc.albumId).map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.version_title || '通常盤'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {bulkMergeTargetAlbumId && albumGroup?.albums.find(a => a.id === bulkMergeTargetAlbumId)?.media_format !== "Digital" && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のディスク番号 (Target Disc)</label>
+                  <select 
+                    value={bulkMergeTargetDisc} 
+                    onChange={(e) => setBulkMergeTargetDisc(Number(e.target.value))}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                  >
+                    <option value="">自動マッチング (指定なし)</option>
+                    {albumGroup?.albums.find(a => a.id === bulkMergeTargetAlbumId)?.discs?.map(d => (
+                      <option key={d.id} value={d.disc_number}>
+                        Disc {d.disc_number} {d.title ? `(${d.title})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+              <Button onClick={() => setIsBulkMergeModalOpen(false)} variant="secondary" disabled={bulkMergeLoading}>キャンセル</Button>
+              <Button 
+                onClick={handleBulkMergeSubmit} 
+                variant="primary" 
+                disabled={!bulkMergeTargetAlbumId || bulkMergeLoading}
+                style={{ backgroundColor: 'var(--danger-color)' }}
+              >
+                {bulkMergeLoading ? '統合中...' : '一括統合を実行'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isGroupMergeModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
+          <div style={{ backgroundColor: 'var(--bg-primary)', padding: '32px', borderRadius: '16px', width: '100%', maxWidth: '600px', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GitMerge size={24} /> 複数エディションの一括統合
+              </h2>
+              <button onClick={() => setIsGroupMergeModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '24px' }}>
+              選択した複数のエディション（統合元）の全楽曲を、マスターエディション（統合先）に一括で統合します。<br />
+              ディスク番号とトラック番号が一致する楽曲のみがマージされ、マスターに存在しない特典ディスク等は安全にスキップされます。<br />
+              <b>※この操作は取り消しできません。</b>
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 'bold' }}>1. 統合先（マスターエディション）を選択</label>
+                <select 
+                  value={groupMergeTargetId || ''} 
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setGroupMergeTargetId(val);
+                    // 統合先として選んだものは、統合元リストから外す
+                    setGroupMergeSourceIds(prev => prev.filter(id => id !== val));
+                  }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--accent-primary)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                >
+                  <option value="">マスターエディションを選択してください...</option>
+                  {sortedAlbums.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.version_title || '通常盤'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {groupMergeTargetId && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 'bold' }}>2. 統合元（マスターへ吸収させるエディション）を選択</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', maxHeight: '200px', overflowY: 'auto' }}>
+                    {sortedAlbums.filter(a => a.id !== groupMergeTargetId).map(a => {
+                      const targetAlbum = sortedAlbums.find(ta => ta.id === groupMergeTargetId);
+                      let isMerged = false;
+                      if (targetAlbum && a.album_tracks.length > 0) {
+                        const targetSongIds = new Set(targetAlbum.album_tracks.map(t => t.song_id));
+                        isMerged = a.album_tracks.every(t => targetSongIds.has(t.song_id));
+                      }
+                      return (
+                      <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '8px', borderRadius: '4px', backgroundColor: groupMergeSourceIds.includes(a.id) ? 'rgba(255,255,255,0.05)' : 'transparent' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={groupMergeSourceIds.includes(a.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setGroupMergeSourceIds([...groupMergeSourceIds, a.id]);
+                            } else {
+                              setGroupMergeSourceIds(groupMergeSourceIds.filter(id => id !== a.id));
+                            }
+                          }}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        <span style={{ fontSize: '0.95rem' }}>
+                          {a.version_title || '通常盤'}
+                          {isMerged && <span style={{ marginLeft: '8px', fontSize: '0.75rem', backgroundColor: 'var(--accent-primary)', color: 'white', padding: '2px 6px', borderRadius: '12px' }}>統合済</span>}
+                        </span>
+                      </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+              <Button onClick={() => setIsGroupMergeModalOpen(false)} variant="secondary" disabled={bulkMergeLoading}>キャンセル</Button>
+              <Button 
+                onClick={handleGroupMergeSubmit} 
+                variant="primary" 
+                disabled={!groupMergeTargetId || groupMergeSourceIds.length === 0 || bulkMergeLoading}
+                style={{ backgroundColor: 'var(--danger-color)' }}
+              >
+                {bulkMergeLoading ? '統合中...' : '一括統合を実行'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

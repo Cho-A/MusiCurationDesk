@@ -104,14 +104,14 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
       zIndex: 1000, backdropFilter: 'blur(4px)'
     }}>
       <div style={{
-        backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)',
+        backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)',
         borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '80vh',
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
       }}>
         {/* Header */}
         <div style={{ 
-          padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)',
+          padding: '20px 24px', borderBottom: '1px solid var(--border-color)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <div>
@@ -160,8 +160,8 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
               {results.map(song => (
                 <div key={song.id} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '16px', backgroundColor: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px'
+                  padding: '12px 16px', backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-color)', borderRadius: '8px'
                 }}>
                   <div style={{ minWidth: 0, flex: 1, paddingRight: '16px' }}>
                     <div style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -169,7 +169,7 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {song.artist_links && song.artist_links.length > 0 ? song.artist_links.map(a => a.artist_name).join(', ') : 'Unknown Artist'}
-                      <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.2)' }}>|</span>
+                      <span style={{ margin: '0 8px', color: 'var(--border-color)' }}>|</span>
                       Work ID: {song.work_id || '(未統合)'}
                     </div>
                   </div>

@@ -518,7 +518,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: '#1a1a1a', border: '1px solid var(--border-color)', borderRadius: '12px',
+            backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '12px',
             width: '100%', maxWidth: '600px', display: 'flex', flexDirection: 'column',
             maxHeight: '80vh'
           }}>

@@ -37,6 +37,7 @@ export interface Album {
   physical_release_date?: string;
   digital_release_date?: string;
   artist_names?: string[];
+  album_group_id?: number;
 }
 
 interface AlbumCardProps {
@@ -51,7 +52,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical', to })
 
   if (layout === 'horizontal') {
     return (
-      <Link to={to || `/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <Link to={to || (album.album_group_id ? `/album-groups/${album.album_group_id}` : `/albums/${album.id}`)} style={{ textDecoration: 'none', color: 'inherit' }}>
         <div className="glass-panel hover-scale" style={{ 
           padding: '16px', borderRadius: '12px', display: 'flex', gap: '16px', 
           transition: 'transform 0.2s', alignItems: 'center' 
@@ -92,7 +93,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical', to })
   }
 
   return (
-    <Link to={to || `/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Link to={to || (album.album_group_id ? `/album-groups/${album.album_group_id}` : `/albums/${album.id}`)} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div className="hover-scale" style={{ 
         backgroundColor: 'var(--bg-secondary)', 
         borderRadius: '16px', 

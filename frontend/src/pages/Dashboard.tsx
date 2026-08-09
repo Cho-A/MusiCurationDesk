@@ -4,6 +4,7 @@ import { Music, Disc, Mic2, Calendar, Play, Sparkles, Headphones } from 'lucide-
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/PageHeader';
 import AlbumCard, { type Album } from '../components/AlbumCard';
+import SongCard from '../components/SongCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 
@@ -21,6 +22,7 @@ interface RecentAlbum {
   title: string;
   cover_image_url: string | null;
   release_date: string | null;
+  album_group_id?: number;
 }
 
 interface RecentSong {
@@ -162,7 +164,7 @@ const Dashboard = () => {
             display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '16px',
             scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent'
           }}>
-            {recentAlbums.length > 0 ? recentAlbums.map(album => (
+            {recentAlbums.length > 0 ? Array.from(new Map(recentAlbums.map(album => [album.album_group_id || `album_${album.id}`, album])).values()).map(album => (
               <div key={album.id} style={{ minWidth: '200px', maxWidth: '200px' }}>
                 <AlbumCard album={album as unknown as Album} layout="vertical" />
               </div>
@@ -179,34 +181,9 @@ const Dashboard = () => {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
             {recentSongs.length > 0 ? recentSongs.map(song => (
-              <Link to={`/songs/${song.id}`} key={song.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ 
-                  backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-                  borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px',
-                  transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                }}
-                >
-                  <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '10px', borderRadius: '50%' }}>
-                    <Play size={16} fill="currentColor" />
-                  </div>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontWeight: 600, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {song.title}
-                    </div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
-                      {song.artist_name}
-                    </div>
-                  </div>
-                </div>
-              </Link>
+              <div key={song.id} style={{ height: '100%' }}>
+                <SongCard song={song} isDashboard={true} />
+              </div>
             )) : (
               <EmptyState title="最近追加された楽曲がありません" description="新しく楽曲を追加してください。" />
             )}

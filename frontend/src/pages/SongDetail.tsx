@@ -364,12 +364,23 @@ const SongDetail = () => {
   });
 
   // アルバム表示用のデータ作成
-  let displayAlbums: AlbumTrackInfo[] = [];
+  let rawDisplayAlbums: AlbumTrackInfo[] = [];
   if (showAllAlbums) {
-    displayAlbums = displaySong.album_links || [];
+    rawDisplayAlbums = displaySong.album_links || [];
   } else {
-    displayAlbums = (displaySong.album_links || []).filter((a: AlbumTrackInfo) => a.song_id === displaySong.id);
+    rawDisplayAlbums = (displaySong.album_links || []).filter((a: AlbumTrackInfo) => a.song_id === displaySong.id);
   }
+
+  // 同じ AlbumGroup (またはタイトル) でグループ化し、重複表示を防ぐ
+  const groupedAlbumsMap = new Map<string, { groupData: AlbumTrackInfo, editions: AlbumTrackInfo[] }>();
+  rawDisplayAlbums.forEach(albumLink => {
+    const key = albumLink.album.album_group_id ? String(albumLink.album.album_group_id) : albumLink.album.main_title;
+    if (!groupedAlbumsMap.has(key)) {
+      groupedAlbumsMap.set(key, { groupData: albumLink, editions: [] });
+    }
+    groupedAlbumsMap.get(key)!.editions.push(albumLink);
+  });
+  const displayAlbums = Array.from(groupedAlbumsMap.values());
 
   // Workクレジット（baseSongのwork情報を使用）
   const lyricists = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Lyricist').map((l: WorkArtistLink) => l.artist_name);
@@ -760,8 +771,36 @@ const SongDetail = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-            {displayAlbums.map((albumLink, idx) => (
-              <Link key={`${albumLink.album_id}-${albumLink.disc_number}-${albumLink.track_number}`} to={`/album-groups/${albumLink.album.album_group_id || albumLink.album_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            {displayAlbums.map(({ groupData: albumLink, editions }, idx) => {
+              const editionsMap = new Map<number, { album: AlbumMini, tracks: AlbumTrackInfo[] }>();
+              editions.forEach(t => {
+                if (!editionsMap.has(t.album_id)) {
+                  editionsMap.set(t.album_id, { album: t.album, tracks: [] });
+                }
+                editionsMap.get(t.album_id)!.tracks.push(t);
+              });
+              
+              const sortedEditions = Array.from(editionsMap.values()).sort((a, b) => {
+                const getScore = (title?: string) => {
+                  if (!title) return 1;
+                  const lower = title.toLowerCase();
+                  if (lower.includes('通常') || lower.includes('regular')) return 1;
+                  if (lower.includes('初回') || lower.includes('first press')) return 2;
+                  if (lower.includes('限定') || lower.includes('limited')) return 3;
+                  return 4;
+                };
+                const scoreA = getScore(a.album.version_title);
+                const scoreB = getScore(b.album.version_title);
+                if (scoreA !== scoreB) return scoreA - scoreB;
+                return (a.album.version_title || '').localeCompare(b.album.version_title || '');
+              });
+
+              const shortestMainTitle = sortedEditions.reduce((shortest, current) => {
+                  return current.album.main_title.length < shortest.length ? current.album.main_title : shortest;
+              }, sortedEditions[0].album.main_title);
+
+              return (
+              <Link key={`${albumLink.album_id}-${albumLink.disc_number}-${albumLink.track_number}-${idx}`} to={`/album-groups/${albumLink.album.album_group_id || albumLink.album_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
                   backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
                   border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)',
@@ -780,47 +819,44 @@ const SongDetail = () => {
                     width: '48px', height: '48px', backgroundColor: 'var(--bg-secondary)', 
                     borderRadius: '4px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0
                   }}>
-                    {albumLink.album.cover_image_url ? (
-                      <img src={albumLink.album.cover_image_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {(albumLink.album.cover_image_url || editions.find(e => e.album.cover_image_url)?.album.cover_image_url) ? (
+                      <img src={albumLink.album.cover_image_url || editions.find(e => e.album.cover_image_url)?.album.cover_image_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <Disc3 size={24} color="var(--text-secondary)" />
                     )}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: '1.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {albumLink.album.main_title}
+                      {shortestMainTitle}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      <span>Disc {albumLink.disc_number} - Track {albumLink.track_number}</span>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                      {sortedEditions.map(editionGroup => (
+                        <div key={editionGroup.album.id} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {editionGroup.album.version_title || '通常盤'}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {editionGroup.tracks
+                              .sort((a, b) => a.disc_number !== b.disc_number ? a.disc_number - b.disc_number : a.track_number - b.track_number)
+                              .map((t, i) => (
+                              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-tertiary)', padding: '4px 8px', borderRadius: '6px', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                                {t.is_video ? <Film size={12} color="#ff4d4d" /> : <Music size={12} color="#1DB954" />}
+                                D{t.disc_number}-T{t.track_number}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    {showAllAlbums && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: albumLink.is_video ? '#ff4d4d' : '#1DB954', marginTop: '4px', fontWeight: 600 }}>
-                        {albumLink.is_video ? <Film size={12} /> : <Music size={12} />}
-                        {albumLink.display_title || albumLink.song_title}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: 'auto' }}>
-                    <a 
-                      href={`https://www.amazon.co.jp/s?k=${encodeURIComponent(albumLink.album.main_title + ' CD')}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()} // Linkへの遷移を防ぐ
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        background: 'var(--warning-color)', color: '#fff', fontSize: '0.8rem', fontWeight: 'bold',
-                        padding: '6px 12px', borderRadius: '16px', textDecoration: 'none',
-                        border: '1px solid #E68A00'
-                      }}
-                    >
-                      🛒 Amazonで探す
-                    </a>
                   </div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
+            
             {displayAlbums.length === 0 && (
-              <div style={{ color: 'var(--text-tertiary)' }}>収録アルバム情報はありません。</div>
+              <div style={{ color: 'var(--text-tertiary)', gridColumn: '1 / -1' }}>収録アルバム情報はありません。</div>
             )}
           </div>
         </div>

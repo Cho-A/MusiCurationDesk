@@ -43,7 +43,8 @@ def get_recent_additions(db: Session = Depends(models.get_db)):
             "id": album.id,
             "title": album.main_title,
             "cover_image_url": album.cover_image_url,
-            "release_date": album.physical_release_date or album.digital_release_date
+            "release_date": album.physical_release_date or album.digital_release_date,
+            "album_group_id": album.album_group_id
         })
         
     songs_data = []
@@ -54,11 +55,21 @@ def get_recent_additions(db: Session = Depends(models.get_db)):
         elif song.work and song.work.artist_links:
             artist_name = song.work.artist_links[0].artist.name
             
+        cover_image_url = None
+        album_title = None
+        first_track = db.query(models.AlbumTrack).filter(models.AlbumTrack.song_id == song.id).first()
+        if first_track and first_track.album:
+            cover_image_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if first_track.album.album_group else None)
+            album_title = first_track.album.main_title
+
         songs_data.append({
             "id": song.id,
             "title": song.title,
             "artist_name": artist_name,
-            "created_at": song.created_at
+            "created_at": song.created_at,
+            "cover_image_url": cover_image_url,
+            "album_title": album_title,
+            "is_video": song.is_video
         })
 
     return {
@@ -184,7 +195,8 @@ def get_personal_recent_additions(
             "id": album.id,
             "title": album.main_title,
             "cover_image_url": album.cover_image_url,
-            "release_date": album.physical_release_date or album.digital_release_date
+            "release_date": album.physical_release_date or album.digital_release_date,
+            "album_group_id": album.album_group_id
         })
         
     songs_data = []
@@ -193,11 +205,21 @@ def get_personal_recent_additions(
         if song.artist_links:
             artist_name = song.artist_links[0].artist.name
             
+        cover_image_url = None
+        album_title = None
+        first_track = db.query(models.AlbumTrack).filter(models.AlbumTrack.song_id == song.id).first()
+        if first_track and first_track.album:
+            cover_image_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if first_track.album.album_group else None)
+            album_title = first_track.album.main_title
+
         songs_data.append({
             "id": song.id,
             "title": song.title,
             "artist_name": artist_name,
-            "created_at": song.created_at
+            "created_at": song.created_at,
+            "cover_image_url": cover_image_url,
+            "album_title": album_title,
+            "is_video": song.is_video
         })
 
     return {

@@ -217,9 +217,10 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
             # タグ (Tag)
             joinedload(models.Song.tags),
             
-            # アルバム情報 (AlbumTrack -> Album)
+            # アルバム情報 (AlbumTrack -> Album -> AlbumGroup)
             joinedload(models.Song.album_links)\
-                .joinedload(models.AlbumTrack.album),
+                .joinedload(models.AlbumTrack.album)\
+                .joinedload(models.Album.album_group),
                 
             # Workとそのクレジット情報
             joinedload(models.Song.work)\
@@ -236,7 +237,8 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
         all_songs_in_work = db.query(models.Song)\
             .options(
                 joinedload(models.Song.album_links)\
-                    .joinedload(models.AlbumTrack.album)
+                    .joinedload(models.AlbumTrack.album)\
+                    .joinedload(models.Album.album_group)
             )\
             .filter(models.Song.work_id == db_song.work_id).all()
             
@@ -244,6 +246,9 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
         other_versions = []
         for s in all_songs_in_work:
             for track in s.album_links:
+                # アルバムのカバー画像がない場合は、アルバムグループのカバー画像を継承する
+                if not track.album.cover_image_url and track.album.album_group and track.album.album_group.cover_image_url:
+                    track.album.cover_image_url = track.album.album_group.cover_image_url
                 combined_albums.append(track)
             if s.id != db_song.id:
                 other_versions.append(s)
@@ -258,6 +263,9 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
         song_model.other_versions = [schemas.SongMini.model_validate(s) for s in other_versions]
         return song_model
     else:
+        for track in db_song.album_links:
+            if not track.album.cover_image_url and track.album.album_group and track.album.album_group.cover_image_url:
+                track.album.cover_image_url = track.album.album_group.cover_image_url
         song_model = schemas.SongDetail.model_validate(db_song)
         song_model.other_versions = []
         return song_model
@@ -630,7 +638,15 @@ def merge_song(song_id: int, target_song_id: int = Query(...), db: Session = Dep
     if not target_song:
         raise HTTPException(status_code=404, detail="Target song not found.")
 
-    # Move AlbumTrack
+    perform_song_merge(db, source_song, target_song)
+    return {"message": "Successfully merged song.", "target_song_id": target_song_id}
+
+def perform_song_merge(db: Session, source_song: models.Song, target_song: models.Song):
+    """
+    指定された source_song を target_song に統合し、source_song を削除します。
+    """
+    target_song_id = target_song.id
+
     for album_link in list(source_song.album_links):
         existing = db.query(models.AlbumTrack).filter(
             models.AlbumTrack.album_id == album_link.album_id,
@@ -687,17 +703,32 @@ def merge_song(song_id: int, target_song_id: int = Query(...), db: Session = Dep
         if tag not in target_song.tags:
             target_song.tags.append(tag)
 
-    # Migrate identifiers
+    # Migrate identifiers (with flush to avoid UNIQUE constraint violation)
     if not target_song.spotify_song_id and source_song.spotify_song_id:
-        target_song.spotify_song_id = source_song.spotify_song_id
-        target_song.spotify_song_title = source_song.spotify_song_title
+        spotify_id = source_song.spotify_song_id
+        spotify_title = source_song.spotify_song_title
+        source_song.spotify_song_id = None
+        db.flush()
+        target_song.spotify_song_id = spotify_id
+        target_song.spotify_song_title = spotify_title
     
     if not target_song.jasrac_code and source_song.jasrac_code:
-        target_song.jasrac_code = source_song.jasrac_code
-        target_song.jasrac_title = source_song.jasrac_title
+        jasrac_code = source_song.jasrac_code
+        jasrac_title = source_song.jasrac_title
+        source_song.jasrac_code = None
+        db.flush()
+        target_song.jasrac_code = jasrac_code
+        target_song.jasrac_title = jasrac_title
 
     if not target_song.lyrics and source_song.lyrics:
         target_song.lyrics = source_song.lyrics
+
+    # Migrate boolean flags (Logical OR: if either is True, the merged song is True)
+    if source_song.is_streaming_available and not target_song.is_streaming_available:
+        target_song.is_streaming_available = True
+        
+    if source_song.is_video and not target_song.is_video:
+        target_song.is_video = True
 
     # 一度変更をコミットして、関連データの付け替えを確定させる
     # (これをしないと db.delete(source_song) 時に SQLAlchemy が FK を NULL にしてしまう)
@@ -706,5 +737,3 @@ def merge_song(song_id: int, target_song_id: int = Query(...), db: Session = Dep
     # Delete source song
     db.delete(source_song)
     db.commit()
-
-    return {"message": "Successfully merged song.", "target_song_id": target_song_id}

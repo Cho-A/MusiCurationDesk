@@ -3,6 +3,7 @@ import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPin, Music, Disc3 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import SongCard from '../components/SongCard';
 
 interface AlbumMini {
   id: number;
@@ -25,6 +26,8 @@ interface SongContribution {
   song_id: number;
   title: string;
   roles: string[];
+  cover_image_url?: string | null;
+  is_video?: boolean;
 }
 
 interface AliasInfo {
@@ -335,8 +338,8 @@ const ArtistDetail = () => {
       {/* Tab Content */}
       {activeTab === 'albums' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-          {(artist.albums || []).map(album => (
-            <Link key={album.id} to={`/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+          {Array.from(new Map((artist.albums || []).map(album => [album.album_group_id || `album_${album.id}`, album])).values()).map(album => (
+            <Link key={album.id} to={album.album_group_id ? `/album-groups/${album.album_group_id}` : `/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
               <div style={{
                 height: '100%',
                 background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
@@ -407,22 +410,15 @@ const ArtistDetail = () => {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {songs.map((contribution, idx) => (
-                  <Link key={`${contribution.song_id}-${idx}`} to={`/songs/${contribution.song_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{
-                      background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
-                      border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Music size={20} color="var(--primary-color)" />
-                        </div>
-                        <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{contribution.title}</div>
-                      </div>
-                    </div>
-                  </Link>
+                  <div key={`${contribution.song_id}-${idx}`} style={{ height: '100%' }}>
+                    <SongCard song={{
+                      id: contribution.song_id,
+                      title: contribution.title,
+                      cover_image_url: contribution.cover_image_url,
+                      is_video: contribution.is_video,
+                      role: role
+                    }} />
+                  </div>
                 ))}
               </div>
             </div>

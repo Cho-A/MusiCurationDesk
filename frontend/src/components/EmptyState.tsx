@@ -36,7 +36,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon: Icon = Info, title, descr
         <Icon size={32} color="var(--text-tertiary)" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.2rem', fontWeight: 600 }}>{title}</h3>
+        <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.2rem', fontWeight: 600, wordBreak: 'keep-all', overflowWrap: 'break-word', textWrap: 'balance' as any }}>{title}</h3>
         {description && <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{description}</p>}
       </div>
       {action && <div style={{ marginTop: '8px' }}>{action}</div>}

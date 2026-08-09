@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Music, Music2, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Music2, Clock } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
+import SongCard from '../components/SongCard';
 import EmptyState from '../components/EmptyState';
 
 interface AlbumMini {
@@ -22,6 +22,7 @@ interface Song {
   is_streaming_available?: boolean;
   primary_album?: AlbumMini | null;
   spotify_song_id?: string | null;
+  artist_links?: { artist_name: string }[];
 }
 
 interface SpotifyTrack {
@@ -123,78 +124,6 @@ const Songs = () => {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, searchMode]);
-
-  // 楽曲カードコンポーネント
-  const SongCard = ({ song }: { song: Song }) => (
-    <Link to={`/songs/${song.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
-      <div style={{
-        backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', padding: '16px',
-        display: 'flex', alignItems: 'center', gap: '16px',
-        transition: 'all 0.2s ease', cursor: 'pointer',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-        border: '1px solid var(--border-color)',
-        height: '100%',
-        boxSizing: 'border-box'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-      }}
-      >
-        {song.primary_album?.cover_image_url ? (
-          <img src={song.primary_album.cover_image_url} alt="Cover" style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} />
-        ) : (
-          <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Music size={20} color={song.is_video ? "#ff4d4d" : "#1DB954"} />
-          </div>
-        )}
-        
-        <div style={{ overflow: 'hidden', flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span style={{
-              fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
-              background: song.is_video ? 'rgba(255, 77, 77, 0.15)' : 'rgba(29, 185, 84, 0.15)',
-              color: song.is_video ? '#ff4d4d' : '#1DB954',
-              border: `1px solid ${song.is_video ? 'rgba(255, 77, 77, 0.3)' : 'rgba(29, 185, 84, 0.3)'}`,
-              flexShrink: 0, whiteSpace: 'nowrap'
-            }}>
-              {song.is_video ? '映像' : '音源'}
-            </span>
-            <div style={{ fontWeight: 600, fontSize: '1.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {song.title}
-              {!song.is_video && song.is_streaming_available === false && (
-                <span style={{color: 'var(--error-color)', fontSize: '0.75rem', border: '1px solid #ff4d4d', padding: '2px 4px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
-                  サブスク未解禁
-                </span>
-              )}
-            </div>
-          </div>
-          
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {song.version_name && (
-              <span style={{ 
-                color: 'var(--text-primary)',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }} title={song.version_name}>
-                {song.version_name}
-              </span>
-            )}
-            <span style={{ fontSize: '0.8rem' }}>
-              {song.primary_album ? `収録: ${song.primary_album.main_title}` : 'アルバム未収録'}
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
 
   return (
     <div style={{ padding: '48px 32px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -316,7 +245,16 @@ const Songs = () => {
               </h2>
               {searchResults.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                  {searchResults.map((song: Song) => <SongCard key={song.id} song={song} />)}
+                  {searchResults.map(song => (
+                    <div key={song.id} style={{ height: '100%' }}>
+                      <SongCard song={{
+                        ...song,
+                        cover_image_url: song.primary_album?.cover_image_url,
+                        album_title: song.primary_album?.main_title,
+                        artist_name: song.artist_links && song.artist_links.length > 0 ? song.artist_links[0].artist_name : 'Unknown Artist'
+                      }} />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div style={{ color: 'var(--text-tertiary)', padding: '24px' }}>見つかりませんでした。Spotifyタブから検索して追加してください。</div>
@@ -330,7 +268,16 @@ const Songs = () => {
               </h2>
               {songs.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                  {songs.map((song: Song) => <SongCard key={song.id} song={song} />)}
+                  {songs.map(song => (
+                    <div key={song.id} style={{ height: '100%' }}>
+                      <SongCard song={{
+                        ...song,
+                        cover_image_url: song.primary_album?.cover_image_url,
+                        album_title: song.primary_album?.main_title,
+                        artist_name: song.artist_links && song.artist_links.length > 0 ? song.artist_links[0].artist_name : 'Unknown Artist'
+                      }} />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <EmptyState icon={Music2} title="楽曲が見つかりませんでした" description="別のキーワードで検索するか、新しく楽曲を追加してください。" />

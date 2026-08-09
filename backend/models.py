@@ -216,10 +216,20 @@ class Artist(Base):
             song_id = link.song_id
 
             if song_id not in contributions_map:
+                # Find cover image URL if available
+                cover_image_url = None
+                if link.song.album_links:
+                    for album_link in link.song.album_links:
+                        if album_link.album and album_link.album.cover_image_url:
+                            cover_image_url = album_link.album.cover_image_url
+                            break
+                            
                 contributions_map[song_id] = {
                     "song_id": song_id,
                     "title": link.song.title,
-                    "roles": [],  # 新しい役割リスト
+                    "roles": [],
+                    "cover_image_url": cover_image_url,
+                    "is_video": link.song.is_video
                 }
 
             # 役割をリストに追加
@@ -514,6 +524,7 @@ class Album(Base):
     spotify_album_id = Column(String(100), nullable=True, unique=True)
     cover_image_url = Column(String(500), nullable=True)
     album_type = Column(String(50), nullable=True)  # "album", "single", "compilation", "dvd", etc.
+    media_format = Column(String(50), default="CD", nullable=False)  # "CD", "Digital", "Vinyl", "Cassette", "DVD/BD", "Other"
 
     artist = relationship("Artist", back_populates="albums")
     album_group = relationship("AlbumGroup", back_populates="albums")

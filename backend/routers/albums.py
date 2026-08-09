@@ -331,6 +331,10 @@ def update_album(
     if not album:
         raise HTTPException(status_code=404, detail="対象のアルバムが見つかりません。")
         
+    
+    old_album_group_id = album.album_group_id
+    group_changed = False
+    
     if request.main_title is not None: album.main_title = request.main_title
     if request.version_title is not None: album.version_title = request.version_title
     if request.artist_id is not None: album.artist_id = request.artist_id
@@ -340,8 +344,31 @@ def update_album(
     if request.cover_image_url is not None: album.cover_image_url = request.cover_image_url
     if request.album_type is not None: album.album_type = request.album_type
     
+    if request.album_group_id is not None and request.album_group_id != album.album_group_id:
+        # verify the target album_group_id exists
+        target_group = db.query(models.AlbumGroup).filter(models.AlbumGroup.id == request.album_group_id).first()
+        if not target_group:
+            raise HTTPException(status_code=400, detail="Target AlbumGroup not found.")
+        album.album_group_id = request.album_group_id
+        group_changed = True
+        
+        # アルバムグループのカバー画像がない場合、マージされるアルバムのカバー画像を継承する
+        if not target_group.cover_image_url and album.cover_image_url:
+            target_group.cover_image_url = album.cover_image_url
+            db.add(target_group)
+    
     db.commit()
     db.refresh(album)
+    
+    # cleanup old group if empty
+    if group_changed and old_album_group_id is not None:
+        remaining = db.query(models.Album).filter(models.Album.album_group_id == old_album_group_id).count()
+        if remaining == 0:
+            old_group = db.query(models.AlbumGroup).filter(models.AlbumGroup.id == old_album_group_id).first()
+            if old_group:
+                db.delete(old_group)
+                db.commit()
+                
     return album
 
 
@@ -372,3 +399,99 @@ def update_album_disc(
     db.commit()
     db.refresh(disc)
     return disc
+
+# [DELETE] /albums/{album_id}
+# ----------------------------------------------------
+@router.delete("/albums/{album_id}", tags=["Albums"])
+def delete_album(
+    album_id: int,
+    db: Session = Depends(models.get_db)
+):
+    """
+    特定のアルバム（エディション）を削除します。
+    """
+    album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    if not album:
+        raise HTTPException(status_code=404, detail="対象のアルバムが見つかりません。")
+        
+    old_album_group_id = album.album_group_id
+    
+    # 紐づくAlbumTrackとAlbumDiscを削除
+    db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == album.id).delete()
+    db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album.id).delete()
+    
+    # Album自身を削除
+    db.delete(album)
+    db.commit()
+    
+    # 所属していたAlbumGroupが空になった場合は削除
+    if old_album_group_id:
+        remaining = db.query(models.Album).filter(models.Album.album_group_id == old_album_group_id).count()
+        if remaining == 0:
+            old_group = db.query(models.AlbumGroup).filter(models.AlbumGroup.id == old_album_group_id).first()
+            if old_group:
+                db.delete(old_group)
+                db.commit()
+                
+    return {"status": "success"}
+# [POST] /albums/{album_id}/discs/{disc_number}/merge
+# ----------------------------------------------------
+@router.post("/albums/{album_id}/discs/{disc_number}/merge", tags=["Albums"])
+def bulk_merge_disc(
+    album_id: int,
+    disc_number: int,
+    request: schemas.BulkDiscMergeRequest,
+    db: Session = Depends(models.get_db)
+):
+    """
+    指定されたディスク（album_id, disc_number）に含まれるすべてのトラックを、
+    別のエディション（target_album_id）の楽曲に一括統合します。
+    target_disc_number が指定されている場合はそのディスク内で、未指定の場合は全ディスクから
+    曲名とバージョン名が一致するものを探してマージします。
+    """
+    from backend.routers.songs import perform_song_merge
+
+    source_tracks = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number == disc_number
+    ).all()
+
+    query = db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == request.target_album_id)
+    if request.target_disc_number is not None:
+        query = query.filter(models.AlbumTrack.disc_number == request.target_disc_number)
+    target_tracks = query.all()
+
+    if not source_tracks:
+        raise HTTPException(status_code=404, detail="Source tracks not found.")
+    if not target_tracks:
+        raise HTTPException(status_code=404, detail="Target tracks not found.")
+
+    merged_count = 0
+    skipped_count = 0
+
+    for s_track in source_tracks:
+        source_song = db.query(models.Song).filter(models.Song.id == s_track.song_id).first()
+        if not source_song:
+            continue
+            
+        s_title = source_song.title.lower().replace(" ", "").replace("　", "")
+        match_found = False
+
+        for t_track in target_tracks:
+            target_song = db.query(models.Song).filter(models.Song.id == t_track.song_id).first()
+            if target_song and source_song.id != target_song.id:
+                t_title = target_song.title.lower().replace(" ", "").replace("　", "")
+                if s_title == t_title and source_song.version_name == target_song.version_name:
+                    perform_song_merge(db, source_song, target_song)
+                    merged_count += 1
+                    match_found = True
+                    break # Stop searching target tracks once matched
+        
+        if not match_found:
+            skipped_count += 1
+
+    return {
+        "message": f"Successfully merged {merged_count} tracks.",
+        "merged_count": merged_count,
+        "skipped_count": skipped_count
+    }

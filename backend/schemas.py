@@ -37,8 +37,10 @@ class AliasInfo(BaseModel):
 # --- Song Contribution (楽曲貢献情報) ---
 class SongContribution(BaseModel):
     song_id: int
-    title: str  # 楽曲名
-    roles: list[str]  # 役割 (Composer, Vocalist, etc.)
+    title: str
+    roles: list[str]
+    cover_image_url: str | None = None
+    is_video: bool = False
 
     class Config:
         from_attributes = True
@@ -272,6 +274,8 @@ class TieupLinkInfo(BaseModel):
     class Config:
         from_attributes = True
 
+from pydantic import BaseModel, Field, model_validator
+
 class AlbumMini(BaseModel):
     id: int
     main_title: str
@@ -279,6 +283,16 @@ class AlbumMini(BaseModel):
     cover_image_url: str | None = None
     album_type: str | None = None
     album_group_id: int | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def set_cover_image_url(cls, data: any) -> any:
+        if isinstance(data, dict):
+            if not data.get("cover_image_url") and data.get("album_group"):
+                data["cover_image_url"] = data["album_group"].get("cover_image_url")
+        elif hasattr(data, 'cover_image_url') and not data.cover_image_url and hasattr(data, 'album_group') and data.album_group:
+            data.cover_image_url = data.album_group.cover_image_url
+        return data
 
     class Config:
         from_attributes = True
@@ -587,6 +601,7 @@ class AlbumCreate(BaseModel):
     spotify_album_id: str | None = None
     cover_image_url: str | None = None
     album_type: str | None = None
+    media_format: str | None = "CD"
 
 
 class AlbumUpdate(BaseModel):
@@ -599,6 +614,7 @@ class AlbumUpdate(BaseModel):
     spotify_album_id: str | None = None
     cover_image_url: str | None = None
     album_type: str | None = None
+    media_format: str | None = None
 
 class Album(BaseModel):
     id: int
@@ -611,9 +627,18 @@ class Album(BaseModel):
     spotify_album_id: str | None = None
     cover_image_url: str | None = None
     album_type: str | None = None
+    media_format: str | None = "CD"
 
     class Config:
         from_attributes = True
+
+class BulkDiscMergeRequest(BaseModel):
+    target_album_id: int
+    target_disc_number: int | None = None
+
+class BulkEditionMergeRequest(BaseModel):
+    target_album_id: int
+    source_album_ids: list[int]
 
 class AlbumDiscUpdate(BaseModel):
     title: str | None = None
@@ -670,6 +695,12 @@ class AlbumGroupUpdate(BaseModel):
 
 class AlbumGroup(AlbumGroupBase):
     id: int
+
+    class Config:
+        from_attributes = True
+
+class AlbumGroupWithArtist(AlbumGroup):
+    artist: ArtistMini | None = None
 
     class Config:
         from_attributes = True
