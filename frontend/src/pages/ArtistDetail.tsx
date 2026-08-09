@@ -4,6 +4,7 @@ import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPi
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import SongCard from '../components/SongCard';
+import type { SongCardData } from '../types/models';
 
 interface AlbumMini {
   id: number;
@@ -410,14 +411,18 @@ const ArtistDetail = () => {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {songs.map((contribution, idx) => (
-                  <div key={`${contribution.song_id}-${idx}`} style={{ height: '100%' }}>
-                    <SongCard song={{
-                      id: contribution.song_id,
-                      title: contribution.title,
-                      cover_image_url: contribution.cover_image_url,
-                      is_video: contribution.is_video,
-                      role: role
-                    }} />
+                  <div key={idx} style={{ height: '100%' }}>
+                    <SongCard 
+                      song={{
+                        id: contribution.song_id,
+                        title: contribution.title,
+                        role: contribution.roles.join(', '),
+                        cover_image_url: contribution.cover_image_url,
+                        is_video: contribution.is_video || false,
+                        is_streaming_available: true,
+                        artist_name: artist.name
+                      } as SongCardData}
+                    />
                   </div>
                 ))}
               </div>

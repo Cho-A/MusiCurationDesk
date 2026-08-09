@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Music, Disc, Mic2, Calendar, Play, Sparkles, Headphones } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/PageHeader';
-import AlbumCard, { type Album } from '../components/AlbumCard';
+import AlbumCard from '../components/AlbumCard';
 import SongCard from '../components/SongCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+
+import type { AlbumCardData, SongCardData } from '../types/models';
 
 interface DashboardStats {
   total_songs?: number;
@@ -15,21 +17,6 @@ interface DashboardStats {
   total_performances?: number;
   total_songs_experienced?: number;
   unique_songs_experienced?: number;
-}
-
-interface RecentAlbum {
-  id: number;
-  title: string;
-  cover_image_url: string | null;
-  release_date: string | null;
-  album_group_id?: number;
-}
-
-interface RecentSong {
-  id: number;
-  title: string;
-  artist_name: string;
-  created_at: string;
 }
 
 interface RandomDiscovery {
@@ -43,8 +30,8 @@ const Dashboard = () => {
   const { isAuthenticated, token, user } = useAuth();
   
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentAlbums, setRecentAlbums] = useState<RecentAlbum[]>([]);
-  const [recentSongs, setRecentSongs] = useState<RecentSong[]>([]);
+  const [recentAlbums, setRecentAlbums] = useState<AlbumCardData[]>([]);
+  const [recentSongs, setRecentSongs] = useState<SongCardData[]>([]);
   const [discovery, setDiscovery] = useState<RandomDiscovery | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -166,7 +153,7 @@ const Dashboard = () => {
           }}>
             {recentAlbums.length > 0 ? Array.from(new Map(recentAlbums.map(album => [album.album_group_id || `album_${album.id}`, album])).values()).map(album => (
               <div key={album.id} style={{ minWidth: '200px', maxWidth: '200px' }}>
-                <AlbumCard album={album as unknown as Album} layout="vertical" />
+                <AlbumCard album={album} layout="vertical" />
               </div>
             )) : (
               <EmptyState title="最近追加されたアルバムがありません" description="新しくアルバムを追加してください。" />

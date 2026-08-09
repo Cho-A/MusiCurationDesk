@@ -27,28 +27,17 @@ const FallbackCover = ({ title, size }: { title: string; size: string | number }
   </div>
 );
 
-export interface Album {
-  id: number;
-  title?: string;
-  main_title?: string;
-  version_title?: string;
-  cover_image_url?: string;
-  release_date?: string;
-  physical_release_date?: string;
-  digital_release_date?: string;
-  artist_names?: string[];
-  album_group_id?: number;
-}
+import type { AlbumCardData } from '../types/models';
 
 interface AlbumCardProps {
-  album: Album;
+  album: AlbumCardData;
   layout?: 'vertical' | 'horizontal';
   to?: string;
 }
 
 const AlbumCard: React.FC<AlbumCardProps> = ({ album, layout = 'vertical', to }) => {
-  const displayTitle = album.title || album.main_title || 'Unknown Album';
-  const displayDate = album.release_date || album.physical_release_date || album.digital_release_date || '不明なリリース日';
+  const displayTitle = album.main_title || 'Unknown Album';
+  const displayDate = album.release_date || '不明なリリース日';
 
   if (layout === 'horizontal') {
     return (

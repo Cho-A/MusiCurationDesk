@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, List, Optional
 from datetime import date, datetime, time
+from pydantic import BaseModel, Field, EmailStr, model_validator
 from datetime import date as dt_date, time as dt_time  # aliases for PerformanceUpdate field collision
-
-from pydantic import BaseModel, EmailStr, Field
 
 # --- Artist (アーティスト) ---
 
@@ -250,6 +249,85 @@ class ArtistLinkInfo(BaseModel):
     class Config:
         from_attributes = True
 
+class AlbumCardData(BaseModel):
+    id: int
+    main_title: str
+    version_title: str | None = None
+    cover_image_url: str | None = None
+    release_date: str | None = None
+    artist_names: list[str] | None = None
+    album_group_id: int | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def extract_fields(cls, data: any) -> any:
+        if isinstance(data, dict):
+            return data
+        
+        # SQLAlchemy ORM fallback extraction
+        return {
+            "id": data.id,
+            "main_title": data.main_title,
+            "version_title": getattr(data, 'version_title', None),
+            "cover_image_url": data.cover_image_url or (data.album_group.cover_image_url if getattr(data, 'album_group', None) else None),
+            "release_date": getattr(data, 'physical_release_date', None) or getattr(data, 'digital_release_date', None),
+            "artist_names": [link.artist.name for link in data.artist_links] if getattr(data, 'artist_links', None) else [],
+            "album_group_id": getattr(data, 'album_group_id', None)
+        }
+
+    class Config:
+        from_attributes = True
+
+class SongCardData(BaseModel):
+    id: int
+    title: str
+    artist_name: str | None = None
+    cover_image_url: str | None = None
+    is_video: bool = False
+    role: str | None = None
+    album_title: str | None = None
+    version_name: str | None = None
+    is_streaming_available: bool = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def extract_fields(cls, data: any) -> any:
+        if isinstance(data, dict):
+            return data
+            
+        # SQLAlchemy ORM fallback extraction
+        artist_name = "Unknown Artist"
+        if getattr(data, 'artist_links', None):
+            artist_name = data.artist_links[0].artist.name
+        elif getattr(data, 'work', None) and getattr(data.work, 'artist_links', None):
+            artist_name = data.work.artist_links[0].artist.name
+
+        cover_url = None
+        album_title = None
+        # This part assumes first_track is passed or eagerly loaded, else it might cause lazy load
+        # To avoid lazy load N+1, it's better if routers pass dicts or ensure eager loading
+        if getattr(data, 'album_tracks', None):
+            first_track = data.album_tracks[0] if data.album_tracks else None
+            if first_track and first_track.album:
+                cover_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if first_track.album.album_group else None)
+                album_title = first_track.album.main_title
+
+        return {
+            "id": data.id,
+            "title": data.title,
+            "artist_name": artist_name,
+            "cover_image_url": cover_url,
+            "is_video": getattr(data, 'is_video', False),
+            "role": None, # Should be explicitly passed if needed
+            "album_title": album_title,
+            "version_name": getattr(data, 'version_name', None),
+            "is_streaming_available": getattr(data, 'is_streaming_available', True)
+        }
+
+    class Config:
+        from_attributes = True
+
+
 
 class WorkArtistLinkInfo(BaseModel):
     artist_id: int
@@ -274,7 +352,7 @@ class TieupLinkInfo(BaseModel):
     class Config:
         from_attributes = True
 
-from pydantic import BaseModel, Field, model_validator
+
 
 class AlbumMini(BaseModel):
     id: int

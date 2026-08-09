@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
 from typing import List, Dict, Any
 from sqlalchemy.orm import joinedload
+from pydantic import BaseModel
 from .. import models, schemas, dependencies
+
+class DashboardRecentResponse(BaseModel):
+    recent_albums: List[schemas.AlbumCardData]
+    recent_songs: List[schemas.SongCardData]
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -24,57 +29,23 @@ def get_dashboard_stats(db: Session = Depends(models.get_db)):
     }
 
 
-@router.get("/recent")
+@router.get("/recent", response_model=DashboardRecentResponse)
 def get_recent_additions(db: Session = Depends(models.get_db)):
     """最近追加されたアルバムと楽曲を取得する"""
-    # 最近追加されたアルバム (10件)
-    recent_albums = db.query(models.Album).order_by(models.Album.id.desc()).limit(10).all()
+    recent_albums = db.query(models.Album).options(
+        joinedload(models.Album.artist_links).joinedload(models.AlbumArtistLink.artist),
+        joinedload(models.Album.album_group)
+    ).order_by(models.Album.id.desc()).limit(10).all()
     
-    # 最近追加された楽曲 (10件)
     recent_songs = db.query(models.Song).options(
         joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
-        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist)
+        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist),
+        joinedload(models.Song.album_tracks).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
     ).order_by(models.Song.id.desc()).limit(10).all()
     
-    # 返却用に整形
-    albums_data = []
-    for album in recent_albums:
-        albums_data.append({
-            "id": album.id,
-            "title": album.main_title,
-            "cover_image_url": album.cover_image_url,
-            "release_date": album.physical_release_date or album.digital_release_date,
-            "album_group_id": album.album_group_id
-        })
-        
-    songs_data = []
-    for song in recent_songs:
-        artist_name = "Unknown Artist"
-        if song.artist_links:
-            artist_name = song.artist_links[0].artist.name
-        elif song.work and song.work.artist_links:
-            artist_name = song.work.artist_links[0].artist.name
-            
-        cover_image_url = None
-        album_title = None
-        first_track = db.query(models.AlbumTrack).filter(models.AlbumTrack.song_id == song.id).first()
-        if first_track and first_track.album:
-            cover_image_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if first_track.album.album_group else None)
-            album_title = first_track.album.main_title
-
-        songs_data.append({
-            "id": song.id,
-            "title": song.title,
-            "artist_name": artist_name,
-            "created_at": song.created_at,
-            "cover_image_url": cover_image_url,
-            "album_title": album_title,
-            "is_video": song.is_video
-        })
-
     return {
-        "recent_albums": albums_data,
-        "recent_songs": songs_data
+        "recent_albums": recent_albums,
+        "recent_songs": recent_songs
     }
 
 
@@ -150,7 +121,7 @@ def get_personal_dashboard_stats(
         "unique_songs_experienced": unique_songs_experienced
     }
 
-@router.get("/recent/me")
+@router.get("/recent/me", response_model=DashboardRecentResponse)
 def get_personal_recent_additions(
     db: Session = Depends(models.get_db),
     current_user: models.User = Depends(dependencies.get_current_user)
@@ -178,52 +149,25 @@ def get_personal_recent_additions(
         # 関心アーティストがいない場合は全体の recent を返す
         return get_recent_additions(db)
         
-    recent_albums = db.query(models.Album).filter(
+    recent_albums = db.query(models.Album).options(
+        joinedload(models.Album.artist_links).joinedload(models.AlbumArtistLink.artist),
+        joinedload(models.Album.album_group)
+    ).filter(
         models.Album.artist_id.in_(artist_ids_list)
     ).order_by(models.Album.id.desc()).limit(10).all()
     
     # 3. アーティストに紐づく最近の楽曲を取得 (最大10件)
-    recent_songs = db.query(models.Song).join(
+    recent_songs = db.query(models.Song).options(
+        joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
+        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist),
+        joinedload(models.Song.album_tracks).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
+    ).join(
         models.SongArtistLink, models.Song.id == models.SongArtistLink.song_id
     ).filter(
         models.SongArtistLink.artist_id.in_(artist_ids_list)
     ).order_by(models.Song.id.desc()).limit(10).all()
     
-    albums_data = []
-    for album in recent_albums:
-        albums_data.append({
-            "id": album.id,
-            "title": album.main_title,
-            "cover_image_url": album.cover_image_url,
-            "release_date": album.physical_release_date or album.digital_release_date,
-            "album_group_id": album.album_group_id
-        })
-        
-    songs_data = []
-    for song in recent_songs:
-        artist_name = "Unknown Artist"
-        if song.artist_links:
-            artist_name = song.artist_links[0].artist.name
-            
-        cover_image_url = None
-        album_title = None
-        first_track = db.query(models.AlbumTrack).filter(models.AlbumTrack.song_id == song.id).first()
-        if first_track and first_track.album:
-            cover_image_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if first_track.album.album_group else None)
-            album_title = first_track.album.main_title
-
-        songs_data.append({
-            "id": song.id,
-            "title": song.title,
-            "artist_name": artist_name,
-            "created_at": song.created_at,
-            "cover_image_url": cover_image_url,
-            "album_title": album_title,
-            "is_video": song.is_video
-        })
-
     return {
-        "recent_albums": albums_data,
-        "recent_songs": songs_data
+        "recent_albums": recent_albums,
+        "recent_songs": recent_songs
     }
-

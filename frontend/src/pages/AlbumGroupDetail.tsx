@@ -640,9 +640,11 @@ const AlbumGroupDetail = () => {
                   ))}
                 </select>
             ) : (
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--accent-primary)', margin: 0 }}>
-                {album?.version_title || '通常盤'}
-              </h2>
+              (album?.version_title && album.version_title !== '通常盤') ? (
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--accent-primary)', margin: 0 }}>
+                  {album.version_title}
+                </h2>
+              ) : null
             )}
             {album && (
               <button 

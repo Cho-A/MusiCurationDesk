@@ -4,26 +4,7 @@ import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
 import SongCard from '../components/SongCard';
 import EmptyState from '../components/EmptyState';
-
-interface AlbumMini {
-  id: number;
-  main_title: string;
-  cover_image_url?: string;
-  album_group_id?: number;
-}
-
-interface Song {
-  id: number;
-  title: string;
-  release_date?: string;
-  jasrac_code?: string;
-  is_video?: boolean;
-  version_name?: string;
-  is_streaming_available?: boolean;
-  primary_album?: AlbumMini | null;
-  spotify_song_id?: string | null;
-  artist_links?: { artist_name: string }[];
-}
+import type { SongCardData } from '../types/models';
 
 interface SpotifyTrack {
   spotify_id: string;
@@ -34,11 +15,11 @@ interface SpotifyTrack {
 }
 
 const Songs = () => {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<SongCardData[]>([]);
   const [, setLoading] = useState(true);
   const [searchMode, setSearchMode] = useState<'local' | 'spotify'>('local');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Song[]>([]);
+  const [searchResults, setSearchResults] = useState<SongCardData[]>([]);
   const [spotifyResults, setSpotifyResults] = useState<SpotifyTrack[]>([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [importingTrackId, setImportingTrackId] = useState<string | null>(null);
@@ -247,12 +228,7 @@ const Songs = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                   {searchResults.map(song => (
                     <div key={song.id} style={{ height: '100%' }}>
-                      <SongCard song={{
-                        ...song,
-                        cover_image_url: song.primary_album?.cover_image_url,
-                        album_title: song.primary_album?.main_title,
-                        artist_name: song.artist_links && song.artist_links.length > 0 ? song.artist_links[0].artist_name : 'Unknown Artist'
-                      }} />
+                      <SongCard song={song} />
                     </div>
                   ))}
                 </div>
@@ -270,12 +246,7 @@ const Songs = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
                   {songs.map(song => (
                     <div key={song.id} style={{ height: '100%' }}>
-                      <SongCard song={{
-                        ...song,
-                        cover_image_url: song.primary_album?.cover_image_url,
-                        album_title: song.primary_album?.main_title,
-                        artist_name: song.artist_links && song.artist_links.length > 0 ? song.artist_links[0].artist_name : 'Unknown Artist'
-                      }} />
+                      <SongCard song={song} />
                     </div>
                   ))}
                 </div>

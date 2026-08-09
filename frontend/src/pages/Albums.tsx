@@ -65,7 +65,7 @@ const Albums = () => {
               id: group.id,
               main_title: group.title,
               cover_image_url: group.cover_image_url,
-              physical_release_date: group.release_date
+              release_date: group.release_date
             }} layout="vertical" to={`/album-groups/${group.id}`} />
           ))}
         </div>

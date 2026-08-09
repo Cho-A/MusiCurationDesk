@@ -2,18 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Music } from 'lucide-react';
 
+import type { SongCardData } from '../types/models';
+
 export interface SongCardProps {
-  song: {
-    id: number | string;
-    title: string;
-    artist_name?: string;
-    cover_image_url?: string | null;
-    is_video?: boolean;
-    role?: string; // used in ArtistDetail
-    album_title?: string | null;
-    version_name?: string | null;
-    is_streaming_available?: boolean;
-  };
+  song: SongCardData;
   onClick?: () => void;
   isDashboard?: boolean;
 }
