@@ -58,6 +58,7 @@ interface AlbumTrack {
   display_title?: string;
   notes?: string;
   media_format?: string;
+  is_unreleased?: boolean;
   song: SongMini;
 }
 
@@ -808,7 +809,7 @@ const AlbumGroupDetail = () => {
                 {tracks.sort((a, b) => a.track_number - b.track_number).map((track) => {
                   // 映像フォーマット（Blu-ray/DVD）か、曲自体が映像フラグを持っている場合はサブスク未解禁フラグを出さない
                   const isVideoTrack = track.song.is_video || (track.media_format && ['Blu-ray', 'DVD'].includes(track.media_format));
-                  const isUnreleased = !isVideoTrack && (track.song.spotify_song_id === null || track.song.is_streaming_available === false);
+                  const isUnreleased = !isVideoTrack && (track.song.spotify_song_id === null || track.song.is_streaming_available === false || track.is_unreleased === true);
                   
                   return (
                     <div key={track.id} style={{ textDecoration: 'none', color: 'inherit' }}>

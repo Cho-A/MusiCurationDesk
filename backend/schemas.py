@@ -149,6 +149,7 @@ class Song(BaseModel):
     work_id: int | None = None
     is_video: bool = False
     version_name: str | None = None
+    is_streaming_available: bool = True
     
     # 検索一覧などでアーティスト情報を表示できるように追加
     artists: list["ArtistLinkInfo"] = Field(
@@ -264,13 +265,16 @@ class AlbumCardData(BaseModel):
         if isinstance(data, dict):
             return data
         
+        raw_date = getattr(data, 'physical_release_date', None) or getattr(data, 'digital_release_date', None)
+        str_date = raw_date.isoformat() if hasattr(raw_date, 'isoformat') else str(raw_date) if raw_date else None
+
         # SQLAlchemy ORM fallback extraction
         return {
             "id": data.id,
             "main_title": data.main_title,
             "version_title": getattr(data, 'version_title', None),
             "cover_image_url": data.cover_image_url or (data.album_group.cover_image_url if getattr(data, 'album_group', None) else None),
-            "release_date": getattr(data, 'physical_release_date', None) or getattr(data, 'digital_release_date', None),
+            "release_date": str_date,
             "artist_names": [link.artist.name for link in data.artist_links] if getattr(data, 'artist_links', None) else [],
             "album_group_id": getattr(data, 'album_group_id', None)
         }
@@ -304,12 +308,11 @@ class SongCardData(BaseModel):
 
         cover_url = None
         album_title = None
-        # This part assumes first_track is passed or eagerly loaded, else it might cause lazy load
         # To avoid lazy load N+1, it's better if routers pass dicts or ensure eager loading
-        if getattr(data, 'album_tracks', None):
-            first_track = data.album_tracks[0] if data.album_tracks else None
+        if getattr(data, 'album_links', None):
+            first_track = data.album_links[0] if data.album_links else None
             if first_track and first_track.album:
-                cover_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if first_track.album.album_group else None)
+                cover_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if getattr(first_track.album, 'album_group', None) else None)
                 album_title = first_track.album.main_title
 
         return {
