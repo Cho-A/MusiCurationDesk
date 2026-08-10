@@ -1244,8 +1244,8 @@ const AlbumGroupDetail = () => {
               <button 
                 onClick={handleEditionDelete}
                 style={{ 
-                  background: 'none', border: '1px solid var(--danger-color)', color: 'var(--danger-color)',
-                  padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
+                  background: 'none', border: '1px solid var(--error-color)', color: 'var(--error-color)',
+                  padding: '8px 16px', borderRadius: '24px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'
                 }}
               >
                 このエディションを削除
@@ -1317,7 +1317,6 @@ const AlbumGroupDetail = () => {
                 onClick={handleBulkMergeSubmit} 
                 variant="primary" 
                 disabled={!bulkMergeTargetAlbumId || bulkMergeLoading}
-                style={{ backgroundColor: 'var(--danger-color)' }}
               >
                 {bulkMergeLoading ? '統合中...' : '一括統合を実行'}
               </Button>
@@ -1409,7 +1408,6 @@ const AlbumGroupDetail = () => {
                 onClick={handleGroupMergeSubmit} 
                 variant="primary" 
                 disabled={!groupMergeTargetId || groupMergeSourceIds.length === 0 || bulkMergeLoading}
-                style={{ backgroundColor: 'var(--danger-color)' }}
               >
                 {bulkMergeLoading ? '統合中...' : '一括統合を実行'}
               </Button>
