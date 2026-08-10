@@ -840,9 +840,14 @@ const SongDetail = () => {
                             {editionGroup.tracks
                               .sort((a, b) => a.disc_number !== b.disc_number ? a.disc_number - b.disc_number : a.track_number - b.track_number)
                               .map((t, i) => (
-                              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-tertiary)', padding: '4px 8px', borderRadius: '6px', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-tertiary)', padding: '4px 8px', borderRadius: '6px', whiteSpace: 'nowrap', fontWeight: 500 }} title={t.display_title || t.song_title || ''}>
                                 {t.is_video ? <Film size={12} color="#ff4d4d" /> : <Music size={12} color="#1DB954" />}
                                 D{t.disc_number}-T{t.track_number}
+                                {(t.display_title || (t.song_title && t.song_title !== displaySong.title)) && (
+                                  <span style={{ fontSize: '0.75rem', opacity: 0.8, marginLeft: '4px', fontWeight: 'normal' }}>
+                                    {t.display_title || t.song_title}
+                                  </span>
+                                )}
                               </span>
                             ))}
                           </div>
