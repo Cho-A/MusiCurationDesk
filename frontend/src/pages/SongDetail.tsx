@@ -67,6 +67,7 @@ interface OtherVersion {
   is_streaming_available?: boolean;
   spotify_song_title?: string;
   album_links?: AlbumTrackInfo[]; // 実際のAPIではother_versionsにはalbum_linksが含まれないかもしれない。必要ならAPI改修が必要。
+  primary_album_title?: string;
 }
 
 interface SongDetailData {
@@ -83,6 +84,7 @@ interface SongDetailData {
   album_links?: AlbumTrackInfo[];
   tags?: TagData[];
   other_versions?: OtherVersion[];
+  primary_album_title?: string;
   work_id?: number;
   work?: { 
     id: number; 
@@ -847,9 +849,14 @@ const SongDetail = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
                       {sortedEditions.map(editionGroup => (
                         <div key={editionGroup.album.id} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {editionGroup.album.version_title || '通常盤'}
-                          </div>
+                          {(() => {
+                            const title = editionGroup.album.version_title || (sortedEditions.length > 1 ? '通常盤' : null);
+                            return title ? (
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {title}
+                              </div>
+                            ) : null;
+                          })()}
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {editionGroup.tracks
                               .sort((a, b) => a.disc_number !== b.disc_number ? a.disc_number - b.disc_number : a.track_number - b.track_number)

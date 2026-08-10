@@ -152,6 +152,7 @@ class Song(BaseModel):
     version_name: str | None = None
     is_streaming_available: bool = True
     track_category: str | None = None
+    primary_album_title: Optional[str] = None
     
     # 検索一覧などでアーティスト情報を表示できるように追加
     artists: list["ArtistLinkInfo"] = Field(
@@ -163,6 +164,17 @@ class Song(BaseModel):
     class Config:
         from_attributes = True  # SQLAlchemyモデルをPydanticモデルに変換
         populate_by_name = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def set_primary_album_title(cls, data: Any):
+        if hasattr(data, 'primary_album') and data.primary_album:
+            if not getattr(data, 'primary_album_title', None):
+                if isinstance(data, dict):
+                    data['primary_album_title'] = data.primary_album.main_title
+                else:
+                    setattr(data, 'primary_album_title', data.primary_album.main_title)
+        return data
 
 
 # --- SongArtistLink (アーティスト紐付け) ---
@@ -451,6 +463,7 @@ class SongDetail(BaseModel):
     is_streaming_available: bool = True
     track_category: str | None = None
     work: MusicalWork | None = None
+    primary_album_title: Optional[str] = None
     
     other_versions: list["SongDetailMini"] = []
 
@@ -474,6 +487,17 @@ class SongDetail(BaseModel):
     class Config:
         from_attributes = True
         populate_by_name = True  # エイリアスが機能するために必要
+
+    @model_validator(mode='before')
+    @classmethod
+    def set_primary_album_title(cls, data: Any):
+        if hasattr(data, 'primary_album') and data.primary_album:
+            if not getattr(data, 'primary_album_title', None):
+                if isinstance(data, dict):
+                    data['primary_album_title'] = data.primary_album.main_title
+                else:
+                    setattr(data, 'primary_album_title', data.primary_album.main_title)
+        return data
 
 
 # --- Song Search Result (検索結果) ---
@@ -558,9 +582,9 @@ class SongMini(BaseModel):
     version_name: str | None = None
     is_streaming_available: bool = True
     spotify_song_id: str | None = None
-    isrc: str | None = None
-    track_category: str | None = None
-    primary_album_title: str | None = None
+    isrc: Optional[str] = None
+    track_category: Optional[str] = None
+    primary_album_title: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -571,9 +595,9 @@ class SongMini(BaseModel):
         if hasattr(data, 'primary_album') and data.primary_album:
             if not getattr(data, 'primary_album_title', None):
                 if isinstance(data, dict):
-                    data['primary_album_title'] = data.primary_album.title
+                    data['primary_album_title'] = data.primary_album.main_title
                 else:
-                    setattr(data, 'primary_album_title', data.primary_album.title)
+                    setattr(data, 'primary_album_title', data.primary_album.main_title)
         return data
 
 class SongAliasCreate(BaseModel):
@@ -1042,9 +1066,21 @@ class SongDetailMini(BaseModel):
     is_video: bool = False
     version_name: str | None = None
     is_streaming_available: bool = True
+    primary_album_title: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def set_primary_album_title(cls, data: Any):
+        if hasattr(data, 'primary_album') and data.primary_album:
+            if not getattr(data, 'primary_album_title', None):
+                if isinstance(data, dict):
+                    data['primary_album_title'] = data.primary_album.main_title
+                else:
+                    setattr(data, 'primary_album_title', data.primary_album.main_title)
+        return data
 
 # --- CD Import (手動アルバムビルダー用) ---
 class CDImportDisc(BaseModel):
