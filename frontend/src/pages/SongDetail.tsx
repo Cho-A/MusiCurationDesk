@@ -119,6 +119,7 @@ const SongDetail = () => {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isEditingWorkTitle, setIsEditingWorkTitle] = useState(false);
   const [editWorkTitleValue, setEditWorkTitleValue] = useState("");
+  const [isEditingCredits, setIsEditingCredits] = useState(false);
 
   const [isEditingMainArtist, setIsEditingMainArtist] = useState(false);
   const [mainArtistSearchQuery, setMainArtistSearchQuery] = useState("");
@@ -737,15 +738,47 @@ const SongDetail = () => {
 
         {/* クレジット (バージョンごと) */}
         <div>
-          <h3 style={{ fontSize: '1.2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-            バージョンごとのクレジット (編曲・演奏)
-          </h3>
-          <SongCreditEditor 
-            songId={displaySong.id} 
-            existingCredits={sortedCredits} 
-            onAddCredit={handleAddCredit}
-            onRemoveCredit={handleRemoveCredit}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '1.2rem', margin: 0 }}>
+              バージョンごとのクレジット (編曲・演奏)
+            </h3>
+            <button
+              onClick={() => setIsEditingCredits(!isEditingCredits)}
+              style={{
+                background: 'var(--bg-tertiary)', border: 'none',
+                width: '32px', height: '32px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'var(--text-secondary)'
+              }}
+              title="クレジットを編集"
+            >
+              <Edit2 size={16} />
+            </button>
+          </div>
+          
+          {!isEditingCredits ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {sortedCredits.length > 0 ? sortedCredits.map((credit, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                  <span style={{ fontWeight: 600 }}>{credit.artist_name}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    {credit.role_category}{credit.role_detail ? ` (${credit.role_detail})` : ''}
+                  </span>
+                </div>
+              )) : (
+                <div style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>
+                  クレジット情報が登録されていません。
+                </div>
+              )}
+            </div>
+          ) : (
+            <SongCreditEditor 
+              songId={displaySong.id} 
+              existingCredits={sortedCredits} 
+              onAddCredit={handleAddCredit}
+              onRemoveCredit={handleRemoveCredit}
+            />
+          )}
         </div>
 
         {/* 収録アルバム */}
