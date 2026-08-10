@@ -28,6 +28,7 @@ interface AlbumMini {
   cover_image_url?: string;
   album_type?: string;
   album_group_id?: number;
+  release_date?: string;
 }
 
 interface AlbumTrackInfo {
@@ -385,7 +386,11 @@ const SongDetail = () => {
     }
     groupedAlbumsMap.get(key)!.editions.push(albumLink);
   });
-  const displayAlbums = Array.from(groupedAlbumsMap.values());
+  const displayAlbums = Array.from(groupedAlbumsMap.values()).sort((a, b) => {
+    const dateA = a.groupData.album.release_date || '0000-00-00';
+    const dateB = b.groupData.album.release_date || '0000-00-00';
+    return dateB.localeCompare(dateA);
+  });
 
   // Workクレジット（baseSongのwork情報を使用）
   const lyricists = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Lyricist').map((l: WorkArtistLink) => l.artist_name);
