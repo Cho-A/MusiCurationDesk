@@ -177,6 +177,20 @@ class Song(BaseModel):
         return data
 
 
+# --- WorkArtistLink (作品とアーティストの紐付け) ---
+class WorkArtistLinkCreate(BaseModel):
+    work_id: int
+    artist_id: int
+    role_category: str
+    role_detail: str | None = None
+
+class WorkArtistLink(WorkArtistLinkCreate):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 # --- SongArtistLink (アーティスト紐付け) ---
 class SongMainArtistUpdate(BaseModel):
     artist_id: int

@@ -13,17 +13,19 @@ interface SongCreditEditorProps {
   existingCredits: Credit[];
   onAddCredit: (artistName: string, category: string, detail?: string) => void;
   onRemoveCredit: (artistId: number, category: string, detail?: string) => void;
+  categories?: string[];
+  title?: string;
 }
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   'Vocal', 'Guitar', 'Bass', 'Drums & Percussion',
   'Keyboard & Synth', 'Strings', 'Brass & Woodwinds',
   'Producer', 'Arranger', 'Composer', 'Lyricist', 'Other Instrument'
 ];
 
-const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, onAddCredit, onRemoveCredit }) => {
+const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, onAddCredit, onRemoveCredit, categories = DEFAULT_CATEGORIES, title = "クレジット編集" }) => {
   const [newArtistName, setNewArtistName] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
+  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [newDetail, setNewDetail] = useState('');
 
   const handleAdd = () => {
@@ -43,7 +45,7 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
     }}>
       <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <User size={20} />
-        クレジット編集
+        {title}
       </h3>
 
       {/* 既存クレジットのリスト */}
@@ -107,12 +109,10 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
           style={{
             flex: 1, minWidth: '120px', padding: '10px 14px', borderRadius: '6px',
             background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)', outline: 'none'
+            color: 'var(--text-primary)', outline: 'none', cursor: 'pointer'
           }}
         >
-          {CATEGORIES.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
         <input

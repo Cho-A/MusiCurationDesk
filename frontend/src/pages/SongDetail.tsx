@@ -120,6 +120,7 @@ const SongDetail = () => {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isEditingWorkTitle, setIsEditingWorkTitle] = useState(false);
   const [editWorkTitleValue, setEditWorkTitleValue] = useState("");
+  const [isEditingWorkCredits, setIsEditingWorkCredits] = useState(false);
   const [isEditingCredits, setIsEditingCredits] = useState(false);
 
   const [isEditingMainArtist, setIsEditingMainArtist] = useState(false);
@@ -223,6 +224,65 @@ const SongDetail = () => {
         if (selectedVersionId) fetchBaseSong(selectedVersionId.toString());
       } else {
         alert("クレジットの削除に失敗しました");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddWorkCredit = async (artistName: string, category: string, detail?: string) => {
+    if (!baseSong?.work_id) return;
+    try {
+      let artistId: number | null = null;
+      const searchRes = await fetch(`http://127.0.0.1:8000/artists/search?q=${encodeURIComponent(artistName)}`);
+      if (searchRes.ok) {
+        const artists = await searchRes.json();
+        const exactMatch = artists.find((a: any) => a.name.toLowerCase() === artistName.toLowerCase());
+        if (exactMatch) artistId = exactMatch.id;
+      }
+      if (!artistId) {
+        const createRes = await fetch('http://127.0.0.1:8000/artists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: artistName })
+        });
+        if (createRes.ok) {
+          const newArtist = await createRes.json();
+          artistId = newArtist.id;
+        }
+      }
+      if (!artistId) return alert('アーティストの特定/作成に失敗しました');
+
+      const res = await fetch(`http://127.0.0.1:8000/works/${baseSong.work_id}/artists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_id: baseSong.work_id,
+          artist_id: artistId,
+          role_category: category,
+          role_detail: detail || null
+        })
+      });
+      if (res.ok) {
+        if (id) fetchBaseSong(id);
+      } else {
+        alert('追加に失敗しました');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRemoveWorkCredit = async (artistId: number, category: string, detail?: string) => {
+    if (!baseSong?.work_id) return;
+    try {
+      let url = `http://127.0.0.1:8000/works/${baseSong.work_id}/artists/${artistId}?role_category=${encodeURIComponent(category)}`;
+      if (detail) url += `&role_detail=${encodeURIComponent(detail)}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      if (res.ok) {
+        if (id) fetchBaseSong(id);
+      } else {
+        alert("削除に失敗しました");
       }
     } catch (err) {
       console.error(err);
@@ -450,20 +510,54 @@ const SongDetail = () => {
         </div>
         
         {/* 作詞・作曲クレジット */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: 'var(--text-secondary)' }}>
-          {lyricists.length > 0 && (
-            <div>
-              <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>作詞:</span>{' '}
-              <span style={{ color: 'var(--text-primary)' }}>{lyricists.join(', ')}</span>
-            </div>
-          )}
-          {composers.length > 0 && (
-            <div>
-              <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>作曲:</span>{' '}
-              <span style={{ color: 'var(--text-primary)' }}>{composers.join(', ')}</span>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: 'var(--text-secondary)' }}>
+            {lyricists.length > 0 && (
+              <div>
+                <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>作詞:</span>{' '}
+                <span style={{ color: 'var(--text-primary)' }}>{lyricists.join(', ')}</span>
+              </div>
+            )}
+            {composers.length > 0 && (
+              <div>
+                <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>作曲:</span>{' '}
+                <span style={{ color: 'var(--text-primary)' }}>{composers.join(', ')}</span>
+              </div>
+            )}
+            {lyricists.length === 0 && composers.length === 0 && !isEditingWorkCredits && (
+              <div style={{ fontSize: '0.85rem', opacity: 0.5 }}>作詞・作曲情報がありません</div>
+            )}
+          </div>
+          {baseSong.work && (
+            <button
+              onClick={() => setIsEditingWorkCredits(!isEditingWorkCredits)}
+              style={{
+                background: 'none', border: 'none',
+                width: '32px', height: '32px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'var(--text-secondary)'
+              }}
+              title="共通クレジットを編集"
+            >
+              <Edit2 size={16} />
+            </button>
           )}
         </div>
+        {isEditingWorkCredits && baseSong.work && (
+          <SongCreditEditor 
+            songId={baseSong.work.id} 
+            existingCredits={baseSong.work.artist_links.map(a => ({
+              artist_id: a.artist_id,
+              artist_name: a.artist_name,
+              role_category: a.role_category,
+              role_detail: a.role_detail
+            }))} 
+            onAddCredit={handleAddWorkCredit}
+            onRemoveCredit={handleRemoveWorkCredit}
+            categories={['Lyricist', 'Composer', 'Arranger', 'Producer']}
+            title="共通クレジット編集 (全バージョン共通)"
+          />
+        )}
       </div>
 
       {/* バージョン選択 (音源 / 映像 大タブ) */}
@@ -508,20 +602,29 @@ const SongDetail = () => {
               key={v.id} 
               onClick={() => handleVersionSelect(v.id)}
               style={{
-                padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer',
-                background: v.id === selectedVersionId 
-                  ? 'var(--accent-primary)' 
-                  : 'var(--bg-tertiary)',
+                padding: '8px 16px', borderRadius: '16px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer',
+                background: v.id === selectedVersionId ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                 color: v.id === selectedVersionId ? '#fff' : 'var(--text-secondary)',
                 border: v.id === selectedVersionId ? 'none' : '1px solid var(--border-color)',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '100%', textAlign: 'left',
+                boxSizing: 'border-box'
               }}
             >
-              {v.title} {v.version_name ? `(${v.version_name})` : (v.primary_album_title ? ` [収録: ${v.primary_album_title}]` : '')}
-              {!v.is_video && v.is_streaming_available === false && (
-                <span style={{color: 'var(--error-color)', marginLeft: '6px', fontSize: '0.8em', border: '1px solid #ff4d4d', padding: '1px 4px', borderRadius: '4px'}}>
-                  サブスク未解禁
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {v.title} {v.version_name && `(${v.version_name})`}
                 </span>
+                {!v.is_video && v.is_streaming_available === false && (
+                  <span style={{color: 'var(--error-color)', fontSize: '0.75rem', border: '1px solid #ff4d4d', padding: '1px 4px', borderRadius: '4px', flexShrink: 0}}>
+                    サブスク未解禁
+                  </span>
+                )}
+              </div>
+              {v.primary_album_title && !v.version_name && (
+                <div style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                  収録: {v.primary_album_title}
+                </div>
               )}
             </button>
           ))}
