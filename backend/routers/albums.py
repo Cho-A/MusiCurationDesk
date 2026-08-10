@@ -495,3 +495,70 @@ def bulk_merge_disc(
         "merged_count": merged_count,
         "skipped_count": skipped_count
     }
+
+# [POST] /albums/{album_id}/discs
+# ----------------------------------------------------
+@router.post("/albums/{album_id}/discs", response_model=schemas.AlbumDiscBase, tags=["Albums"])
+def create_album_disc(
+    album_id: int,
+    request: schemas.AlbumDiscCreate,
+    db: Session = Depends(models.get_db)
+):
+    album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+        
+    new_disc = models.AlbumDisc(
+        album_id=album_id,
+        disc_number=request.disc_number,
+        title=request.title,
+        media_format=request.media_format,
+        edition=request.edition
+    )
+    db.add(new_disc)
+    db.commit()
+    db.refresh(new_disc)
+    return new_disc
+
+# [POST] /albums/{album_id}/discs/{disc_number}/tracks
+# ----------------------------------------------------
+@router.post("/albums/{album_id}/discs/{disc_number}/tracks", response_model=schemas.AlbumTrackForAlbum, tags=["Albums"])
+def create_album_track(
+    album_id: int,
+    disc_number: int,
+    request: schemas.AlbumTrackCreate,
+    db: Session = Depends(models.get_db)
+):
+    # Verify song exists
+    song = db.query(models.Song).filter(models.Song.id == request.song_id).first()
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+        
+    new_track = models.AlbumTrack(
+        album_id=album_id,
+        disc_number=disc_number,
+        song_id=request.song_id,
+        track_number=request.track_number,
+        display_title=request.display_title,
+        notes=request.notes,
+        is_unreleased=request.is_unreleased
+    )
+    db.add(new_track)
+    db.commit()
+    db.refresh(new_track)
+    return new_track
+
+# [DELETE] /albums/tracks/{track_id}
+# ----------------------------------------------------
+@router.delete("/albums/tracks/{track_id}", tags=["Albums"])
+def delete_album_track(
+    track_id: int,
+    db: Session = Depends(models.get_db)
+):
+    track = db.query(models.AlbumTrack).filter(models.AlbumTrack.id == track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track not found")
+        
+    db.delete(track)
+    db.commit()
+    return {"status": "success"}

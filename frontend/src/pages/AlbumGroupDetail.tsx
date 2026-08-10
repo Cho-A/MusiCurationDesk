@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X, GitMerge, Check } from 'lucide-react';
+import { ArrowLeft, Disc3, Check, Edit2, Plus, X, AlertCircle, Save, GitMerge, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -1150,6 +1150,19 @@ const AlbumGroupDetail = () => {
                             >
                               <Edit2 size={16} />
                             </Button>
+                            <Button 
+                              variant="ghost" 
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if(window.confirm('このトラックを削除しますか？')) {
+                                  const res = await fetch(`http://127.0.0.1:8000/albums/tracks/${track.id}`, { method: 'DELETE' });
+                                  if (res.ok) fetchAlbum();
+                                }
+                              }}
+                              style={{ color: 'var(--error-color)', padding: '8px' }}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -1157,12 +1170,66 @@ const AlbumGroupDetail = () => {
                   );
                 })}
               </div>
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                <Button 
+                  variant="ghost" 
+                  onClick={async () => {
+                    const songIdStr = window.prompt("追加する楽曲(Song)のIDを入力してください:\n(※事前に別のタブで楽曲を検索しIDを確認してください)");
+                    if (!songIdStr) return;
+                    const songId = parseInt(songIdStr, 10);
+                    if (isNaN(songId)) return;
+                    const trackNumStr = window.prompt("トラック番号を入力してください:", String(tracks.length + 1));
+                    if (!trackNumStr) return;
+                    const trackNum = parseInt(trackNumStr, 10);
+                    
+                    const res = await fetch(`http://127.0.0.1:8000/albums/${album!.id}/discs/${discNum}/tracks`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ song_id: songId, track_number: trackNum || tracks.length + 1 })
+                    });
+                    if (res.ok) {
+                      fetchAlbum();
+                    } else {
+                      alert("トラックの追加に失敗しました。楽曲IDが正しいか確認してください。");
+                    }
+                  }}
+                  icon={Plus}
+                >
+                  このディスクにトラックを追加
+                </Button>
+              </div>
             </div>
           );
         })}
         {album?.album_tracks?.length === 0 && (
           <EmptyState title="収録曲が登録されていません" />
         )}
+        
+        <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', borderTop: '1px dashed var(--border-color)', paddingTop: '32px' }}>
+          <Button 
+            variant="secondary" 
+            onClick={async () => {
+              const newDiscNum = uniqueDiscs.length > 0 ? Math.max(...uniqueDiscs) + 1 : 1;
+              const formatStr = window.prompt("新しいディスクのメディアフォーマットを入力してください (例: CD, DVD, Blu-ray)", "CD");
+              if (formatStr === null) return;
+              const titleStr = window.prompt("ディスクのタイトル (任意)");
+              
+              const res = await fetch(`http://127.0.0.1:8000/albums/${album!.id}/discs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ disc_number: newDiscNum, media_format: formatStr, title: titleStr || null })
+              });
+              if (res.ok) {
+                fetchAlbum();
+              } else {
+                alert("ディスクの追加に失敗しました。");
+              }
+            }}
+            icon={Disc3}
+          >
+            新しいディスクを追加
+          </Button>
+        </div>
       </div>
       {isEditionModalOpen && album && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>

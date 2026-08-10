@@ -20,4 +20,6 @@ export interface SongCardData {
   is_streaming_available: boolean;
   track_category?: string | null;
   work_id?: number | null;
+  isrc?: string | null;
+  primary_album_title?: string | null;
 }

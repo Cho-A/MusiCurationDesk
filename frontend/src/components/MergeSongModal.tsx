@@ -132,10 +132,22 @@ const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, curren
                     <div style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {song.title} {song.version_name && <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>- {song.version_name}</span>}
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center' }}>
                       {song.artist_name || 'Unknown Artist'}
                       <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.2)' }}>|</span>
                       Song ID: {song.id}
+                      {song.isrc && (
+                        <>
+                          <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.2)' }}>|</span>
+                          ISRC: <span style={{ fontFamily: 'monospace' }}>{song.isrc}</span>
+                          {currentSong.isrc && song.isrc === currentSong.isrc && (
+                            <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--success-bg)', color: 'var(--success-color)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap', border: '1px solid var(--success-color)' }}>
+                              <Check size={10} style={{ display: 'inline', marginRight: '4px' }} />
+                              100%同一音源
+                            </span>
+                          )}
+                        </>
+                      )}
                       {song.is_video && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--warning-bg)', color: 'var(--warning-color)', borderRadius: '4px', fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}>映像</span>}
                     </div>
                   </div>

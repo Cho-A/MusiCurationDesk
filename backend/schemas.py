@@ -560,9 +560,21 @@ class SongMini(BaseModel):
     spotify_song_id: str | None = None
     isrc: str | None = None
     track_category: str | None = None
+    primary_album_title: str | None = None
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def set_primary_album_title(cls, data: Any):
+        if hasattr(data, 'primary_album') and data.primary_album:
+            if not getattr(data, 'primary_album_title', None):
+                if isinstance(data, dict):
+                    data['primary_album_title'] = data.primary_album.title
+                else:
+                    setattr(data, 'primary_album_title', data.primary_album.title)
+        return data
 
 class SongAliasCreate(BaseModel):
     alias_name: str
@@ -753,6 +765,19 @@ class AlbumDiscUpdate(BaseModel):
     title: str | None = None
     media_format: str | None = None
     edition: str | None = None
+
+class AlbumDiscCreate(BaseModel):
+    disc_number: int
+    title: str | None = None
+    media_format: str | None = None
+    edition: str | None = None
+
+class AlbumTrackCreate(BaseModel):
+    song_id: int
+    track_number: int
+    display_title: str | None = None
+    notes: str | None = None
+    is_unreleased: bool = False
 
 class AlbumDiscBase(BaseModel):
     id: int

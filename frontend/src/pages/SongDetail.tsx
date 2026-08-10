@@ -509,7 +509,7 @@ const SongDetail = () => {
                 transition: 'all 0.2s'
               }}
             >
-              {v.title} {v.version_name ? `(${v.version_name})` : ''}
+              {v.title} {v.version_name ? `(${v.version_name})` : (v.primary_album_title ? ` [収録: ${v.primary_album_title}]` : '')}
               {!v.is_video && v.is_streaming_available === false && (
                 <span style={{color: 'var(--error-color)', marginLeft: '6px', fontSize: '0.8em', border: '1px solid #ff4d4d', padding: '1px 4px', borderRadius: '4px'}}>
                   サブスク未解禁
@@ -618,6 +618,15 @@ const SongDetail = () => {
                 )}
               </div>
             </div>
+            
+            {/* ISRC表示 */}
+            {displaySong.isrc && (
+              <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                <span style={{ border: '1px solid var(--border-color)', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', backgroundColor: 'var(--bg-tertiary)' }}>
+                  ISRC: {displaySong.isrc}
+                </span>
+              </div>
+            )}
             
             {/* 種別変更トグル */}
             <button
