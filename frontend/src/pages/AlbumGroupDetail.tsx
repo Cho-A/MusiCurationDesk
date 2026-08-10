@@ -382,6 +382,22 @@ const AlbumGroupDetail = () => {
       
       if (!res.ok) throw new Error("Failed to update track");
 
+      // Update Master Song title if modified manually
+      if (editForm.song_id === track.song.id && editForm.song_title !== track.song.title) {
+        const songRes = await fetch(`http://127.0.0.1:8000/songs/${editForm.song_id}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ title: editForm.song_title })
+        });
+        if (!songRes.ok) {
+          const errData = await songRes.json().catch(() => null);
+          throw new Error(`マスター楽曲名の更新に失敗しました: ${errData?.detail || ''}`);
+        }
+      }
+
       // Save Main Artist if provided
       if (editForm.main_artist_id && editForm.song_id) {
         const artistRes = await fetch(`http://127.0.0.1:8000/songs/${editForm.song_id}/main_artist`, {
