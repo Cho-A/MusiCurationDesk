@@ -371,15 +371,33 @@ class AlbumMini(BaseModel):
     cover_image_url: str | None = None
     album_type: str | None = None
     album_group_id: int | None = None
+    release_date: str | None = None
 
     @model_validator(mode='before')
     @classmethod
-    def set_cover_image_url(cls, data: any) -> any:
+    def set_computed_fields(cls, data: any) -> any:
         if isinstance(data, dict):
             if not data.get("cover_image_url") and data.get("album_group"):
                 data["cover_image_url"] = data["album_group"].get("cover_image_url")
-        elif hasattr(data, 'cover_image_url') and not data.cover_image_url and hasattr(data, 'album_group') and data.album_group:
-            data.cover_image_url = data.album_group.cover_image_url
+            
+            if not data.get("release_date"):
+                if data.get("album_group") and data["album_group"].get("release_date"):
+                    data["release_date"] = str(data["album_group"].get("release_date"))
+                else:
+                    raw_date = data.get("physical_release_date") or data.get("digital_release_date")
+                    if raw_date:
+                        data["release_date"] = str(raw_date)
+        elif hasattr(data, '__dict__'):
+            if not getattr(data, 'cover_image_url', None) and getattr(data, 'album_group', None):
+                data.cover_image_url = data.album_group.cover_image_url
+            
+            if not getattr(data, 'release_date', None):
+                if getattr(data, 'album_group', None) and getattr(data.album_group, 'release_date', None):
+                    data.release_date = str(data.album_group.release_date)
+                else:
+                    raw_date = getattr(data, 'physical_release_date', None) or getattr(data, 'digital_release_date', None)
+                    if raw_date:
+                        data.release_date = str(raw_date)
         return data
 
     class Config:

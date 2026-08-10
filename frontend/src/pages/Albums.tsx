@@ -18,6 +18,10 @@ const Albums = () => {
   const [albums, setAlbums] = useState<AlbumGroup[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Sort & Filter states
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [typeFilters, setTypeFilters] = useState<string[]>([]);
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/album-groups/')
@@ -34,9 +38,27 @@ const Albums = () => {
 
   if (loading) return <LoadingSpinner fullPage />;
 
-  const filteredAlbums = albums.filter(album => 
+  let filteredAlbums = albums.filter(album => 
     album.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (typeFilters.length > 0) {
+    filteredAlbums = filteredAlbums.filter(album => typeFilters.includes(album.album_type || ''));
+  }
+
+  filteredAlbums.sort((a, b) => {
+    const dateA = a.release_date ? new Date(a.release_date).getTime() : 0;
+    const dateB = b.release_date ? new Date(b.release_date).getTime() : 0;
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+  });
+
+  const toggleFilter = (type: string) => {
+    if (typeFilters.includes(type)) {
+      setTypeFilters(typeFilters.filter(t => t !== type));
+    } else {
+      setTypeFilters([...typeFilters, type]);
+    }
+  };
 
   return (
     <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -55,6 +77,39 @@ const Albums = () => {
         onChange={setSearchQuery}
         placeholder="アルバムを検索..."
       />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px', marginTop: '16px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => toggleFilter('album')}
+            style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: typeFilters.includes('album') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: typeFilters.includes('album') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+          >
+            アルバム
+          </button>
+          <button
+            onClick={() => toggleFilter('single')}
+            style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: typeFilters.includes('single') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: typeFilters.includes('single') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+          >
+            シングル
+          </button>
+          <button
+            onClick={() => toggleFilter('dvd')}
+            style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: typeFilters.includes('dvd') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: typeFilters.includes('dvd') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+          >
+            映像作品
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <select 
+            value={sortOrder} 
+            onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+          >
+            <option value="desc">発売日が新しい順</option>
+            <option value="asc">発売日が古い順</option>
+          </select>
+        </div>
+      </div>
 
       {filteredAlbums.length === 0 ? (
         <EmptyState icon={Disc3} title="アルバムが見つかりませんでした" description="別のキーワードで検索するか、新しくアルバムを追加してください。" />

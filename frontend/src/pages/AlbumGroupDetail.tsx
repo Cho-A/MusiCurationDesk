@@ -118,6 +118,10 @@ const AlbumGroupDetail = () => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleEditForm, setTitleEditForm] = useState('');
 
+  // For Album Release Date Edit
+  const [isEditingReleaseDate, setIsEditingReleaseDate] = useState(false);
+  const [releaseDateEditForm, setReleaseDateEditForm] = useState('');
+
   // For Album Artist Edit
   const [isEditingArtist, setIsEditingArtist] = useState(false);
   const [artistSearchQuery, setArtistSearchQuery] = useState('');
@@ -480,6 +484,25 @@ const AlbumGroupDetail = () => {
     }
   };
 
+  const handleSaveReleaseDate = async () => {
+    if (!albumGroup) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/album-groups/${albumGroup.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ release_date: releaseDateEditForm || null })
+      });
+      if (!res.ok) throw new Error("Failed to update release date");
+      fetchAlbum();
+      setIsEditingReleaseDate(false);
+      toast.success('発売日を更新しました');
+    } catch (err) {
+      console.error(err);
+      toast.error('保存に失敗しました');
+    }
+  };
+
   const handleEditionSave = async () => {
     if (!album || !editionForm.album_group_id) return;
     try {
@@ -804,8 +827,25 @@ const AlbumGroupDetail = () => {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', color: 'var(--text-secondary)', marginTop: '8px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {/* <Calendar size={18} /> */}
-              {releaseDate}
+              {isEditingReleaseDate ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input
+                    type="date"
+                    value={releaseDateEditForm}
+                    onChange={(e) => setReleaseDateEditForm(e.target.value)}
+                    style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '2px 6px', fontSize: '0.9rem' }}
+                  />
+                  <button onClick={handleSaveReleaseDate} style={{ background: 'var(--spotify-color)', color: '#000', border: 'none', borderRadius: '4px', padding: '4px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}><Check size={14} /></button>
+                  <button onClick={() => setIsEditingReleaseDate(false)} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}><X size={14} /></button>
+                </div>
+              ) : (
+                <>
+                  {releaseDate}
+                  <button onClick={() => { setReleaseDateEditForm(albumGroup.release_date || ''); setIsEditingReleaseDate(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }} title="発売日を編集">
+                    <Edit2 size={14} />
+                  </button>
+                </>
+              )}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Disc3 size={18} />

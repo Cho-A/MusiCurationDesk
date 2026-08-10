@@ -11,6 +11,8 @@ interface AlbumMini {
   main_title: string;
   cover_image_url: string | null;
   album_group_id?: number;
+  release_date?: string;
+  album_type?: string;
 }
 
 interface Performance {
@@ -91,6 +93,10 @@ const ArtistDetail = () => {
   // Tag edit states
   const [availableTags, setAvailableTags] = useState<any[]>([]);
   const [selectedTagId, setSelectedTagId] = useState<string>("");
+
+  // Album sort & filter states
+  const [albumSortOrder, setAlbumSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [albumTypeFilters, setAlbumTypeFilters] = useState<string[]>([]);
 
   const fetchArtist = () => {
     fetch(`http://127.0.0.1:8000/artists/${id}`)
@@ -337,17 +343,76 @@ const ArtistDetail = () => {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'albums' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-          {Array.from(new Map((artist.albums || []).map(album => [album.album_group_id || `album_${album.id}`, album])).values()).map(album => (
-            <Link key={album.id} to={album.album_group_id ? `/album-groups/${album.album_group_id}` : `/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
-              <div style={{
-                height: '100%',
-                background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
-                border: '1px solid var(--border-color)', transition: 'transform 0.2s, box-shadow 0.2s',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
-                boxSizing: 'border-box'
-              }}
+      {activeTab === 'albums' && (() => {
+        // Prepare unique albums
+        const uniqueAlbums = Array.from(new Map((artist.albums || []).map(album => [album.album_group_id || `album_${album.id}`, album])).values());
+        
+        // Filter
+        const filteredAlbums = uniqueAlbums.filter(album => {
+          if (albumTypeFilters.length === 0) return true;
+          return albumTypeFilters.includes(album.album_type || '');
+        });
+
+        // Sort
+        filteredAlbums.sort((a, b) => {
+          const dateA = a.release_date ? new Date(a.release_date).getTime() : 0;
+          const dateB = b.release_date ? new Date(b.release_date).getTime() : 0;
+          return albumSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+        });
+
+        const toggleFilter = (type: string) => {
+          if (albumTypeFilters.includes(type)) {
+            setAlbumTypeFilters(albumTypeFilters.filter(t => t !== type));
+          } else {
+            setAlbumTypeFilters([...albumTypeFilters, type]);
+          }
+        };
+
+        return (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => toggleFilter('album')}
+                  style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: albumTypeFilters.includes('album') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: albumTypeFilters.includes('album') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  アルバム
+                </button>
+                <button
+                  onClick={() => toggleFilter('single')}
+                  style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: albumTypeFilters.includes('single') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: albumTypeFilters.includes('single') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  シングル
+                </button>
+                <button
+                  onClick={() => toggleFilter('dvd')}
+                  style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: albumTypeFilters.includes('dvd') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: albumTypeFilters.includes('dvd') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  映像作品
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <select 
+                  value={albumSortOrder} 
+                  onChange={(e) => setAlbumSortOrder(e.target.value as 'desc' | 'asc')}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                >
+                  <option value="desc">発売日が新しい順</option>
+                  <option value="asc">発売日が古い順</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+              {filteredAlbums.map(album => (
+                <Link key={album.id} to={album.album_group_id ? `/album-groups/${album.album_group_id}` : `/albums/${album.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+                  <div style={{
+                    height: '100%',
+                    background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
+                    border: '1px solid var(--border-color)', transition: 'transform 0.2s, box-shadow 0.2s',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                    boxSizing: 'border-box'
+                  }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
               >
@@ -364,9 +429,11 @@ const ArtistDetail = () => {
               </div>
             </Link>
           ))}
-          {(artist.albums || []).length === 0 && <EmptyState icon={Disc} title="作品がありません" />}
+          {filteredAlbums.length === 0 && <EmptyState icon={Disc} title="該当する作品がありません" />}
         </div>
-      )}
+      </div>
+        );
+      })()}
 
       {activeTab === 'performances' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
