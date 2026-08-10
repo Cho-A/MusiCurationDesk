@@ -195,7 +195,7 @@ const MusicBrainzImport = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             style={{ 
-              background: 'transparent', border: 'none', color: 'white', 
+              background: 'transparent', border: 'none', color: 'var(--text-primary)', 
               fontSize: '1rem', width: '100%', outline: 'none'
             }}
           />

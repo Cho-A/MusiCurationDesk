@@ -53,7 +53,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           disabled={disabled}
           style={{
             background: 'var(--spotify-color)',
-            color: '#000',
+            color: '#000', // allow-hardcoded-color
             border: 'none',
             borderRadius: '30px',
             padding: '0 24px',

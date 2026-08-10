@@ -430,7 +430,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                       <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
                         {disc.media_format && disc.media_format !== 'CD' ? '📺 ' : '💿 '}Disc {disc.disc_number}
                         {disc.title && <span style={{ marginLeft: '8px', color: 'var(--text-secondary)' }}>- {disc.title}</span>}
-                        {disc.edition && <span style={{ marginLeft: '8px', fontSize: '0.8rem', background: 'var(--accent-primary)', color: '#000', padding: '2px 8px', borderRadius: '12px' }}>{disc.edition}</span>}
+                        {disc.edition && <span style={{ marginLeft: '8px', fontSize: '0.8rem', background: 'var(--accent-primary)', color: '#fff', padding: '2px 8px', borderRadius: '12px' }}>{disc.edition}</span>}
                         <span style={{ marginLeft: '12px', fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>
                           ({discMatches.length} Tracks)
                         </span>

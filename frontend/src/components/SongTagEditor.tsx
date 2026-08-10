@@ -155,8 +155,8 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
                 onFocus={() => setShowSuggestions(true)}
                 autoFocus
                 style={{ 
-                  background: 'var(--bg-tertiary)', color: 'white', 
-                  border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', 
+                  background: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
+                  border: '1px solid var(--border-color)', padding: '6px 12px', 
                   borderRadius: '16px', outline: 'none', fontSize: '0.9rem',
                   minWidth: '200px'
                 }}
