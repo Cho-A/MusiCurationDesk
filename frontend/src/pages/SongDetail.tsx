@@ -803,7 +803,7 @@ const SongDetail = () => {
               const targetDiscNumber = sortedEditions[0].tracks.length > 0 ? sortedEditions[0].tracks[0].disc_number : 1;
 
               return (
-              <Link key={`${albumLink.album_id}-${albumLink.disc_number}-${albumLink.track_number}-${idx}`} to={`/album-groups/${albumLink.album.album_group_id || albumLink.album_id}?album_id=${targetAlbumId}&disc_number=${targetDiscNumber}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Link key={`${albumLink.album_id}-${albumLink.disc_number}-${albumLink.track_number}-${idx}`} to={`/album-groups/${albumLink.album.album_group_id || albumLink.album_id}?album_id=${targetAlbumId}#disc-${targetDiscNumber}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ 
                   backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px',
                   border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)',
