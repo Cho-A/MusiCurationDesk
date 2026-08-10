@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film, X } from 'lucide-react';
+import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film, X, SplitSquareHorizontal } from 'lucide-react';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
 import AttachWorkModal from '../components/AttachWorkModal';
@@ -375,6 +375,26 @@ const SongDetail = () => {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSplitVersion = async (e: React.MouseEvent, track: AlbumTrackInfo) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("このトラックを別のバージョンとして独立して分割しますか？\n（誤って違うバージョンを統合してしまった場合に使用します）")) return;
+    
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/albums/${track.album_id}/discs/${track.disc_number}/tracks/${track.track_number}/split`, { method: 'POST' });
+      if (res.ok) {
+        const newSong = await res.json();
+        alert("別バージョンとしての分割が完了しました。分離先のページへ移動します。");
+        navigate(`/songs/${newSong.id}`);
+      } else {
+        alert("分割に失敗しました。");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("通信エラーが発生しました。");
     }
   };
 
@@ -1031,6 +1051,27 @@ const SongDetail = () => {
                                     {t.track_category}
                                   </span>
                                 )}
+                                <button
+                                  onClick={(e) => handleSplitVersion(e, t)}
+                                  style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    padding: '2px', marginLeft: '4px', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    color: 'var(--text-tertiary)', borderRadius: '4px',
+                                    transition: 'all 0.1s'
+                                  }}
+                                  title="このトラックを別バージョンとして分割する"
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                                    e.currentTarget.style.color = 'var(--accent-primary)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = 'var(--text-tertiary)';
+                                  }}
+                                >
+                                  <SplitSquareHorizontal size={14} />
+                                </button>
                               </span>
                             ))}
                           </div>

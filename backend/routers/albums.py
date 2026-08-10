@@ -562,3 +562,46 @@ def delete_album_track(
     db.delete(track)
     db.commit()
     return {"status": "success"}
+
+# [POST] /albums/{album_id}/discs/{disc_number}/tracks/{track_number}/split
+# ----------------------------------------------------
+@router.post("/albums/{album_id}/discs/{disc_number}/tracks/{track_number}/split", response_model=schemas.SongMini, tags=["Albums"])
+def split_album_track_to_new_version(
+    album_id: int,
+    disc_number: int,
+    track_number: int,
+    db: Session = Depends(models.get_db)
+):
+    """
+    指定されたアルバムトラックを現在のSongから切り離し、同じMusicalWorkに属する新しいSong（バージョン）として分割します。
+    誤って別のバージョンを同じSongとして統合してしまった場合に使用します。
+    """
+    track = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number == disc_number,
+        models.AlbumTrack.track_number == track_number
+    ).first()
+    
+    if not track:
+        raise HTTPException(status_code=404, detail="Track not found")
+        
+    old_song = db.query(models.Song).filter(models.Song.id == track.song_id).first()
+    if not old_song:
+        raise HTTPException(status_code=404, detail="Original song not found")
+        
+    # 新しいSong（バージョン）を作成
+    new_song = models.Song(
+        title=old_song.title,
+        work_id=old_song.work_id,
+        is_video=old_song.is_video,
+        # spotify_song_id などは引き継がない（別のバージョンのため）
+    )
+    db.add(new_song)
+    db.flush() # new_song.idを取得するため
+    
+    # トラックの紐付けを新しいSongに変更
+    track.song_id = new_song.id
+    db.commit()
+    db.refresh(new_song)
+    
+    return schemas.SongMini.model_validate(new_song)
