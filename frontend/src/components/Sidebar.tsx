@@ -2,7 +2,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, User, LogOut, LogIn, UserPlus, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen = true }: { isOpen?: boolean }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -33,7 +33,10 @@ const Sidebar = () => {
       position: 'fixed',
       height: '100vh',
       left: 0,
-      top: 0
+      top: 0,
+      transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+      transition: 'transform 0.3s ease',
+      zIndex: 20
     }}>
       {/* Logo Area */}
       <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 
-import { Search, Sun, Moon } from 'lucide-react';
+import { Search, Sun, Moon, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const Header = () => {
+const Header = ({ toggleSidebar, isSidebarOpen }: { toggleSidebar?: () => void, isSidebarOpen?: boolean }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
   });
@@ -31,9 +31,22 @@ const Header = () => {
       top: 0,
       zIndex: 10
     }}>
-      {/* Global Search Bar */}
-      <div style={{ flex: 1, maxWidth: '600px' }}>
+      {/* Global Search Bar & Toggle */}
+      <div style={{ flex: 1, maxWidth: '600px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <button
+          onClick={toggleSidebar}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-secondary)', padding: '8px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: '50%'
+          }}
+          title={isSidebarOpen ? "メニューを隠す" : "メニューを表示"}
+        >
+          <Menu size={24} />
+        </button>
         <div style={{
+          flex: 1,
           display: 'flex', alignItems: 'center', gap: '12px',
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-color)',
