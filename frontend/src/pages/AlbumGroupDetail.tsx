@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X, GitMerge } from 'lucide-react';
+import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X, GitMerge, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -113,6 +113,10 @@ const AlbumGroupDetail = () => {
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
   const [, setIsSearchingSong] = useState(false);
   const [trackArtistSearchResults, setTrackArtistSearchResults] = useState<{id: number, name: string}[]>([]);
+
+  // For Album Group Title Edit
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleEditForm, setTitleEditForm] = useState('');
 
   // For Album Artist Edit
   const [isEditingArtist, setIsEditingArtist] = useState(false);
@@ -457,6 +461,25 @@ const AlbumGroupDetail = () => {
     }
   };
 
+  const handleSaveTitle = async () => {
+    if (!albumGroup || !titleEditForm.trim()) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/album-groups/${albumGroup.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ title: titleEditForm })
+      });
+      if (!res.ok) throw new Error("Failed to update title");
+      fetchAlbum();
+      setIsEditingTitle(false);
+      toast.success('アルバム名を更新しました');
+    } catch (err) {
+      console.error(err);
+      toast.error('保存に失敗しました');
+    }
+  };
+
   const handleEditionSave = async () => {
     if (!album || !editionForm.album_group_id) return;
     try {
@@ -633,9 +656,36 @@ const AlbumGroupDetail = () => {
           }}>
             {albumGroup.album_type === 'single' ? 'Single' : albumGroup.album_type === 'dvd' ? 'Video' : 'Album'}
           </span>
-          <h1 style={{ fontSize: '3rem', fontWeight: 900, margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-            {albumGroup.title}
-          </h1>
+          {isEditingTitle ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <input
+                type="text"
+                value={titleEditForm}
+                onChange={(e) => setTitleEditForm(e.target.value)}
+                style={{ fontSize: '2.5rem', fontWeight: 900, background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '4px 12px', width: '100%', maxWidth: '600px' }}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveTitle();
+                  if (e.key === 'Escape') setIsEditingTitle(false);
+                }}
+              />
+              <button onClick={handleSaveTitle} style={{ background: 'var(--spotify-color)', color: '#000', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <Check size={20} />
+              </button>
+              <button onClick={() => setIsEditingTitle(false)} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <h1 style={{ fontSize: '3rem', fontWeight: 900, margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                {albumGroup.title}
+              </h1>
+              <button onClick={() => { setTitleEditForm(albumGroup.title); setIsEditingTitle(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-tertiary)', borderRadius: '50%' }} title="アルバム名を編集">
+                <Edit2 size={24} />
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {albumGroup.albums && albumGroup.albums.length > 1 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
