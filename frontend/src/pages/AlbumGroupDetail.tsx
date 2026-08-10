@@ -143,6 +143,13 @@ const AlbumGroupDetail = () => {
   const [bulkMergeTargetAlbumId, setBulkMergeTargetAlbumId] = useState<number | null>(null);
   const [bulkMergeTargetDisc, setBulkMergeTargetDisc] = useState<number | ''>('');
   const [bulkMergeLoading, setBulkMergeLoading] = useState(false);
+  const [bulkMergeMode, setBulkMergeMode] = useState<'same' | 'cross'>('same');
+  const [crossSearchQuery, setCrossSearchQuery] = useState('');
+  const [crossSearchResults, setCrossSearchResults] = useState<{id: number, title: string, artist?: {name: string}}[]>([]);
+  const [crossTargetAlbumGroupId, setCrossTargetAlbumGroupId] = useState<number | null>(null);
+  const [crossTargetAlbumGroup, setCrossTargetAlbumGroup] = useState<AlbumGroupDetailData | null>(null);
+  const [crossTargetAlbumId, setCrossTargetAlbumId] = useState<number | null>(null);
+  const [crossTargetDiscNumber, setCrossTargetDiscNumber] = useState<number | ''>('');
 
   // Group Multi-Edition Merge States
   const [isGroupMergeModalOpen, setIsGroupMergeModalOpen] = useState(false);
@@ -562,15 +569,18 @@ const AlbumGroupDetail = () => {
   };
 
   const handleBulkMergeSubmit = async () => {
-    if (!bulkMergeSourceDisc || !bulkMergeTargetAlbumId) return;
+    if (!bulkMergeSourceDisc) return;
+    const targetAlbumId = bulkMergeMode === 'same' ? bulkMergeTargetAlbumId : crossTargetAlbumId;
+    if (!targetAlbumId) return;
+    
     setBulkMergeLoading(true);
     try {
       const res = await fetch(`http://127.0.0.1:8000/albums/${bulkMergeSourceDisc.albumId}/discs/${bulkMergeSourceDisc.discNumber}/merge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          target_album_id: bulkMergeTargetAlbumId,
-          target_disc_number: bulkMergeTargetDisc === '' ? null : bulkMergeTargetDisc
+          target_album_id: targetAlbumId,
+          target_disc_number: bulkMergeMode === 'same' ? (bulkMergeTargetDisc === '' ? null : bulkMergeTargetDisc) : (crossTargetDiscNumber === '' ? null : crossTargetDiscNumber)
         })
       });
       if (!res.ok) throw new Error('Bulk merge failed');
@@ -587,6 +597,32 @@ const AlbumGroupDetail = () => {
       alert('エラーが発生しました。');
     } finally {
       setBulkMergeLoading(false);
+    }
+  };
+
+  const handleCrossSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!crossSearchQuery.trim()) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/album-groups/?q=${encodeURIComponent(crossSearchQuery)}&limit=10`);
+      if (res.ok) {
+        const data = await res.json();
+        setCrossSearchResults(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchCrossTargetAlbumGroup = async (groupId: number) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/album-groups/${groupId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCrossTargetAlbumGroup(data);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1344,37 +1380,133 @@ const AlbumGroupDetail = () => {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のエディション (Target Edition)</label>
-                <select 
-                  value={bulkMergeTargetAlbumId || ''} 
-                  onChange={(e) => setBulkMergeTargetAlbumId(Number(e.target.value))}
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
-                >
-                  <option value="">選択してください...</option>
-                  {albumGroup?.albums.filter(a => a.id !== bulkMergeSourceDisc.albumId).map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.version_title || '通常盤'}
-                    </option>
-                  ))}
-                </select>
+              <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: bulkMergeMode === 'same' ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                  <input type="radio" checked={bulkMergeMode === 'same'} onChange={() => setBulkMergeMode('same')} style={{ cursor: 'pointer' }} />
+                  同じアルバムから選ぶ
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: bulkMergeMode === 'cross' ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                  <input type="radio" checked={bulkMergeMode === 'cross'} onChange={() => setBulkMergeMode('cross')} style={{ cursor: 'pointer' }} />
+                  別のアルバムから検索
+                </label>
               </div>
-              {bulkMergeTargetAlbumId && albumGroup?.albums.find(a => a.id === bulkMergeTargetAlbumId)?.media_format !== "Digital" && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のディスク番号 (Target Disc)</label>
-                  <select 
-                    value={bulkMergeTargetDisc} 
-                    onChange={(e) => setBulkMergeTargetDisc(Number(e.target.value))}
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
-                  >
-                    <option value="">自動マッチング (指定なし)</option>
-                    {albumGroup?.albums.find(a => a.id === bulkMergeTargetAlbumId)?.discs?.map(d => (
-                      <option key={d.id} value={d.disc_number}>
-                        Disc {d.disc_number} {d.title ? `(${d.title})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+
+              {bulkMergeMode === 'same' ? (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のエディション (Target Edition)</label>
+                    <select 
+                      value={bulkMergeTargetAlbumId || ''} 
+                      onChange={(e) => setBulkMergeTargetAlbumId(Number(e.target.value))}
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                    >
+                      <option value="">選択してください...</option>
+                      {albumGroup?.albums.filter(a => a.id !== bulkMergeSourceDisc.albumId).map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.version_title || '通常盤'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {bulkMergeTargetAlbumId && albumGroup?.albums.find(a => a.id === bulkMergeTargetAlbumId)?.media_format !== "Digital" && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のディスク番号 (Target Disc)</label>
+                      <select 
+                        value={bulkMergeTargetDisc} 
+                        onChange={(e) => setBulkMergeTargetDisc(Number(e.target.value))}
+                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                      >
+                        <option value="">自動マッチング (指定なし)</option>
+                        {albumGroup?.albums.find(a => a.id === bulkMergeTargetAlbumId)?.discs?.map(d => (
+                          <option key={d.id} value={d.disc_number}>
+                            Disc {d.disc_number} {d.title ? `(${d.title})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <form onSubmit={handleCrossSearch} style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      value={crossSearchQuery}
+                      onChange={(e) => setCrossSearchQuery(e.target.value)}
+                      placeholder="アルバム名で検索..."
+                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                    />
+                    <Button type="submit" variant="secondary">検索</Button>
+                  </form>
+                  
+                  {crossSearchResults.length > 0 && !crossTargetAlbumGroupId && (
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                      {crossSearchResults.map(res => (
+                        <div 
+                          key={res.id} 
+                          onClick={() => {
+                            setCrossTargetAlbumGroupId(res.id);
+                            fetchCrossTargetAlbumGroup(res.id);
+                          }}
+                          style={{ padding: '12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
+                        >
+                          <div style={{ fontWeight: 'bold' }}>{res.title}</div>
+                          {res.artist && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{res.artist.name}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {crossTargetAlbumGroupId && crossTargetAlbumGroup && (
+                    <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>選択中のアルバム</div>
+                          <div style={{ fontWeight: 'bold' }}>{crossTargetAlbumGroup.title}</div>
+                        </div>
+                        <Button variant="secondary" onClick={() => {
+                          setCrossTargetAlbumGroupId(null);
+                          setCrossTargetAlbumGroup(null);
+                          setCrossTargetAlbumId(null);
+                        }}>変更</Button>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のエディション (Target Edition)</label>
+                        <select 
+                          value={crossTargetAlbumId || ''} 
+                          onChange={(e) => setCrossTargetAlbumId(Number(e.target.value))}
+                          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                        >
+                          <option value="">選択してください...</option>
+                          {crossTargetAlbumGroup.albums.map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.version_title || '通常盤'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {crossTargetAlbumId && crossTargetAlbumGroup.albums.find(a => a.id === crossTargetAlbumId)?.media_format !== "Digital" && (
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>統合先のディスク番号 (Target Disc)</label>
+                          <select 
+                            value={crossTargetDiscNumber} 
+                            onChange={(e) => setCrossTargetDiscNumber(Number(e.target.value))}
+                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
+                          >
+                            <option value="">自動マッチング (指定なし)</option>
+                            {crossTargetAlbumGroup.albums.find(a => a.id === crossTargetAlbumId)?.discs?.map(d => (
+                              <option key={d.id} value={d.disc_number}>
+                                Disc {d.disc_number} {d.title ? `(${d.title})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
             
@@ -1383,7 +1515,7 @@ const AlbumGroupDetail = () => {
               <Button 
                 onClick={handleBulkMergeSubmit} 
                 variant="primary" 
-                disabled={!bulkMergeTargetAlbumId || bulkMergeLoading}
+                disabled={(bulkMergeMode === 'same' && !bulkMergeTargetAlbumId) || (bulkMergeMode === 'cross' && !crossTargetAlbumId) || bulkMergeLoading}
               >
                 {bulkMergeLoading ? '統合中...' : '一括統合を実行'}
               </Button>
