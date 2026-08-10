@@ -5,6 +5,7 @@ import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
 import AttachWorkModal from '../components/AttachWorkModal';
 import MergeSongModal from '../components/MergeSongModal';
+import type { SongCardData } from '../types/models';
 
 interface ArtistLink {
   artist_id: number;
@@ -970,7 +971,7 @@ const SongDetail = () => {
         isOpen={isMergeModalOpen}
         onClose={() => setIsMergeModalOpen(false)}
         currentSong={baseSong}
-        otherVersions={baseSong.other_versions || []}
+        otherVersions={(baseSong.other_versions || []).map((v: any) => ({...v, is_video: v.is_video || false})) as SongCardData[]}
         onMerge={handleMergeSong}
       />
     </div>

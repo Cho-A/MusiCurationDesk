@@ -295,6 +295,7 @@ class SongCardData(BaseModel):
     version_name: str | None = None
     is_streaming_available: bool = True
     track_category: str | None = None
+    work_id: int | None = None
 
     @model_validator(mode='before')
     @classmethod
@@ -329,7 +330,8 @@ class SongCardData(BaseModel):
             "role": None, # Should be explicitly passed if needed
             "album_title": album_title,
             "version_name": getattr(data, 'version_name', None),
-            "is_streaming_available": getattr(data, 'is_streaming_available', True)
+            "is_streaming_available": getattr(data, 'is_streaming_available', True),
+            "work_id": getattr(data, 'work_id', None)
         }
 
     class Config:

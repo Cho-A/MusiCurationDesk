@@ -33,14 +33,14 @@ def get_dashboard_stats(db: Session = Depends(models.get_db)):
 def get_recent_additions(db: Session = Depends(models.get_db)):
     """最近追加されたアルバムと楽曲を取得する"""
     recent_albums = db.query(models.Album).options(
-        joinedload(models.Album.artist_links).joinedload(models.AlbumArtistLink.artist),
+        joinedload(models.Album.artist),
         joinedload(models.Album.album_group)
     ).order_by(models.Album.id.desc()).limit(10).all()
     
     recent_songs = db.query(models.Song).options(
         joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
         joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist),
-        joinedload(models.Song.album_tracks).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
+        joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
     ).order_by(models.Song.id.desc()).limit(10).all()
     
     return {
@@ -150,7 +150,7 @@ def get_personal_recent_additions(
         return get_recent_additions(db)
         
     recent_albums = db.query(models.Album).options(
-        joinedload(models.Album.artist_links).joinedload(models.AlbumArtistLink.artist),
+        joinedload(models.Album.artist),
         joinedload(models.Album.album_group)
     ).filter(
         models.Album.artist_id.in_(artist_ids_list)
@@ -160,7 +160,7 @@ def get_personal_recent_additions(
     recent_songs = db.query(models.Song).options(
         joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
         joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist),
-        joinedload(models.Song.album_tracks).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
+        joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
     ).join(
         models.SongArtistLink, models.Song.id == models.SongArtistLink.song_id
     ).filter(

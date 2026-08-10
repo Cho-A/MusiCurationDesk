@@ -1,28 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Link as LinkIcon, Loader } from 'lucide-react';
-
-interface ArtistLink {
-  artist_id: number;
-  artist_name: string;
-}
-
-interface SongData {
-  id: number;
-  title: string;
-  work_id?: number;
-  artist_links?: ArtistLink[];
-}
+import type { SongCardData } from '../types/models';
 
 interface AttachWorkModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentSong: SongData;
+  currentSong: any;
   onAttach: (targetWorkId: number) => void;
 }
 
 const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, currentSong, onAttach }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<SongData[]>([]);
+  const [results, setResults] = useState<SongCardData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // 初期値のセット
@@ -61,10 +50,10 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
 
         const res = await fetch(url);
         if (res.ok) {
-          const data: SongData[] = await res.json();
+          const data: SongCardData[] = await res.json();
           
           // 名寄せ処理 (同じ work_id のものは1つにまとめる。work_idが無いものはidで)
-          const uniqueWorks = new Map<number, SongData>();
+          const uniqueWorks = new Map<number, SongCardData>();
           data.forEach(song => {
             if (song.id === currentSong.id) return;
             const key = song.work_id ? song.work_id : -song.id;
@@ -168,7 +157,7 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
                       {song.title}
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {song.artist_links && song.artist_links.length > 0 ? song.artist_links.map(a => a.artist_name).join(', ') : 'Unknown Artist'}
+                      {song.artist_name || 'Unknown Artist'}
                       <span style={{ margin: '0 8px', color: 'var(--border-color)' }}>|</span>
                       Work ID: {song.work_id || '(未統合)'}
                     </div>

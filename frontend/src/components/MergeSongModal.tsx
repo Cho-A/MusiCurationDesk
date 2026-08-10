@@ -1,31 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Check, Loader } from 'lucide-react';
-
-interface ArtistLink {
-  artist_id: number;
-  artist_name: string;
-}
-
-interface SongData {
-  id: number;
-  title: string;
-  version_name?: string;
-  work_id?: number;
-  is_video?: boolean;
-  artist_links?: ArtistLink[];
-}
+import { X, Search, Loader, Check } from 'lucide-react';
+import type { SongCardData } from '../types/models';
 
 interface MergeSongModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentSong: SongData;
-  otherVersions: SongData[];
+  currentSong: any;
+  otherVersions: SongCardData[];
   onMerge: (targetSongId: number) => void;
 }
 
 const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, currentSong, otherVersions, onMerge }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<SongData[]>([]);
+  const [results, setResults] = useState<SongCardData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // 初期値は空にして、サジェスト（otherVersions）を表示
@@ -50,8 +37,8 @@ const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, curren
         const url = `http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}&limit=50`;
         const res = await fetch(url);
         if (res.ok) {
-          const data: SongData[] = await res.json();
-          // 自分自身を除外
+          const data: SongCardData[] = await res.json();
+          // 自分自身を除外してセット
           setResults(data.filter(s => s.id !== currentSong.id));
         }
       } catch (err) {
@@ -146,7 +133,7 @@ const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, curren
                       {song.title} {song.version_name && <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>- {song.version_name}</span>}
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {song.artist_links && song.artist_links.length > 0 ? song.artist_links.map(a => a.artist_name).join(', ') : 'Unknown Artist'}
+                      {song.artist_name || 'Unknown Artist'}
                       <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.2)' }}>|</span>
                       Song ID: {song.id}
                       {song.is_video && <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'var(--warning-bg)', color: 'var(--warning-color)', borderRadius: '4px', fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}>映像</span>}

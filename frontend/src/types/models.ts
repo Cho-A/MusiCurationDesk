@@ -18,4 +18,6 @@ export interface SongCardData {
   album_title?: string | null;
   version_name?: string | null;
   is_streaming_available: boolean;
+  track_category?: string | null;
+  work_id?: number | null;
 }

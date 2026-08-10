@@ -761,7 +761,7 @@ const PerformanceDetail = () => {
                             )}
                           </span>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '8px' }}>
-                            <span>👤 {song.artist_links?.map((a: any) => a.artist_name).join(', ') || '不明'}</span>
+                            <span>👤 {song.artist_name || '不明'}</span>
                             {song.primary_album && <span>💿 {song.primary_album.main_title}</span>}
                             {song.version_name && <span style={{ color: '#88aaff' }}>[{song.version_name}]</span>}
                           </div>
@@ -862,7 +862,7 @@ const PerformanceDetail = () => {
                         )}
                       </span>
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '12px' }}>
-                        <span>👤 {song.artist_links?.map((a: any) => a.artist_name).join(', ') || '不明'}</span>
+                        <span>👤 {song.artist_name || '不明'}</span>
                         {song.primary_album && <span>💿 {song.primary_album.main_title}</span>}
                         {song.version_name && <span style={{ color: '#88aaff' }}>[{song.version_name}]</span>}
                       </div>
