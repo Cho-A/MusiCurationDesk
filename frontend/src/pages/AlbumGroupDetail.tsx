@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X, GitMerge } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -100,9 +100,14 @@ interface AlbumGroupDetailData {
 const AlbumGroupDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialAlbumId = searchParams.get('album_id') ? parseInt(searchParams.get('album_id')!, 10) : null;
+  const initialDisc = searchParams.get('disc_number') ? parseInt(searchParams.get('disc_number')!, 10) : 1;
+
   const [albumGroup, setAlbumGroup] = useState<AlbumGroupDetailData | null>(null);
-  const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(initialAlbumId);
+  const [selectedDisc, setSelectedDisc] = useState<number>(initialDisc);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, is_unreleased: boolean, main_artist_id: number | null, main_artist_name: string}>({ display_title: '', notes: '', song_id: null, song_title: '', is_unreleased: false, main_artist_id: null, main_artist_name: '' });
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
@@ -165,7 +170,11 @@ const AlbumGroupDetail = () => {
             if (scoreA !== scoreB) return scoreA - scoreB;
             return (a.version_title || '').localeCompare(b.version_title || '');
           });
-          setSelectedAlbumId(sorted[0].id);
+          if (!initialAlbumId || !data.albums.some((a: any) => a.id === initialAlbumId)) {
+            setSelectedAlbumId(sorted[0].id);
+          } else {
+            setSelectedAlbumId(initialAlbumId);
+          }
         }
         setLoading(false);
       })
