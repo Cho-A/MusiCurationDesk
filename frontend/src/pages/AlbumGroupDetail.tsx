@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Disc3, AlertCircle, Edit2, Save, X, GitMerge } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -103,6 +103,7 @@ const AlbumGroupDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialAlbumId = searchParams.get('album_id') ? parseInt(searchParams.get('album_id')!, 10) : null;
+  const hasScrolledRef = useRef(false);
 
   const [albumGroup, setAlbumGroup] = useState<AlbumGroupDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -215,10 +216,11 @@ const AlbumGroupDetail = () => {
   const album = albumGroup?.albums?.find(a => a.id === selectedAlbumId) || null;
 
   useEffect(() => {
-    if (!loading && albumGroup && window.location.hash) {
+    if (!loading && albumGroup && window.location.hash && !hasScrolledRef.current) {
       const element = document.getElementById(window.location.hash.slice(1));
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
+        hasScrolledRef.current = true;
       }
     }
   }, [loading, albumGroup]);
