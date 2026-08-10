@@ -841,16 +841,25 @@ const AlbumGroupDetail = () => {
                                 {discData.edition}
                               </span>
                             )}
-                            <button 
-                              onClick={() => {
-                                setBulkMergeSourceDisc({albumId: album!.id, discNumber: discNum, title: discData?.title || null});
-                                setIsBulkMergeModalOpen(true);
-                              }} 
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', marginLeft: 'auto', padding: '4px' }} 
-                              title="ディスクの一括統合 (開発者用)"
-                            >
-                              <GitMerge size={16} />
-                            </button>
+                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <button
+                                onClick={() => setEditingDiscId(discData!.id)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
+                                title="ディスク名を編集"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setBulkMergeSourceDisc({albumId: album!.id, discNumber: discNum, title: discData?.title || null});
+                                  setIsBulkMergeModalOpen(true);
+                                }} 
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }} 
+                                title="ディスクの一括統合 (開発者用)"
+                              >
+                                <GitMerge size={16} />
+                              </button>
+                            </div>
                           </>
                         )}
                       </>
