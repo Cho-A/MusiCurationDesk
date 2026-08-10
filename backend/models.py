@@ -361,9 +361,18 @@ class Song(Base):
 
     @property
     def primary_album(self):
-        # 紐づいているアルバムがあれば最初の一つを返す
+        # 紐づいているアルバムがあれば、発売日が最も古いものを返す
         if self.album_links and len(self.album_links) > 0:
-            return self.album_links[0].album
+            import datetime
+            MAX_DATE = datetime.date(9999, 12, 31)
+            
+            def get_release_date(link):
+                d1 = link.album.physical_release_date
+                d2 = link.album.digital_release_date
+                return min(d1 if d1 else MAX_DATE, d2 if d2 else MAX_DATE)
+                
+            sorted_links = sorted(self.album_links, key=get_release_date)
+            return sorted_links[0].album
         return None
 
     # 楽曲タグへのリレーション (中間テーブル song_tags を使用)
