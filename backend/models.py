@@ -348,6 +348,7 @@ class Song(Base):
     is_video = Column(Boolean, default=False, nullable=False)
     version_name = Column(String, nullable=True)
     is_streaming_available = Column(Boolean, default=True, nullable=False)
+    track_category = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     work = relationship("MusicalWork", back_populates="songs")

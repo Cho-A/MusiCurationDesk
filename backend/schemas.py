@@ -136,6 +136,7 @@ class SongCreate(BaseModel):
     jasrac_code: str | None = None
     jasrac_title: str | None = None
     lyrics: str | None = None
+    track_category: str | None = None
 
 
 # APIが「返す」データの型 (登録後・参照時)
@@ -150,6 +151,7 @@ class Song(BaseModel):
     is_video: bool = False
     version_name: str | None = None
     is_streaming_available: bool = True
+    track_category: str | None = None
     
     # 検索一覧などでアーティスト情報を表示できるように追加
     artists: list["ArtistLinkInfo"] = Field(
@@ -292,11 +294,14 @@ class SongCardData(BaseModel):
     album_title: str | None = None
     version_name: str | None = None
     is_streaming_available: bool = True
+    track_category: str | None = None
 
     @model_validator(mode='before')
     @classmethod
     def extract_fields(cls, data: any) -> any:
+        print("DEBUG SongCardData data type:", type(data))
         if isinstance(data, dict):
+            print("DEBUG dict keys:", data.keys())
             return data
             
         # SQLAlchemy ORM fallback extraction
@@ -424,6 +429,7 @@ class SongDetail(BaseModel):
     is_video: bool = False
     version_name: str | None = None
     is_streaming_available: bool = True
+    track_category: str | None = None
     work: MusicalWork | None = None
     
     other_versions: list["SongDetailMini"] = []
@@ -533,6 +539,7 @@ class SongMini(BaseModel):
     is_streaming_available: bool = True
     spotify_song_id: str | None = None
     isrc: str | None = None
+    track_category: str | None = None
 
     class Config:
         from_attributes = True
@@ -553,7 +560,8 @@ class SongUpdate(BaseModel):
     work_id: int | None = None
     is_video: bool | None = None
     version_name: str | None = None
-    is_streaming_available: bool | None = None
+    is_streaming_available: bool = None
+    track_category: str | None = None
     lyrics: str | None = None
     jasrac_code: str | None = None
     jasrac_title: str | None = None

@@ -39,6 +39,7 @@ interface SongMini {
   is_video?: boolean;
   version_name?: string;
   is_streaming_available?: boolean;
+  track_category?: string | null;
 }
 
 interface AlbumDisc {
@@ -631,29 +632,45 @@ const AlbumGroupDetail = () => {
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {albumGroup.albums && albumGroup.albums.length > 1 ? (
-                <select
-                  value={selectedAlbumId || ''}
-                  onChange={(e) => setSelectedAlbumId(Number(e.target.value))}
-                  style={{
-                    fontSize: '1.2rem', fontWeight: 500, color: 'var(--accent-primary)', 
-                    background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', 
-                    borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', outline: 'none',
-                    width: 'fit-content'
-                  }}
-                >
-                  {sortedAlbums.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.version_title || '通常盤'}
-                    </option>
-                  ))}
-                </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {sortedAlbums.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => setSelectedAlbumId(a.id)}
+                    style={{
+                      background: selectedAlbumId === a.id ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                      color: selectedAlbumId === a.id ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                      border: `1px solid ${selectedAlbumId === a.id ? 'var(--text-primary)' : 'var(--border-color)'}`,
+                      borderRadius: '20px',
+                      padding: '6px 16px',
+                      fontSize: '0.95rem',
+                      fontWeight: selectedAlbumId === a.id ? 700 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: selectedAlbumId === a.id ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    {a.version_title || '通常盤'}
+                  </button>
+                ))}
+              </div>
             ) : (
               (album?.version_title && album.version_title !== '通常盤') ? (
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--accent-primary)', margin: 0 }}>
+                <div style={{ display: 'inline-block', background: 'var(--text-primary)', color: 'var(--bg-primary)', borderRadius: '20px', padding: '6px 16px', fontSize: '0.95rem', fontWeight: 700 }}>
                   {album.version_title}
-                </h2>
+                </div>
               ) : null
             )}
+            
+            {/* 外部リンク（ストア等）プレースホルダー */}
+            <a 
+              href="#" 
+              onClick={(e) => e.preventDefault()}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', textDecoration: 'none', marginLeft: '8px', border: '1px solid var(--border-color)' }}
+              title="ストアを開く (Coming Soon)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </a>
             {album && (
               <button 
                 onClick={handleOpenEditionModal} 
@@ -744,9 +761,32 @@ const AlbumGroupDetail = () => {
 
       {/* トラックリスト */}
       <div>
-        <h2 style={{ fontSize: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px', marginBottom: '24px' }}>
-          収録曲
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '1.5rem', margin: 0 }}>
+            収録曲
+          </h2>
+          {uniqueDiscs.length > 1 && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Jump to:</span>
+              <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {uniqueDiscs.map(discNum => (
+                  <a 
+                    key={discNum} 
+                    href={`#disc-${discNum}`} 
+                    style={{ 
+                      fontSize: '0.85rem', padding: '4px 10px', 
+                      background: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
+                      borderRadius: '12px', textDecoration: 'none', fontWeight: 600,
+                      border: '1px solid var(--border-color)', whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Disc {discNum}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         
         {/* Discごとにグループ化して表示 */}
         {uniqueDiscs.map((discNum) => {
@@ -784,7 +824,14 @@ const AlbumGroupDetail = () => {
                           </div>
                         ) : (
                           <>
-                            <span>{icon} Disc {discNum}{formatStr}</span>
+                            {discData?.title ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>{icon} Disc {discNum}{formatStr}</span>
+                                <span style={{ fontSize: '1.3rem', color: 'var(--text-primary)', fontWeight: 700, marginTop: '2px' }}>{discData.title}</span>
+                              </div>
+                            ) : (
+                              <span>{icon} Disc {discNum}{formatStr}</span>
+                            )}
                             {discData?.edition && (
                               <span style={{ 
                                 fontSize: '0.75rem', backgroundColor: 'var(--accent-primary)', 
@@ -962,10 +1009,21 @@ const AlbumGroupDetail = () => {
                               {track.notes && (
                                 <span style={{ 
                                   display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                  fontSize: '0.75rem', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#ddd',
+                                  fontSize: '0.75rem', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
                                   padding: '2px 6px', borderRadius: '4px'
                                 }}>
                                   {track.notes}
+                                </span>
+                              )}
+                              {track.song.track_category && (
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: '0.7rem', color: 'var(--text-secondary)',
+                                  border: '1px solid var(--border-color)', borderRadius: '12px',
+                                  padding: '1px 8px', marginLeft: 'auto', textTransform: 'lowercase',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {track.song.track_category}
                                 </span>
                               )}
                             </div>

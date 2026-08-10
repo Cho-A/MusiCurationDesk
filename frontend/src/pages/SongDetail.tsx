@@ -41,6 +41,7 @@ interface AlbumTrackInfo {
   display_title?: string;
   version_name?: string;
   is_streaming_available?: boolean;
+  track_category?: string | null;
 }
 
 interface TagData {
@@ -849,6 +850,17 @@ const SongDetail = () => {
                                 {(t.display_title || (t.song_title && t.song_title !== displaySong.title)) && (
                                   <span style={{ fontSize: '0.75rem', opacity: 0.8, marginLeft: '4px', fontWeight: 'normal' }}>
                                     {t.display_title || t.song_title}
+                                  </span>
+                                )}
+                                {t.track_category && (
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '0.65rem', color: 'var(--text-secondary)',
+                                    border: '1px solid var(--border-color)', borderRadius: '12px',
+                                    padding: '1px 6px', marginLeft: '4px', textTransform: 'lowercase',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {t.track_category}
                                   </span>
                                 )}
                               </span>

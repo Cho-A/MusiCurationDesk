@@ -73,19 +73,23 @@ def add_song_alias(
         
     return new_alias
 
-@router.get("/recent", response_model=List[schemas.Song], tags=["Songs"])
+@router.get("/recent", response_model=List[schemas.SongCardData], tags=["Songs"])
 def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
     """
     最近追加された楽曲を取得します。
     """
-    recent_songs = db.query(models.Song).order_by(models.Song.created_at.desc()).limit(limit).all()
+    recent_songs = db.query(models.Song).options(
+        joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
+        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist),
+        joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
+    ).order_by(models.Song.created_at.desc()).limit(limit).all()
     return recent_songs
 
 # --- ★★★ 全楽曲の一覧を取得するAPI (上書き) ★★★ ---
 # 
 # [GET] /songs/
 # ----------------------------------------------------
-@router.get("/", response_model=List[schemas.Song], tags=["Songs"])
+@router.get("/", response_model=List[schemas.SongCardData], tags=["Songs"])
 def get_all_songs(
     skip: int = 0,
     limit: int = 100,
@@ -104,8 +108,9 @@ def get_all_songs(
     
     # 1. クエリの組み立て開始 (検索結果用のAlbum情報とArtist情報を結合しておく)
     query = db.query(models.Song).options(
-        joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album),
-        joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist)
+        joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group),
+        joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
+        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist)
     )
 
     # 2. フィルタリング (ArtistとRoleの絞り込みを統合)
