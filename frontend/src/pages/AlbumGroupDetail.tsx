@@ -324,7 +324,7 @@ const AlbumGroupDetail = () => {
   const handleSaveDiscTitle = async (discId: number) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/albums/${id}/discs/${discId}`, {
+      const res = await fetch(`http://127.0.0.1:8000/albums/${selectedAlbumId}/discs/${discId}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -815,11 +815,11 @@ const AlbumGroupDetail = () => {
                               placeholder="ディスク名を入力..."
                               style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', width: '200px', fontSize: '0.9rem' }}
                             />
-                            <button onClick={() => handleSaveDiscTitle(discData!.id)} style={{ background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>
+                            <button onClick={() => handleSaveDiscTitle(discData!.id)} style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                               <Save size={14} />
                             </button>
-                            <button onClick={() => setEditingDiscId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                              <X size={16} />
+                            <button onClick={() => setEditingDiscId(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+                              <X size={14} />
                             </button>
                           </div>
                         ) : (
@@ -843,7 +843,10 @@ const AlbumGroupDetail = () => {
                             )}
                             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <button
-                                onClick={() => setEditingDiscId(discData!.id)}
+                                onClick={() => {
+                                  setEditingDiscId(discData!.id);
+                                  setDiscTitleForm(discData!.title || '');
+                                }}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
                                 title="ディスク名を編集"
                               >
