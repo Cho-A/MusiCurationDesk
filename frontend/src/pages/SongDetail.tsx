@@ -235,13 +235,20 @@ const SongDetail = () => {
     try {
       let artistId: number | null = null;
       const searchRes = await fetch(`http://127.0.0.1:8000/artists/search?q=${encodeURIComponent(artistName)}`);
+      
       if (searchRes.ok) {
         const artists = await searchRes.json();
         const exactMatch = artists.find((a: any) => a.name.toLowerCase() === artistName.toLowerCase());
-        if (exactMatch) artistId = exactMatch.id;
+        if (exactMatch) {
+          artistId = exactMatch.id;
+        }
+      } else if (searchRes.status !== 404) {
+        alert(`アーティスト検索中にエラーが発生しました: ${searchRes.status}`);
+        return;
       }
+
       if (!artistId) {
-        const createRes = await fetch('http://127.0.0.1:8000/artists', {
+        const createRes = await fetch('http://127.0.0.1:8000/artists/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: artistName })
@@ -249,6 +256,9 @@ const SongDetail = () => {
         if (createRes.ok) {
           const newArtist = await createRes.json();
           artistId = newArtist.id;
+        } else {
+          alert(`アーティストの新規作成に失敗しました: ${createRes.status}`);
+          return;
         }
       }
       if (!artistId) return alert('アーティストの特定/作成に失敗しました');

@@ -58,6 +58,21 @@ def create_artist(
     return new_artist
 
 
+# [GET] /artists/search
+# ----------------------------------------------------
+@router.get("/search", response_model=List[schemas.Artist], tags=["Artists"])
+def search_artists(
+    q: str = Query(..., description="アーティスト名検索キーワード"),
+    limit: int = 50,
+    db: Session = Depends(models.get_db)
+):
+    """
+    名前でアーティストを検索します。
+    """
+    artists = db.query(models.Artist).filter(models.Artist.name.ilike(f"%{q}%")).limit(limit).all()
+    return artists
+
+
 # --- 4. (おまけ) 登録したアーティストを読み取るAPI ---
 @router.get("/{artist_id}", response_model=schemas.ArtistDetail, tags=["Artists"])
 def get_artist_by_id(artist_id: int, db: Session = Depends(models.get_db)):
