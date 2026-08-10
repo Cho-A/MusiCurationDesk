@@ -169,11 +169,15 @@ const AlbumGroupDetail = () => {
             if (scoreA !== scoreB) return scoreA - scoreB;
             return (a.version_title || '').localeCompare(b.version_title || '');
           });
-          if (!initialAlbumId || !data.albums.some((a: any) => a.id === initialAlbumId)) {
-            setSelectedAlbumId(sorted[0].id);
-          } else {
-            setSelectedAlbumId(initialAlbumId);
-          }
+          setSelectedAlbumId(prev => {
+            if (prev && data.albums.some((a: any) => a.id === prev)) {
+              return prev;
+            }
+            if (initialAlbumId && data.albums.some((a: any) => a.id === initialAlbumId)) {
+              return initialAlbumId;
+            }
+            return sorted[0].id;
+          });
         }
         setLoading(false);
       })
