@@ -478,6 +478,7 @@ class SongDetail(BaseModel):
     track_category: str | None = None
     work: MusicalWork | None = None
     primary_album_title: Optional[str] = None
+    release_date: Optional[str] = None
     
     other_versions: list["SongDetailMini"] = []
 
@@ -511,6 +512,13 @@ class SongDetail(BaseModel):
                     data['primary_album_title'] = data.primary_album.main_title
                 else:
                     setattr(data, 'primary_album_title', data.primary_album.main_title)
+            if not getattr(data, 'release_date', None):
+                raw_date = getattr(data.primary_album, 'physical_release_date', None) or getattr(data.primary_album, 'digital_release_date', None)
+                if raw_date:
+                    if isinstance(data, dict):
+                        data['release_date'] = str(raw_date)
+                    else:
+                        setattr(data, 'release_date', str(raw_date))
         return data
 
 
@@ -1081,6 +1089,7 @@ class SongDetailMini(BaseModel):
     version_name: str | None = None
     is_streaming_available: bool = True
     primary_album_title: Optional[str] = None
+    release_date: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -1094,6 +1103,13 @@ class SongDetailMini(BaseModel):
                     data['primary_album_title'] = data.primary_album.main_title
                 else:
                     setattr(data, 'primary_album_title', data.primary_album.main_title)
+            if not getattr(data, 'release_date', None):
+                raw_date = getattr(data.primary_album, 'physical_release_date', None) or getattr(data.primary_album, 'digital_release_date', None)
+                if raw_date:
+                    if isinstance(data, dict):
+                        data['release_date'] = str(raw_date)
+                    else:
+                        setattr(data, 'release_date', str(raw_date))
         return data
 
 # --- CD Import (手動アルバムビルダー用) ---

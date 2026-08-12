@@ -124,3 +124,105 @@ ul {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* =========================================
+   RESPONSIVE UTILITIES
+   ========================================= */
+/* Sidebar overlay on small screens */
+.sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 15;
+  animation: fadeIn 0.3s ease;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    margin-left: 0 !important;
+  }
+  .mobile-only-btn {
+    display: block !important;
+  }
+}
+
+/* Prevent collapse on highly structured content */
+.scrollable-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.table-min-width {
+  min-width: 600px;
+}
+
+/* =========================================
+   RESPONSIVE DETAIL HEADERS
+   ========================================= */
+.responsive-detail-header {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 48px;
+  align-items: flex-start;
+}
+
+.responsive-cover {
+  width: 280px;
+  height: 280px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+.metadata-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+  flex: 1;
+  min-width: 0; /* Important to allow text truncation inside flex children */
+}
+
+/* Title wrapper for inline edit buttons */
+.title-action-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .responsive-detail-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  
+  .responsive-cover {
+    width: 220px !important;
+    height: 220px !important;
+  }
+  
+  .metadata-container {
+    align-items: center;
+    padding-top: 0;
+    width: 100%;
+  }
+
+  .title-action-wrapper {
+    justify-content: center;
+  }
+  
+  /* Scale down huge text on mobile */
+  .title-action-wrapper h1,
+  .title-action-wrapper h2 {
+    font-size: 2rem !important;
+  }
+}

@@ -707,24 +707,20 @@ const AlbumGroupDetail = () => {
       </button>
 
       {/* ヘッダーエリア */}
-      <div style={{ display: 'flex', gap: '40px', marginBottom: '48px', alignItems: 'flex-start' }}>
+      <div className="responsive-detail-header">
         {albumGroup.cover_image_url || album?.cover_image_url ? (
           <img 
+            className="responsive-cover"
             src={albumGroup.cover_image_url || album?.cover_image_url} 
             alt={albumGroup.title} 
-            style={{ 
-              width: '280px', height: '280px', 
-              borderRadius: '12px',
-              objectFit: 'cover',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
-              flexShrink: 0
-            }} 
           />
         ) : (
-          <FallbackCoverDetail title={albumGroup.title} size={280} />
+          <div className="responsive-cover fallback-cover">
+            <FallbackCoverDetail title={albumGroup.title} size={280} />
+          </div>
         )}
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '16px' }}>
+        <div className="metadata-container">
           <span style={{ 
             fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', 
             color: 'var(--text-secondary)', letterSpacing: '0.1em'
@@ -732,7 +728,7 @@ const AlbumGroupDetail = () => {
             {albumGroup.album_type === 'single' ? 'Single' : albumGroup.album_type === 'dvd' ? 'Video' : 'Album'}
           </span>
           {isEditingTitle ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <div className="title-action-wrapper">
               <input
                 type="text"
                 value={titleEditForm}
@@ -752,7 +748,7 @@ const AlbumGroupDetail = () => {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div className="title-action-wrapper">
               <h1 style={{ fontSize: '3rem', fontWeight: 900, margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
                 {albumGroup.title}
               </h1>
@@ -1019,7 +1015,7 @@ const AlbumGroupDetail = () => {
                 </h3>
               )}
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="scrollable-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {tracks.sort((a, b) => a.track_number - b.track_number).map((track) => {
                   // 映像フォーマット（Blu-ray/DVD）か、曲自体が映像フラグを持っている場合はサブスク未解禁フラグを出さない
                   const isVideoTrack = track.song.is_video || (track.media_format && ['Blu-ray', 'DVD'].includes(track.media_format));

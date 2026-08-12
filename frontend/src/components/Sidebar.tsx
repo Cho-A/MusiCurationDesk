@@ -1,8 +1,8 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, User, LogOut, LogIn, UserPlus, Shield } from 'lucide-react';
+import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, User, LogOut, LogIn, UserPlus, Shield, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const Sidebar = ({ isOpen = true }: { isOpen?: boolean }) => {
+const Sidebar = ({ isOpen = true, closeSidebar }: { isOpen?: boolean, closeSidebar?: () => void }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -39,24 +39,34 @@ const Sidebar = ({ isOpen = true }: { isOpen?: boolean }) => {
       zIndex: 20
     }}>
       {/* Logo Area */}
-      <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', cursor: 'pointer' }}>
-          <div style={{ 
-            width: '40px', height: '40px', borderRadius: '10px', 
-            background: 'linear-gradient(135deg, #1DB954 0%, #128C3D 100%)',
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            boxShadow: '0 4px 12px rgba(29, 185, 84, 0.3)'
-          }}>
-            <Music size={24} color="#fff" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px' }}>
+        <Link to="/" onClick={() => window.innerWidth <= 900 && closeSidebar?.()} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+            <div style={{ 
+              width: '40px', height: '40px', borderRadius: '10px', 
+              background: 'linear-gradient(135deg, #1DB954 0%, #128C3D 100%)',
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+              boxShadow: '0 4px 12px rgba(29, 185, 84, 0.3)'
+            }}>
+              <Music size={24} color="#fff" />
+            </div>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, transition: 'color 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#1DB954'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+            >
+              MusiCurationDesk
+            </h1>
           </div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, transition: 'color 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#1DB954'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
-          >
-            MusiCurationDesk
-          </h1>
-        </div>
-      </Link>
+        </Link>
+        {/* Mobile Close Button */}
+        <button 
+          className="mobile-only-btn"
+          onClick={closeSidebar}
+          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'none', padding: '4px' }}
+        >
+          <X size={24} />
+        </button>
+      </div>
 
       {/* Navigation */}
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -64,6 +74,7 @@ const Sidebar = ({ isOpen = true }: { isOpen?: boolean }) => {
           <NavLink
             key={item.name}
             to={item.path}
+            onClick={() => window.innerWidth <= 900 && closeSidebar?.()}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: '12px',
               padding: '12px 16px', borderRadius: '12px',
@@ -80,7 +91,10 @@ const Sidebar = ({ isOpen = true }: { isOpen?: boolean }) => {
 
         {/* Developer Tools (Admin Only) */}
         {user?.is_admin && (
-          <NavLink to="/admin" style={({ isActive }) => ({
+          <NavLink 
+            to="/admin" 
+            onClick={() => window.innerWidth <= 900 && closeSidebar?.()}
+            style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: '12px',
             padding: '12px 16px', borderRadius: '12px',
             color: isActive ? '#ff6b6b' : 'var(--text-secondary)',

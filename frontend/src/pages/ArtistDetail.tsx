@@ -229,7 +229,7 @@ const ArtistDetail = () => {
         戻る
       </button>
 
-      <div style={{ position: 'relative', display: 'flex', gap: '32px', alignItems: 'center', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
+      <div className="responsive-detail-header" style={{ position: 'relative', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
         <button 
           onClick={() => setIsEditing(true)}
           style={{ position: 'absolute', top: '24px', right: '24px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
@@ -237,14 +237,14 @@ const ArtistDetail = () => {
           <Edit3 size={18} />
         </button>
 
-        <div style={{ display: 'flex', width: '160px', height: '160px', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', flexShrink: 0, overflow: 'hidden' }}>
+        <div className="responsive-cover" style={{ display: 'flex', borderRadius: '50%', background: 'var(--bg-tertiary)', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--border-color)', overflow: 'hidden' }}>
           {artist.image_url ? (
             <img src={artist.image_url} alt={artist.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <Users size={64} color="var(--text-tertiary)" />
           )}
         </div>
-        <div>
+        <div className="metadata-container">
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
             {artist.tags && artist.tags.map(tag => (
               <span key={tag.id} style={{ background: tag.color || 'var(--primary-color)', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>
@@ -252,7 +252,9 @@ const ArtistDetail = () => {
               </span>
             ))}
           </div>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '2.5rem', fontWeight: 800 }}>{artist.name}</h1>
+          <div className="title-action-wrapper">
+            <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 800 }}>{artist.name}</h1>
+          </div>
           
           {artist.spotify_artist_id && (
             <a href={`https://open.spotify.com/artist/${artist.spotify_artist_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px', width: 'fit-content' }}>

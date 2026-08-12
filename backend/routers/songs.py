@@ -265,7 +265,7 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
         # Pydanticモデルに変換してから上書きする。
         song_model = schemas.SongDetail.model_validate(db_song)
         song_model.albums = [schemas.AlbumTrackInfo.model_validate(t) for t in combined_albums]
-        song_model.other_versions = [schemas.SongMini.model_validate(s) for s in other_versions]
+        song_model.other_versions = [schemas.SongDetailMini.model_validate(s) for s in other_versions]
         return song_model
     else:
         for track in db_song.album_links:

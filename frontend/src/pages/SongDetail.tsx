@@ -69,6 +69,7 @@ interface OtherVersion {
   spotify_song_title?: string;
   album_links?: AlbumTrackInfo[]; // 実際のAPIではother_versionsにはalbum_linksが含まれないかもしれない。必要ならAPI改修が必要。
   primary_album_title?: string;
+  release_date?: string;
 }
 
 interface SongDetailData {
@@ -86,6 +87,7 @@ interface SongDetailData {
   tags?: TagData[];
   other_versions?: OtherVersion[];
   primary_album_title?: string;
+  release_date?: string;
   work_id?: number;
   work?: { 
     id: number; 
@@ -425,7 +427,20 @@ const SongDetail = () => {
   if (!baseSong) return <div style={{ padding: '32px' }}>楽曲が見つかりません。</div>;
 
   // バージョンの整理
-  const allVersions = [baseSong, ...(baseSong.other_versions || [])].sort((a, b) => a.id - b.id);
+  const allVersions = [baseSong, ...(baseSong.other_versions || [])].sort((a, b) => {
+    if (a.release_date && b.release_date) {
+      // release_date がある場合は古い順 (昇順) にソート
+      const dateA = new Date(a.release_date).getTime();
+      const dateB = new Date(b.release_date).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+    } else if (a.release_date) {
+      return -1; // a のみ日付がある場合は a を前に
+    } else if (b.release_date) {
+      return 1; // b のみ日付がある場合は b を前に
+    }
+    // 日付がない、または同じ日付の場合は id でソート
+    return a.id - b.id;
+  });
   // 重複排除 (baseSongがother_versionsに含まれて返ってくるAPI実装に対応するため)
   const uniqueVersionsMap = new Map();
   allVersions.forEach(v => uniqueVersionsMap.set(v.id, v));
@@ -522,7 +537,7 @@ const SongDetail = () => {
               <button onClick={() => setIsEditingWorkTitle(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>キャンセル</button>
             </div>
           ) : (
-            <>
+            <div className="title-action-wrapper" style={{ alignItems: 'center' }}>
               <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
                 {baseSong.work?.title || baseSong.title}
               </h1>
@@ -535,7 +550,7 @@ const SongDetail = () => {
                   <Edit2 size={20} />
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
         
@@ -672,7 +687,7 @@ const SongDetail = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '300px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+              <div className="title-action-wrapper">
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {displaySong.title}
                   {!displaySong.is_video && displaySong.is_streaming_available === false && (
