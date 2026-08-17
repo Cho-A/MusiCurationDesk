@@ -177,6 +177,7 @@ ul {
   object-fit: cover;
   box-shadow: 0 12px 32px rgba(0,0,0,0.15);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .metadata-container {
@@ -194,6 +195,14 @@ ul {
   align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
+  min-width: 0;
+  width: 100%;
+}
+
+.title-action-wrapper h1,
+.title-action-wrapper h2 {
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 768px) {

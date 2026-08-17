@@ -98,14 +98,16 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick, isDashboard = false 
       </div>
       
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
           <div style={{ 
             fontWeight: 700, 
             fontSize: '1.05rem', 
             color: 'var(--text-primary)',
             whiteSpace: 'nowrap', 
             overflow: 'hidden', 
-            textOverflow: 'ellipsis' 
+            textOverflow: 'ellipsis',
+            flex: 1,
+            minWidth: 0
           }}>
             {song.title}
           </div>
