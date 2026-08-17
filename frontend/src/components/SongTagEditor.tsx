@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Tag as TagIcon, X, Plus } from 'lucide-react';
+import { API_BASE_URL } from '../api/config';
 
 interface TagData {
   id: number;
@@ -25,7 +26,7 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
 
   // すべてのタグ（マスターデータ）を取得
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/tags/')
+    fetch(`${API_BASE_URL}/tags/`)
       .then(res => res.json())
       .then(data => setAllTags(data))
       .catch(err => console.error("Failed to load tags", err));
@@ -34,7 +35,7 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
   const handleAddTag = async (tagId: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${songId}/tags/${tagId}`, {
+      const res = await fetch(`${API_BASE_URL}/songs/${songId}/tags/${tagId}`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -52,7 +53,7 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
   const handleRemoveTag = async (tagId: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${songId}/tags/${tagId}`, {
+      const res = await fetch(`${API_BASE_URL}/songs/${songId}/tags/${tagId}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -72,7 +73,7 @@ const SongTagEditor = ({ songId, existingTags, onTagsChange }: SongTagEditorProp
     
     try {
       // 1. タグマスターに新規作成
-      const createRes = await fetch('http://127.0.0.1:8000/tags/', {
+      const createRes = await fetch(`${API_BASE_URL}/tags/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: tagName.trim(), color: 'var(--spotify-color)' }) // デフォルトカラー

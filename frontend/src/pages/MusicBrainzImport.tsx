@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, Disc, PlusCircle, CheckSquare, Square, DownloadCloud, Clipboard } from 'lucide-react';
 import CDImportBuilderModal from '../components/CDImportBuilderModal';
 import SmartPasteModal from '../components/SmartPasteModal';
+import { API_BASE_URL } from '../api/config';
 
 interface MBRelease {
   id: string;
@@ -56,7 +57,7 @@ const MusicBrainzImport = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/search?q=${encodeURIComponent(query)}&limit=50`, {
+      const res = await fetch(`${API_BASE_URL}/musicbrainz/search?q=${encodeURIComponent(query)}&limit=50`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -82,7 +83,7 @@ const MusicBrainzImport = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/releases/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/musicbrainz/releases/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -134,7 +135,7 @@ const MusicBrainzImport = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://127.0.0.1:8000/musicbrainz/import/bulk', {
+      const res = await fetch(`${API_BASE_URL}/musicbrainz/import/bulk`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -156,7 +157,7 @@ const MusicBrainzImport = () => {
   const pollBulkProgress = async (jobId: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/musicbrainz/import/bulk/progress/${jobId}`, {
+      const res = await fetch(`${API_BASE_URL}/musicbrainz/import/bulk/progress/${jobId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../api/config';
 
 interface Tour {
   id: number;
@@ -69,8 +70,8 @@ const Concerts = () => {
     setLoading(true);
     try {
       const [toursRes, perfsRes] = await Promise.all([
-        fetch('http://127.0.0.1:8000/tours/'),
-        fetch('http://127.0.0.1:8000/performances/')
+        fetch(`${API_BASE_URL}/tours/`),
+        fetch(`${API_BASE_URL}/performances/`)
       ]);
       if (toursRes.ok) setTours(await toursRes.json());
       if (perfsRes.ok) setPerformances(await perfsRes.json());
@@ -85,7 +86,7 @@ const Concerts = () => {
     if (!newTourName.trim()) return;
     setSavingTour(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/tours/', {
+      const res = await fetch(`${API_BASE_URL}/tours/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newTourName.trim() })
@@ -112,7 +113,7 @@ const Concerts = () => {
         performance_type: "One-Man",
         event_type: "Live"
       };
-      const res = await fetch('http://127.0.0.1:8000/performances/', {
+      const res = await fetch(`${API_BASE_URL}/performances/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -134,7 +135,7 @@ const Concerts = () => {
     if (!importQuery.trim()) return;
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}&p=${page}`, {
+      const res = await fetch(`${API_BASE_URL}/external/setlistfm/search?artist_name=${encodeURIComponent(importQuery)}&p=${page}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -156,7 +157,7 @@ const Concerts = () => {
     setImporting(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://127.0.0.1:8000/external/setlistfm/import', {
+      const res = await fetch(`${API_BASE_URL}/external/setlistfm/import`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -193,7 +194,7 @@ const Concerts = () => {
   const handleBulkUpdateTour = async () => {
     if (!bulkTourId || selectedSingles.size === 0) return;
     try {
-      const res = await fetch('http://127.0.0.1:8000/performances/bulk-update-tour', {
+      const res = await fetch(`${API_BASE_URL}/performances/bulk-update-tour`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ performance_ids: Array.from(selectedSingles), tour_id: bulkTourId })
@@ -215,7 +216,7 @@ const Concerts = () => {
   const handleBulkCopySetlist = async () => {
     if (!bulkSourceId || selectedSingles.size === 0) return;
     try {
-      const res = await fetch('http://127.0.0.1:8000/performances/bulk-copy-setlist', {
+      const res = await fetch(`${API_BASE_URL}/performances/bulk-copy-setlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_performance_ids: Array.from(selectedSingles), source_performance_id: bulkSourceId })
@@ -239,7 +240,7 @@ const Concerts = () => {
     setImporting(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://127.0.0.1:8000/external/setlistfm/bulk-import', {
+      const res = await fetch(`${API_BASE_URL}/external/setlistfm/bulk-import`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -277,7 +278,7 @@ const Concerts = () => {
     setImporting(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://127.0.0.1:8000/external/setlistfm/full-sync-artist', {
+      const res = await fetch(`${API_BASE_URL}/external/setlistfm/full-sync-artist`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

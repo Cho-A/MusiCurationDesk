@@ -3,6 +3,7 @@ import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Edit3, Save, X, ListMusic, ArrowUp, ArrowDown, Search, Link2Off, Copy, Users, Trash2 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import { API_BASE_URL } from '../api/config';
 
 interface Artist {
   id: number;
@@ -92,7 +93,7 @@ const PerformanceDetail = () => {
 
   const fetchPerformance = () => {
     setLoading(true);
-    fetch(`http://127.0.0.1:8000/performances/${id}`)
+    fetch(`${API_BASE_URL}/performances/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
@@ -117,7 +118,7 @@ const PerformanceDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/tours/')
+    fetch(`${API_BASE_URL}/tours/`)
       .then(res => res.json())
       .then(data => setTours(data))
       .catch(err => console.error(err));
@@ -126,7 +127,7 @@ const PerformanceDetail = () => {
 
   useEffect(() => {
     if (performance && performance.tour && performance.setlist_entries && performance.setlist_entries.length === 0) {
-      fetch(`http://127.0.0.1:8000/tours/${performance.tour.id}`)
+      fetch(`${API_BASE_URL}/tours/${performance.tour.id}`)
         .then(res => res.json())
         .then(data => {
           if (data.performances) {
@@ -140,7 +141,7 @@ const PerformanceDetail = () => {
   const searchSongs = async () => {
     if (!searchQuery.trim()) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`${API_BASE_URL}/songs/?title_search=${encodeURIComponent(searchQuery)}`);
       if (res.ok) {
         setSearchResults(await res.json());
       }
@@ -152,7 +153,7 @@ const PerformanceDetail = () => {
   const searchMappingSongs = async () => {
     if (!mappingSearchQuery.trim()) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(mappingSearchQuery)}`);
+      const res = await fetch(`${API_BASE_URL}/songs/?title_search=${encodeURIComponent(mappingSearchQuery)}`);
       if (res.ok) {
         setMappingSearchResults(await res.json());
       }
@@ -164,13 +165,13 @@ const PerformanceDetail = () => {
   const handleMapAlias = async (songId: number) => {
     if (!mappingTargetEntry || !mappingTargetEntry.unresolved_song_name) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${songId}/aliases`, {
+      const res = await fetch(`${API_BASE_URL}/songs/${songId}/aliases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alias_name: mappingTargetEntry.unresolved_song_name })
       });
       if (res.ok) {
-        await fetch(`http://127.0.0.1:8000/performances/${id}/setlist`, {
+        await fetch(`${API_BASE_URL}/performances/${id}/setlist`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -200,7 +201,7 @@ const PerformanceDetail = () => {
   const handleCopySetlist = async () => {
     if (!copyFromPerfId) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/performances/${id}/copy-setlist?from_performance_id=${copyFromPerfId}`, {
+      const res = await fetch(`${API_BASE_URL}/performances/${id}/copy-setlist?from_performance_id=${copyFromPerfId}`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -216,7 +217,7 @@ const PerformanceDetail = () => {
 
   const handleSaveMeta = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/performances/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/performances/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -333,7 +334,7 @@ const PerformanceDetail = () => {
         }))
       };
 
-      const res = await fetch(`http://127.0.0.1:8000/performances/${id}/setlist`, {
+      const res = await fetch(`${API_BASE_URL}/performances/${id}/setlist`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

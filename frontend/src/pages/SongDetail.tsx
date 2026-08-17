@@ -6,6 +6,7 @@ import SongTagEditor from '../components/SongTagEditor';
 import AttachWorkModal from '../components/AttachWorkModal';
 import MergeSongModal from '../components/MergeSongModal';
 import type { SongCardData } from '../types/models';
+import { API_BASE_URL } from '../api/config';
 
 interface ArtistLink {
   artist_id: number;
@@ -132,7 +133,7 @@ const SongDetail = () => {
   const fetchBaseSong = async (songIdToFetch: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${songIdToFetch}`);
+      const res = await fetch(`${API_BASE_URL}/songs/${songIdToFetch}`);
       if (res.ok) {
         const data = await res.json();
         setBaseSong(data);
@@ -164,7 +165,7 @@ const SongDetail = () => {
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
+      const res = await fetch(`${API_BASE_URL}/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
       if (res.ok) {
         const data = await res.json();
         setMainArtistSearchResults(data);
@@ -178,7 +179,7 @@ const SongDetail = () => {
     if (!selectedVersionId) return;
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/main_artist`, {
+      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}/main_artist`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -198,7 +199,7 @@ const SongDetail = () => {
   const handleCreateMainArtist = async (name: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/artists/`, {
+      const res = await fetch(`${API_BASE_URL}/artists/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ name })
@@ -218,7 +219,7 @@ const SongDetail = () => {
 
   const handleRemoveCredit = async (artistId: number, category: string, detail?: string) => {
     try {
-      let url = `http://127.0.0.1:8000/songs/${selectedVersionId}/artists/${artistId}?role_category=${encodeURIComponent(category)}`;
+      let url = `${API_BASE_URL}/songs/${selectedVersionId}/artists/${artistId}?role_category=${encodeURIComponent(category)}`;
       if (detail) url += `&role_detail=${encodeURIComponent(detail)}`;
       
       const res = await fetch(url, { method: 'DELETE' });
@@ -236,7 +237,7 @@ const SongDetail = () => {
     if (!baseSong?.work_id) return;
     try {
       let artistId: number | null = null;
-      const searchRes = await fetch(`http://127.0.0.1:8000/artists/search?q=${encodeURIComponent(artistName)}`);
+      const searchRes = await fetch(`${API_BASE_URL}/artists/search?q=${encodeURIComponent(artistName)}`);
       
       if (searchRes.ok) {
         const artists = await searchRes.json();
@@ -250,7 +251,7 @@ const SongDetail = () => {
       }
 
       if (!artistId) {
-        const createRes = await fetch('http://127.0.0.1:8000/artists/', {
+        const createRes = await fetch(`${API_BASE_URL}/artists/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: artistName })
@@ -265,7 +266,7 @@ const SongDetail = () => {
       }
       if (!artistId) return alert('アーティストの特定/作成に失敗しました');
 
-      const res = await fetch(`http://127.0.0.1:8000/works/${baseSong.work_id}/artists`, {
+      const res = await fetch(`${API_BASE_URL}/works/${baseSong.work_id}/artists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -288,7 +289,7 @@ const SongDetail = () => {
   const handleRemoveWorkCredit = async (artistId: number, category: string, detail?: string) => {
     if (!baseSong?.work_id) return;
     try {
-      let url = `http://127.0.0.1:8000/works/${baseSong.work_id}/artists/${artistId}?role_category=${encodeURIComponent(category)}`;
+      let url = `${API_BASE_URL}/works/${baseSong.work_id}/artists/${artistId}?role_category=${encodeURIComponent(category)}`;
       if (detail) url += `&role_detail=${encodeURIComponent(detail)}`;
       const res = await fetch(url, { method: 'DELETE' });
       if (res.ok) {
@@ -306,7 +307,7 @@ const SongDetail = () => {
     const nextVal = !displaySong.is_video;
     if (!window.confirm(`このバージョンを「${nextVal ? '映像' : '音源'}」に変更しますか？`)) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}`, {
+      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_video: nextVal })
@@ -329,7 +330,7 @@ const SongDetail = () => {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000/works/${work.id}`, {
+      const res = await fetch(`${API_BASE_URL}/works/${work.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -353,7 +354,7 @@ const SongDetail = () => {
   const handleDetachWork = async () => {
     if (!window.confirm("このバージョンを現在の作品から切り離し、独立した新しい作品として登録しますか？")) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/detach`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}/detach`, { method: 'POST' });
       if (res.ok) {
         alert("切り離しが完了しました");
         if (id) fetchBaseSong(id);
@@ -367,7 +368,7 @@ const SongDetail = () => {
     if (!window.confirm(`このバージョンを対象の楽曲(ID: ${targetId})の作品に統合しますか？`)) return;
     
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/attach_to_song?target_song_id=${targetId}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}/attach_to_song?target_song_id=${targetId}`, { method: 'POST' });
       if (res.ok) {
         alert("結合が完了しました");
         setIsAttachModalOpen(false);
@@ -386,7 +387,7 @@ const SongDetail = () => {
     if (!window.confirm("このトラックを別のバージョンとして独立して分割しますか？\n（誤って違うバージョンを統合してしまった場合に使用します）")) return;
     
     try {
-      const res = await fetch(`http://127.0.0.1:8000/albums/${track.album_id}/discs/${track.disc_number}/tracks/${track.track_number}/split`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/albums/${track.album_id}/discs/${track.disc_number}/tracks/${track.track_number}/split`, { method: 'POST' });
       if (res.ok) {
         const newSong = await res.json();
         alert("別バージョンとしての分割が完了しました。分離先のページへ移動します。");
@@ -409,7 +410,7 @@ const SongDetail = () => {
     if (!window.confirm(`本当にこのバージョンを ID: ${targetId} に統合してよろしいですか？`)) return;
     
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}/merge?target_song_id=${targetId}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}/merge?target_song_id=${targetId}`, { method: 'POST' });
       if (res.ok) {
         alert("統合が完了しました");
         setIsMergeModalOpen(false);
@@ -864,7 +865,7 @@ const SongDetail = () => {
                   version_name: editVersionNameValue.trim() || null,
                   is_streaming_available: displaySong.is_video ? true : editStreamingValue
                 };
-                const res = await fetch(`http://127.0.0.1:8000/songs/${selectedVersionId}`, {
+                const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(payload)

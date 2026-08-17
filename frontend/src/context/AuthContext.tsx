@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
+import { API_BASE_URL } from '../api/config';
 
 // JWTペイロードやユーザー情報の型定義 (簡易版)
 interface User {
@@ -22,7 +23,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchProfile = async (currentToken: string) => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/users/me', {
+      const res = await fetch(`${API_BASE_URL}/users/me`, {
         headers: { 'Authorization': `Bearer ${currentToken}` }
       });
       if (res.ok) {

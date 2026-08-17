@@ -5,6 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import SongCard from '../components/SongCard';
 import type { SongCardData } from '../types/models';
+import { API_BASE_URL } from '../api/config';
 
 interface AlbumMini {
   id: number;
@@ -99,7 +100,7 @@ const ArtistDetail = () => {
   const [albumTypeFilters, setAlbumTypeFilters] = useState<string[]>([]);
 
   const fetchArtist = () => {
-    fetch(`http://127.0.0.1:8000/artists/${id}`)
+    fetch(`${API_BASE_URL}/artists/${id}`)
       .then(res => res.json())
       .then(data => {
         setArtist(data);
@@ -112,7 +113,7 @@ const ArtistDetail = () => {
 
   useEffect(() => {
     fetchArtist();
-    fetch('http://127.0.0.1:8000/tags/')
+    fetch(`${API_BASE_URL}/tags/`)
       .then(res => res.json())
       .then(data => setAvailableTags(data))
       .catch(err => console.error(err));
@@ -120,7 +121,7 @@ const ArtistDetail = () => {
 
   const saveBasicInfo = async () => {
     try {
-      await fetch(`http://127.0.0.1:8000/artists/${id}`, {
+      await fetch(`${API_BASE_URL}/artists/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_url: editImageUrl, spotify_artist_id: editSpotifyId })
@@ -133,7 +134,7 @@ const ArtistDetail = () => {
   const searchMembers = async () => {
     if (!memberSearchQuery.trim()) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/artists/?q=${encodeURIComponent(memberSearchQuery)}`);
+      const res = await fetch(`${API_BASE_URL}/artists/?q=${encodeURIComponent(memberSearchQuery)}`);
       if (res.ok) {
         setMemberSearchResults(await res.json());
       }
@@ -142,7 +143,7 @@ const ArtistDetail = () => {
 
   const addMember = async (memberId: number) => {
     try {
-      await fetch(`http://127.0.0.1:8000/artists/${id}/members`, {
+      await fetch(`${API_BASE_URL}/artists/${id}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -159,7 +160,7 @@ const ArtistDetail = () => {
   const removeMember = async (memberId: number) => {
     if (!confirm('本当にこのメンバーを削除しますか？')) return;
     try {
-      await fetch(`http://127.0.0.1:8000/artists/${id}/members/${memberId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/artists/${id}/members/${memberId}`, { method: 'DELETE' });
       fetchArtist();
     } catch (e) { console.error(e); }
   };
@@ -167,7 +168,7 @@ const ArtistDetail = () => {
   const addTag = async () => {
     if (!selectedTagId) return;
     try {
-      await fetch(`http://127.0.0.1:8000/artists/${id}/tags`, {
+      await fetch(`${API_BASE_URL}/artists/${id}/tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tag_id: parseInt(selectedTagId) })
@@ -180,14 +181,14 @@ const ArtistDetail = () => {
   const removeTag = async (tagId: number) => {
     if (!confirm('このタグを削除しますか？')) return;
     try {
-      await fetch(`http://127.0.0.1:8000/artists/${id}/tags/${tagId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/artists/${id}/tags/${tagId}`, { method: 'DELETE' });
       fetchArtist();
     } catch (e) { console.error(e); }
   };
 
   const updateMemberDates = async (memberId: number, start: string, end: string) => {
     try {
-      await fetch(`http://127.0.0.1:8000/artists/${id}/members/${memberId}`, {
+      await fetch(`${API_BASE_URL}/artists/${id}/members/${memberId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ start_date: start || null, end_date: end || null })

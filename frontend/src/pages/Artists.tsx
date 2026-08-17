@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import { API_BASE_URL } from '../api/config';
 
 interface Artist {
   id: number;
@@ -20,7 +21,7 @@ const Artists = () => {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8000/artists/');
+        const res = await fetch(`${API_BASE_URL}/artists/`);
         if (res.ok) {
           const data = await res.json();
           setArtists(data);

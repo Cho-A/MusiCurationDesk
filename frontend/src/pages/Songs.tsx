@@ -5,6 +5,7 @@ import SearchBar from '../components/SearchBar';
 import SongCard from '../components/SongCard';
 import EmptyState from '../components/EmptyState';
 import type { SongCardData } from '../types/models';
+import { API_BASE_URL } from '../api/config';
 
 interface SpotifyTrack {
   spotify_id: string;
@@ -28,7 +29,7 @@ const Songs = () => {
   // 初期ロード時：最近追加された楽曲を取得
   const fetchLocalSongs = () => {
     setLoading(true);
-    fetch('http://127.0.0.1:8000/songs/recent?limit=10')
+    fetch(`${API_BASE_URL}/songs/recent?limit=10`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch songs');
         return res.json();
@@ -48,7 +49,7 @@ const Songs = () => {
     
     setIsSearchingSpotify(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/external/spotify/search?q=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`${API_BASE_URL}/external/spotify/search?q=${encodeURIComponent(searchQuery)}`);
       if (!res.ok) throw new Error('Spotify search failed');
       const data = await res.json();
       setSpotifyResults(data);
@@ -63,7 +64,7 @@ const Songs = () => {
   const handleImport = async (trackId: string) => {
     setImportingTrackId(trackId);
     try {
-      const res = await fetch('http://127.0.0.1:8000/external/spotify/import', {
+      const res = await fetch(`${API_BASE_URL}/external/spotify/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ spotify_track_id: trackId })
@@ -93,7 +94,7 @@ const Songs = () => {
 
     const delayDebounceFn = setTimeout(() => {
       if (searchMode === 'local') {
-        fetch(`http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}`)
+        fetch(`${API_BASE_URL}/songs/?title_search=${encodeURIComponent(searchQuery)}`)
           .then(res => res.json())
           .then(data => {
             setSearchResults(data);

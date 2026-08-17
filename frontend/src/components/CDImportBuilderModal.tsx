@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Save, AlertCircle, RefreshCw } from 'lucide-react';
+import { API_BASE_URL } from '../api/config';
 
 interface MBTrack {
   position: number;
@@ -158,8 +159,8 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     const fetchMasters = async () => {
       try {
         const [albumRes, songRes] = await Promise.all([
-          fetch('http://127.0.0.1:8000/albums/?limit=10000'), // 全アルバムをメモリに載せる
-          fetch('http://127.0.0.1:8000/songs/?limit=20000') // 全曲をメモリに載せる
+          fetch(`${API_BASE_URL}/albums/?limit=10000`), // 全アルバムをメモリに載せる
+          fetch(`${API_BASE_URL}/songs/?limit=20000`) // 全曲をメモリに載せる
         ]);
         
         if (albumRes.ok && songRes.ok) {
@@ -304,7 +305,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     };
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/albums/import-cd', {
+      const res = await fetch(`${API_BASE_URL}/albums/import-cd`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

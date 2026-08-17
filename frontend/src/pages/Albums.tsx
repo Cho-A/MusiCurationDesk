@@ -5,6 +5,7 @@ import SearchBar from '../components/SearchBar';
 import AlbumCard from '../components/AlbumCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import { API_BASE_URL } from '../api/config';
 
 interface AlbumGroup {
   id: number;
@@ -24,7 +25,7 @@ const Albums = () => {
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/album-groups/')
+    fetch(`${API_BASE_URL}/album-groups/`)
       .then(res => res.json())
       .then(data => {
         setAlbums(data);

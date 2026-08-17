@@ -7,6 +7,7 @@ import AlbumCard from '../components/AlbumCard';
 import SongCard from '../components/SongCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import { API_BASE_URL } from '../api/config';
 
 import type { AlbumCardData, SongCardData } from '../types/models';
 
@@ -40,13 +41,13 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         const headers: Record<string, string> = isAuthenticated && token ? { 'Authorization': `Bearer ${token}` } : {};
-        const statsUrl = isAuthenticated ? 'http://127.0.0.1:8000/dashboard/stats/me' : 'http://127.0.0.1:8000/dashboard/stats';
-        const recentUrl = isAuthenticated ? 'http://127.0.0.1:8000/dashboard/recent/me' : 'http://127.0.0.1:8000/dashboard/recent';
+        const statsUrl = isAuthenticated ? `${API_BASE_URL}/dashboard/stats/me` : `${API_BASE_URL}/dashboard/stats`;
+        const recentUrl = isAuthenticated ? `${API_BASE_URL}/dashboard/recent/me` : `${API_BASE_URL}/dashboard/recent`;
 
         const [statsRes, recentRes, discoveryRes] = await Promise.all([
           fetch(statsUrl, { headers }),
           fetch(recentUrl, { headers }),
-          fetch('http://127.0.0.1:8000/dashboard/discovery')
+          fetch(`${API_BASE_URL}/dashboard/discovery`)
         ]);
 
         if (statsRes.ok) {

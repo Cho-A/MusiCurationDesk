@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, Plus, MapPin, Users } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
+import { API_BASE_URL } from '../api/config';
 
 interface Venue {
   id: number;
@@ -49,7 +50,7 @@ const TourDetail = () => {
 
   const fetchTour = () => {
     setLoading(true);
-    fetch(`http://127.0.0.1:8000/tours/${id}`)
+    fetch(`${API_BASE_URL}/tours/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
@@ -71,7 +72,7 @@ const TourDetail = () => {
         event_type: "Live"
       };
 
-      const res = await fetch('http://127.0.0.1:8000/performances/', {
+      const res = await fetch(`${API_BASE_URL}/performances/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

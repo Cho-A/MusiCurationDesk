@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Folder, Music, ArrowLeft, Music2 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import { API_BASE_URL } from '../api/config';
 
 interface TieupHierarchyNode {
   id: number;
@@ -41,8 +42,8 @@ const TieupDetail = () => {
       try {
         // 並行して詳細情報と楽曲一覧を取得
         const [tieupRes, songsRes] = await Promise.all([
-          fetch(`http://127.0.0.1:8000/tieups/${id}`),
-          fetch(`http://127.0.0.1:8000/tieups/${id}/songs`)
+          fetch(`${API_BASE_URL}/tieups/${id}`),
+          fetch(`${API_BASE_URL}/tieups/${id}/songs`)
         ]);
 
         if (!tieupRes.ok) throw new Error('タイアップ情報の取得に失敗しました');

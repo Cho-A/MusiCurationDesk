@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Loader, Check } from 'lucide-react';
 import type { SongCardData } from '../types/models';
+import { API_BASE_URL } from '../api/config';
 
 interface MergeSongModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ const MergeSongModal: React.FC<MergeSongModalProps> = ({ isOpen, onClose, curren
     const fetchResults = async () => {
       setIsLoading(true);
       try {
-        const url = `http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}&limit=50`;
+        const url = `${API_BASE_URL}/songs/?title_search=${encodeURIComponent(searchQuery)}&limit=50`;
         const res = await fetch(url);
         if (res.ok) {
           const data: SongCardData[] = await res.json();

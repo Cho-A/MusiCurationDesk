@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserCheck, ListMusic, DownloadCloud } from 'lucide-react';
+import { API_BASE_URL } from '../api/config';
 
 const AdminSpotify = () => {
   
@@ -14,7 +15,7 @@ const AdminSpotify = () => {
   const pollJobProgress = async (jobId: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/search/external/import/progress/${jobId}`, {
+      const res = await fetch(`${API_BASE_URL}/search/external/import/progress/${jobId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -46,7 +47,7 @@ const AdminSpotify = () => {
 
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/search/external/import/album/${albumId}`, {
+      const res = await fetch(`${API_BASE_URL}/search/external/import/album/${albumId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -73,7 +74,7 @@ const AdminSpotify = () => {
 
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/search/external/import/artist/${artistId}`, {
+      const res = await fetch(`${API_BASE_URL}/search/external/import/artist/${artistId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -100,7 +101,7 @@ const AdminSpotify = () => {
 
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/search/external/import/playlist/${playlistId}`, {
+      const res = await fetch(`${API_BASE_URL}/search/external/import/playlist/${playlistId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

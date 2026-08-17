@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Link as LinkIcon, Loader } from 'lucide-react';
 import type { SongCardData } from '../types/models';
+import { API_BASE_URL } from '../api/config';
 
 interface AttachWorkModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ const AttachWorkModal: React.FC<AttachWorkModalProps> = ({ isOpen, onClose, curr
         // もしユーザーが明示的に検索ワードを変えた場合（初期値と違う）は、アーティスト縛りを外す
         const baseTitle = currentSong.title.split(/[\(\[-]/)[0].trim() || currentSong.title;
         const isInitialSuggest = searchQuery === baseTitle;
-        let url = `http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(searchQuery)}&limit=50`;
+        let url = `${API_BASE_URL}/songs/?title_search=${encodeURIComponent(searchQuery)}&limit=50`;
         
         if (isInitialSuggest && mainArtistId) {
           url += `&artist_id_filter=${mainArtistId}`;
