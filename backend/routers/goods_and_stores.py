@@ -1,37 +1,36 @@
 from __future__ import annotations
-from typing import Annotated
+
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import models, schemas  # 先ほど作成したファイルをインポート
+from backend.dependencies import get_db
 
-router = APIRouter()
+from .. import models, schemas
+
+router = APIRouter(prefix="/commerce")
 
 
 # --- ★グッズマスター登録API★ ---
 # [POST] /merchandise/
 # ----------------------------------------------------
-@router.post("/merchandises",
+@router.post(
+    "/merchandises",
     response_model=schemas.Merchandise,
-    tags=["Goods & Stores"],
 )
 def create_merchandise(
     merch: schemas.MerchandiseCreate,
-    db: Session = Depends(models.get_db),
+    db: Session = Depends(get_db),
 ):
     """新しいグッズ（例: "ツアーTシャツ"）をデータベースに登録します。"""
-    db_merch = (
-        db.query(models.Merchandise)
-        .filter(models.Merchandise.name == merch.name)
-        .first()
-    )
+    db_merch = db.query(models.Merchandise).filter(models.Merchandise.name == merch.name).first()
     if db_merch:
         raise HTTPException(
             status_code=400,
             detail=f"グッズ名 '{merch.name}' は既に使用されています。",
         )
 
-    new_merch = models.Merchandise(**merch.dict())
+    new_merch = models.Merchandise(**merch.model_dump())
     db.add(new_merch)
     try:
         db.commit()
@@ -45,10 +44,10 @@ def create_merchandise(
 # --- ★店舗マスター登録API★ ---
 # [POST] /stores/
 # ----------------------------------------------------
-@router.post("/stores", response_model=schemas.Store, tags=["Goods & Stores"])
+@router.post("/stores", response_model=schemas.Store)
 def create_store(
     store: schemas.StoreCreate,
-    db: Session = Depends(models.get_db),
+    db: Session = Depends(get_db),
 ):
     """新しい店舗（例: "タワーレコード"）をデータベースに登録します。"""
     db_store = db.query(models.Store).filter(models.Store.name == store.name).first()
@@ -58,7 +57,7 @@ def create_store(
             detail=f"店舗名 '{store.name}' は既に使用されています。",
         )
 
-    new_store = models.Store(**store.dict())
+    new_store = models.Store(**store.model_dump())
     db.add(new_store)
     try:
         db.commit()
@@ -73,13 +72,13 @@ def create_store(
 #
 # [POST] /merchandise_relationships/
 # ----------------------------------------------------
-@router.post("/merchandise_relationships",
+@router.post(
+    "/merchandise-relationships",
     response_model=schemas.MerchandiseRelationship,
-    tags=["Goods & Stores"],
 )
 def create_merchandise_relationship(
     link: schemas.MerchandiseRelationshipCreate,
-    db: Session = Depends(models.get_db),
+    db: Session = Depends(get_db),
 ):
     """グッズ (merch_id_1) と別グッズ (merch_id_2) を、
     指定された関係 (relationship_type) で紐付けます。
@@ -87,22 +86,14 @@ def create_merchandise_relationship(
     例: 「Tシャツ(白)」が「Tシャツ」の "Variation Of" である。
     """
     # --- 外部キー制約のチェック ---
-    db_merch1 = (
-        db.query(models.Merchandise)
-        .filter(models.Merchandise.id == link.merchandise_id_1)
-        .first()
-    )
+    db_merch1 = db.query(models.Merchandise).filter(models.Merchandise.id == link.merchandise_id_1).first()
     if db_merch1 is None:
         raise HTTPException(
             status_code=404,
             detail=f"Merchandise ID (子) {link.merchandise_id_1} が見つかりません。",
         )
 
-    db_merch2 = (
-        db.query(models.Merchandise)
-        .filter(models.Merchandise.id == link.merchandise_id_2)
-        .first()
-    )
+    db_merch2 = db.query(models.Merchandise).filter(models.Merchandise.id == link.merchandise_id_2).first()
     if db_merch2 is None:
         raise HTTPException(
             status_code=404,
@@ -110,7 +101,7 @@ def create_merchandise_relationship(
         )
 
     # --- 紐付けデータを作成 ---
-    new_link = models.MerchandiseRelationship(**link.dict())
+    new_link = models.MerchandiseRelationship(**link.model_dump())
 
     db.add(new_link)
 

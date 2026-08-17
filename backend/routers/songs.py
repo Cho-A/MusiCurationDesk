@@ -1,13 +1,17 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, Response, Query
-from typing import List, Optional
-from sqlalchemy.orm import Session, joinedload, aliased
-from sqlalchemy import text
-from .. import models , schemas # 先ほど作成したファイルをインポート
+
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy.orm import Session, joinedload
+
+from backend.dependencies import get_db
+
+from .. import models, schemas
 
 # --- 1. APIRouter のインスタンスを作成 ---
 router = APIRouter(
-    prefix="/songs", # このファイル内のAPIはすべて "/songs" で始まる
+    prefix="/songs",  # このファイル内のAPIはすべて "/songs" で始まる
 )
 
 
@@ -16,45 +20,39 @@ router = APIRouter(
 # [POST] /songs/
 # ----------------------------------------------------
 @router.post("/", response_model=schemas.Song, tags=["Songs"])
-def create_song(
-    song: schemas.SongCreate, 
-    db: Session = Depends(models.get_db)
-):
+def create_song(song: schemas.SongCreate, db: Session = Depends(get_db)):
     """
     新しい楽曲をデータベースに登録します。
-    
+
     - **title**: 楽曲の「正」となる名前 (必須)
     - **release_date**: 発売日 (任意)
     - **spotify_song_id**: (任意)
     - **jasrac_title**: (任意)
     """
-    
+
     # 1. 受け取ったデータ (song) を、DBモデル (models.Song) に変換
     #    **kwargs を使うと、SongCreateの全フィールドを自動で渡せる
-    new_song = models.Song(**song.dict())
-    
+    new_song = models.Song(**song.model_dump())
+
     # 2. データベースに追加 (INSERT)
     db.add(new_song)
-    
+
     # 3. 変更を確定
     try:
         db.commit()
     except Exception as e:
-        db.rollback() # エラーが出たら変更を元に戻す
+        db.rollback()  # エラーが出たら変更を元に戻す
         raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
 
     # 4. 確定したデータ (IDが採番された状態) をリフレッシュ
     db.refresh(new_song)
-    
+
     # 5. 登録した楽曲情報を返す
     return new_song
 
+
 @router.post("/{song_id}/aliases", response_model=schemas.SongAlias, tags=["Songs"])
-def add_song_alias(
-    song_id: int,
-    alias: schemas.SongAliasCreate,
-    db: Session = Depends(models.get_db)
-):
+def add_song_alias(song_id: int, alias: schemas.SongAliasCreate, db: Session = Depends(get_db)):
     """
     既存の楽曲に別名（Alias）を登録します。
     """
@@ -70,23 +68,35 @@ def add_song_alias(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail="このエイリアスは既に登録されています。")
-        
+
     return new_alias
 
+
 @router.get("/recent", response_model=List[schemas.SongCardData], tags=["Songs"])
-def get_recent_songs(limit: int = 10, db: Session = Depends(models.get_db)):
+def get_recent_songs(limit: int = 10, db: Session = Depends(get_db)):
     """
     最近追加された楽曲を取得します。
     """
-    recent_songs = db.query(models.Song).options(
-        joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
-        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist),
-        joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group)
-    ).order_by(models.Song.created_at.desc()).limit(limit).all()
+    recent_songs = (
+        db.query(models.Song)
+        .options(
+            joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
+            joinedload(models.Song.work)
+            .joinedload(models.MusicalWork.artist_links)
+            .joinedload(models.WorkArtistLink.artist),
+            joinedload(models.Song.album_links)
+            .joinedload(models.AlbumTrack.album)
+            .joinedload(models.Album.album_group),
+        )
+        .order_by(models.Song.created_at.desc())
+        .limit(limit)
+        .all()
+    )
     return recent_songs
 
+
 # --- ★★★ 全楽曲の一覧を取得するAPI (上書き) ★★★ ---
-# 
+#
 # [GET] /songs/
 # ----------------------------------------------------
 @router.get("/", response_model=List[schemas.SongCardData], tags=["Songs"])
@@ -100,39 +110,41 @@ def get_all_songs(
     tieup_id_filter: int | None = Query(None, description="タイアップIDによるフィルタ"),
     # ★★★ 新規追加 ★★★
     artist_id_filter: int | None = Query(None, description="特定のアーティストIDで絞り込む"),
-    db: Session = Depends(models.get_db)
+    db: Session = Depends(get_db),
 ):
     """
     データベースに登録されている楽曲の一覧を、検索・ソート・フィルタリングして取得します。
     """
-    
+
     # 1. クエリの組み立て開始 (検索結果用のAlbum情報とArtist情報を結合しておく)
     query = db.query(models.Song).options(
         joinedload(models.Song.album_links).joinedload(models.AlbumTrack.album).joinedload(models.Album.album_group),
         joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
-        joinedload(models.Song.work).joinedload(models.MusicalWork.artist_links).joinedload(models.WorkArtistLink.artist)
+        joinedload(models.Song.work)
+        .joinedload(models.MusicalWork.artist_links)
+        .joinedload(models.WorkArtistLink.artist),
     )
 
     # 2. フィルタリング (ArtistとRoleの絞り込みを統合)
     if role_filter or artist_id_filter:
         # artist_id_filter がある場合、必ず SongArtistLink を JOIN する
         query = query.join(models.Song.artist_links)
-        
+
         if role_filter:
-            role_list = [r.strip() for r in role_filter.split(',')]
+            role_list = [r.strip() for r in role_filter.split(",")]
             # SongArtistLinkのroleがリストに含まれる AND (かつ) artist_idが一致
             query = query.filter(models.SongArtistLink.role.in_(role_list))
-            
+
         if artist_id_filter:
             # 必須: 特定のアーティストIDに絞り込む
             query = query.filter(models.SongArtistLink.artist_id == artist_id_filter)
-        
+
     if title_search:
         query = query.filter(models.Song.title.ilike(f"%{title_search}%"))
-        
+
     if tieup_id_filter:
         query = query.join(models.Song.tieup_links).filter(models.SongTieupLink.tieup_id == tieup_id_filter)
-        
+
     # 3. ソート (release_date は削除されたため id と title のみに対応)
     if sort_by == "title":
         query = query.order_by(models.Song.title)
@@ -141,52 +153,63 @@ def get_all_songs(
 
     # 4. データの取得 (ページネーション適用)
     songs = query.distinct().offset(skip).limit(limit).all()
-    
+
     return songs
+
 
 # [PUT] /songs/{song_id}
 # ----------------------------------------------------
 @router.put("/{song_id}", response_model=schemas.Song, tags=["Songs"])
-def update_song(
-    song_id: int,
-    song: schemas.SongCreate, 
-    db: Session = Depends(models.get_db)
-):
+def update_song(song_id: int, song: schemas.SongCreate, db: Session = Depends(get_db)):
     """
     指定されたIDの楽曲情報を更新します。
     (Spotify ID / JASRACコードの重複チェックあり)
     """
-    
+
     # 1. 既存の楽曲をIDで検索
     db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if db_song is None:
         raise HTTPException(status_code=404, detail="更新対象の楽曲が見つかりません。")
 
     # --- 2. ID重複チェック (自己参照以外の重複をチェック) ---
-    
+
     # 2a. Spotify IDが既に別の曲に使われていないかチェック
     if song.spotify_song_id:
-        existing_song = db.query(models.Song).filter(
-            models.Song.spotify_song_id == song.spotify_song_id,
-            models.Song.id != song_id  # ★自分自身は除外する
-        ).first()
+        existing_song = (
+            db.query(models.Song)
+            .filter(
+                models.Song.spotify_song_id == song.spotify_song_id,
+                models.Song.id != song_id,  # ★自分自身は除外する
+            )
+            .first()
+        )
         if existing_song:
-            raise HTTPException(status_code=400, detail=f"Spotify ID {song.spotify_song_id} は既に別の曲 ({existing_song.title}) に登録されています。")
-    
+            raise HTTPException(
+                status_code=400,
+                detail=f"Spotify ID {song.spotify_song_id} は既に別の曲 ({existing_song.title}) に登録されています。",
+            )
+
     # 2b. JASRAC コードが既に別の曲に使われていないかチェック
     if song.jasrac_code:
-        existing_song = db.query(models.Song).filter(
-            models.Song.jasrac_code == song.jasrac_code,
-            models.Song.id != song_id # ★自分自身は除外する
-        ).first()
+        existing_song = (
+            db.query(models.Song)
+            .filter(
+                models.Song.jasrac_code == song.jasrac_code,
+                models.Song.id != song_id,  # ★自分自身は除外する
+            )
+            .first()
+        )
         if existing_song:
-            raise HTTPException(status_code=400, detail=f"JASRAC Code {song.jasrac_code} は既に別の曲 ({existing_song.title}) に登録されています。")
+            raise HTTPException(
+                status_code=400,
+                detail=f"JASRAC Code {song.jasrac_code} は既に別の曲 ({existing_song.title}) に登録されています。",
+            )
 
     # --- 3. データの更新 ---
     # schemas.SongCreate のフィールドをループして、db_song オブジェクトに適用
-    for key, value in song.dict(exclude_unset=True).items():
+    for key, value in song.model_dump(exclude_unset=True).items():
         setattr(db_song, key, value)
-    
+
     # --- 4. データベースに変更をコミット ---
     try:
         db.commit()
@@ -197,67 +220,72 @@ def update_song(
     db.refresh(db_song)
     return db_song
 
+
 # --- ★★★ 楽曲詳細取得API (GET /songs/{song_id}) ★★★ ---
 #
 # [GET] /songs/{song_id}
 # ----------------------------------------------------
 @router.get("/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
-def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
+def get_song_by_id(song_id: int, db: Session = Depends(get_db)):
     """
     指定されたIDの楽曲詳細情報を取得します。
     アーティスト貢献度、タイアップ、タグ、最終演奏日、演奏回数を含みます。
     """
-    
+
     # 1. 楽曲をIDで検索し、関連テーブルを事前に結合 (Eager Load) して取得
-    db_song = db.query(models.Song)\
+    db_song = (
+        db.query(models.Song)
         .options(
             # 貢献アーティスト (ArtistLink -> Artist)
-            joinedload(models.Song.artist_links)\
-                .joinedload(models.SongArtistLink.artist),
-            
+            joinedload(models.Song.artist_links).joinedload(models.SongArtistLink.artist),
             # タイアップ (TieupLink -> Tieup)
-            joinedload(models.Song.tieup_links)\
-                .joinedload(models.SongTieupLink.tieup),
-                
+            joinedload(models.Song.tieup_links).joinedload(models.SongTieupLink.tieup),
             # タグ (Tag)
             joinedload(models.Song.tags),
-            
             # アルバム情報 (AlbumTrack -> Album -> AlbumGroup)
-            joinedload(models.Song.album_links)\
-                .joinedload(models.AlbumTrack.album)\
-                .joinedload(models.Album.album_group),
-                
+            joinedload(models.Song.album_links)
+            .joinedload(models.AlbumTrack.album)
+            .joinedload(models.Album.album_group),
             # Workとそのクレジット情報
-            joinedload(models.Song.work)\
-                .joinedload(models.MusicalWork.artist_links)\
-                .joinedload(models.WorkArtistLink.artist)
-        )\
-        .filter(models.Song.id == song_id).first()
-    
+            joinedload(models.Song.work)
+            .joinedload(models.MusicalWork.artist_links)
+            .joinedload(models.WorkArtistLink.artist),
+        )
+        .filter(models.Song.id == song_id)
+        .first()
+    )
+
     if db_song is None:
         raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
 
     # 同じ MusicalWork に属するすべての Song (自身も含む) のアルバム情報を取得
     if db_song.work_id:
-        all_songs_in_work = db.query(models.Song)\
+        all_songs_in_work = (
+            db.query(models.Song)
             .options(
-                joinedload(models.Song.album_links)\
-                    .joinedload(models.AlbumTrack.album)\
-                    .joinedload(models.Album.album_group)
-            )\
-            .filter(models.Song.work_id == db_song.work_id).all()
-            
+                joinedload(models.Song.album_links)
+                .joinedload(models.AlbumTrack.album)
+                .joinedload(models.Album.album_group)
+            )
+            .filter(models.Song.work_id == db_song.work_id)
+            .all()
+        )
+
         combined_albums = []
         other_versions = []
         for s in all_songs_in_work:
             for track in s.album_links:
                 # アルバムのカバー画像がない場合は、アルバムグループのカバー画像を継承する
-                if not track.album.cover_image_url and track.album.album_group and track.album.album_group.cover_image_url:
+                if (
+                    not track.album.cover_image_url
+                    and track.album.album_group
+                    and track.album.album_group.cover_image_url
+                ):
                     track.album.cover_image_url = track.album.album_group.cover_image_url
                 combined_albums.append(track)
             if s.id != db_song.id:
                 other_versions.append(s)
-                
+
         # 自身のみのアルバムリストを、合算したアルバムリストで上書き
         # SQLAlchemyのリレーション(db_song.album_links)を直接上書きすると
         # track.song が db_song に書き換わってしまい、すべてのアルバムが
@@ -275,12 +303,9 @@ def get_song_by_id(song_id: int, db: Session = Depends(models.get_db)):
         song_model.other_versions = []
         return song_model
 
+
 @router.patch("/{song_id}", response_model=schemas.SongDetail, tags=["Songs"])
-def patch_song(
-    song_id: int,
-    song_update: schemas.SongUpdate,
-    db: Session = Depends(models.get_db)
-):
+def patch_song(song_id: int, song_update: schemas.SongUpdate, db: Session = Depends(get_db)):
     """
     楽曲マスターのプロパティ (title, work_id, is_video など) を個別更新します。
     """
@@ -300,14 +325,15 @@ def patch_song(
 
     return get_song_by_id(song_id=song_id, db=db)
 
+
 @router.delete("/{song_id}", tags=["Songs"], status_code=204)
-def delete_song(song_id: int, db: Session = Depends(models.get_db)):
+def delete_song(song_id: int, db: Session = Depends(get_db)):
     """
     指定されたIDの楽曲をデータベースから削除します。
     """
     # 1. 楽曲をIDで検索
     song = db.query(models.Song).filter(models.Song.id == song_id).first()
-    
+
     # 2. 楽曲が存在しない場合は404エラー
     if song is None:
         raise HTTPException(status_code=404, detail=f"Song with ID {song_id} not found")
@@ -317,36 +343,33 @@ def delete_song(song_id: int, db: Session = Depends(models.get_db)):
     # エントリも同時に削除されるように、models.py側でCASCADE設定が必要です。
     # (現在の設計では未設定の可能性がありますが、一旦進めます)
     db.delete(song)
-    
+
     # 4. データベースに変更をコミット
     db.commit()
-    
+
     # 5. 成功を示すHTTP 204 No Contentを返却
     return Response(status_code=204)
+
 
 # --- ★楽曲にタグを紐付けるAPI★ ---
 #
 # [POST] /songs/{song_id}/tieups
 # ----------------------------------------------------
 @router.post("/{song_id}/tieups", response_model=schemas.SongTieupLink, tags=["Songs", "Tieups"])
-def add_tieup_to_song(
-    song_id: int,
-    link: schemas.SongTieupLinkCreate,
-    db: Session = Depends(models.get_db)
-):
+def add_tieup_to_song(song_id: int, link: schemas.SongTieupLinkCreate, db: Session = Depends(get_db)):
     """
     指定された楽曲にタイアップを紐付けます。
     """
     if song_id != link.song_id:
         raise HTTPException(status_code=400, detail="URLのsong_idとリクエストボディのsong_idが一致しません。")
-        
+
     db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if not db_song:
         raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
-        
-    new_link = models.SongTieupLink(**link.dict())
+
+    new_link = models.SongTieupLink(**link.model_dump())
     db.add(new_link)
-    
+
     try:
         db.commit()
     except Exception as e:
@@ -356,46 +379,42 @@ def add_tieup_to_song(
     db.refresh(new_link)
     return new_link
 
+
 # --- ★★★ クレジット (SongArtistLink) 追加・削除 API ★★★ ---
 #
 # [POST] /songs/{song_id}/artists
 # ----------------------------------------------------
 @router.post("/{song_id}/artists", response_model=schemas.SongArtistLink, tags=["Songs", "Artists"])
-def add_credit_to_song(
-    song_id: int,
-    link: schemas.SongArtistLinkCreate,
-    db: Session = Depends(models.get_db)
-):
+def add_credit_to_song(song_id: int, link: schemas.SongArtistLinkCreate, db: Session = Depends(get_db)):
     """
     楽曲にアーティストのクレジット（役割）を追加します。
     """
     if song_id != link.song_id:
         raise HTTPException(status_code=400, detail="URLのsong_idとリクエストボディのsong_idが一致しません。")
-        
+
     db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if not db_song:
         raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
-        
-    new_link = models.SongArtistLink(**link.dict())
+
+    new_link = models.SongArtistLink(**link.model_dump())
     db.add(new_link)
-    
+
     try:
         db.commit()
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"データベース登録エラー (既に同じ役割で登録されている可能性があります): {e}")
+        raise HTTPException(
+            status_code=400, detail=f"データベース登録エラー (既に同じ役割で登録されている可能性があります): {e}"
+        )
 
     db.refresh(new_link)
     return new_link
 
+
 # [PUT] /songs/{song_id}/main_artist
 # ----------------------------------------------------
 @router.put("/{song_id}/main_artist", tags=["Songs", "Artists"])
-def update_song_main_artist(
-    song_id: int,
-    request: schemas.SongMainArtistUpdate,
-    db: Session = Depends(models.get_db)
-):
+def update_song_main_artist(song_id: int, request: schemas.SongMainArtistUpdate, db: Session = Depends(get_db)):
     """
     楽曲の「Main Artist」を上書き更新します。
     既存の Main Artist の紐付けを削除し、新しいアーティストを Main Artist として紐付けます。
@@ -406,19 +425,15 @@ def update_song_main_artist(
 
     # 既存のArtistリンクを削除
     db.query(models.SongArtistLink).filter(
-        models.SongArtistLink.song_id == song_id,
-        models.SongArtistLink.role_category == "Artist"
+        models.SongArtistLink.song_id == song_id, models.SongArtistLink.role_category == "Artist"
     ).delete()
 
     # 新しいArtistを追加
-    new_link = models.SongArtistLink(
-        song_id=song_id,
-        artist_id=request.artist_id,
-        role_category="Artist"
-    )
+    new_link = models.SongArtistLink(song_id=song_id, artist_id=request.artist_id, role_category="Artist")
     db.add(new_link)
     db.commit()
     return {"message": "メインアーティストを更新しました"}
+
 
 # [DELETE] /songs/{song_id}/artists/{artist_id}
 # ----------------------------------------------------
@@ -428,7 +443,7 @@ def remove_credit_from_song(
     artist_id: int,
     role_category: str = Query(..., description="削除する役割の大分類"),
     role_detail: str | None = Query(None, description="削除する役割の詳細"),
-    db: Session = Depends(models.get_db)
+    db: Session = Depends(get_db),
 ):
     """
     楽曲から特定のアーティストのクレジット（役割）を削除します。
@@ -436,40 +451,37 @@ def remove_credit_from_song(
     query = db.query(models.SongArtistLink).filter(
         models.SongArtistLink.song_id == song_id,
         models.SongArtistLink.artist_id == artist_id,
-        models.SongArtistLink.role_category == role_category
+        models.SongArtistLink.role_category == role_category,
     )
-    
+
     if role_detail:
         query = query.filter(models.SongArtistLink.role_detail == role_detail)
     else:
         query = query.filter(models.SongArtistLink.role_detail.is_(None))
-        
+
     link = query.first()
     if not link:
         raise HTTPException(status_code=404, detail="指定されたクレジットが見つかりません。")
-        
+
     db.delete(link)
     db.commit()
     return Response(status_code=204)
 
+
 # [POST] /songs/{song_id}/tags/{tag_id}
 # ----------------------------------------------------
 @router.post("/{song_id}/tags/{tag_id}", response_model=schemas.SongDetail, tags=["Tags"])
-def link_song_to_tag(
-    song_id: int,
-    tag_id: int,
-    db: Session = Depends(models.get_db)
-):
+def link_song_to_tag(song_id: int, tag_id: int, db: Session = Depends(get_db)):
     """
     特定の楽曲 (song_id) に、タグ (tag_id) を紐付けます。
     (SQLAlchemyの Simple Many-to-Many パターンを使用)
     """
-    
+
     # 1. 楽曲 (Song) を取得
     db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
     if db_song is None:
         raise HTTPException(status_code=404, detail=f"Song ID {song_id} が見つかりません。")
-        
+
     # 2. タグ (Tag) を取得
     db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
     if db_tag is None:
@@ -481,52 +493,55 @@ def link_song_to_tag(
 
     # 4. 紐付け (中間テーブルへの書き込み)
     db_song.tags.append(db_tag)
-    
+
     try:
         db.commit()
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"データベース登録エラー: {e}")
-    
+
     db.refresh(db_song)
-    
+
     # 5. 更新された楽曲情報（タグリスト含む）を返す
     # (再度Eager Loadをかけて、完全な情報を返す)
     updated_song = get_song_by_id(song_id=song_id, db=db)
     return updated_song
+
 
 # (POST /songs/generate-spotify-ids)
 # ----------------------------------------------------
 @router.post("/generate-spotify-ids", response_model=List[str], tags=["Playlists"])
 def generate_spotify_ids_from_search(
     # read_songs と同じ検索条件を「リクエストボディ」として受け取る
-    search_params: schemas.SongSearch, # 👈 ★新しいスキーマ
-    db: Session = Depends(models.get_db)
+    search_params: schemas.SongSearch,  # 👈 ★新しいスキーマ
+    db: Session = Depends(get_db),
 ):
     """
     GET /songs/ と同じ検索条件（アーティスト、役割、タイアップ等）に
     合致する楽曲の **Spotify Song ID** のリストを返します。
-    
+
     （このリストを使ってSpotifyプレイリストを作成します）
     """
-    
+
     # --- GET /songs/ と全く同じ検索ロジック ---
     query = db.query(models.Song)
-    
+
     if search_params.role_filter or search_params.artist_id_filter:
         query = query.join(models.Song.artist_links)
         if search_params.role_filter:
-            role_list = [r.strip() for r in search_params.role_filter.split(',')]
+            role_list = [r.strip() for r in search_params.role_filter.split(",")]
             query = query.filter(models.SongArtistLink.role.in_(role_list))
         if search_params.artist_id_filter:
             query = query.filter(models.SongArtistLink.artist_id == search_params.artist_id_filter)
-    
+
     if search_params.title_search:
         query = query.filter(models.Song.title.ilike(f"%{search_params.title_search}%"))
-        
+
     if search_params.tieup_id_filter:
-        query = query.join(models.Song.tieup_links).filter(models.SongTieupLink.tieup_id == search_params.tieup_id_filter)
-    
+        query = query.join(models.Song.tieup_links).filter(
+            models.SongTieupLink.tieup_id == search_params.tieup_id_filter
+        )
+
     # --- ソート ---
     if search_params.sort_by == "release_date":
         query = query.order_by(models.Song.release_date.desc(), models.Song.id.desc())
@@ -537,41 +552,43 @@ def generate_spotify_ids_from_search(
 
     # --- ★ 最終的な出力 ---
     results = query.distinct().all()
-    
+
     return results
+
 
 # --- ★楽曲にタグを紐付ける/解除するAPI★ ---
 @router.post("/{song_id}/tags/{tag_id}", response_model=schemas.SongDetail, tags=["Songs", "Tags"])
-def add_tag_to_song(song_id: int, tag_id: int, db: Session = Depends(models.get_db)):
+def add_tag_to_song(song_id: int, tag_id: int, db: Session = Depends(get_db)):
     db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
     db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
     if not db_song or not db_tag:
         raise HTTPException(status_code=404, detail="楽曲またはタグが見つかりません")
-    
+
     if db_tag not in db_song.tags:
         db_song.tags.append(db_tag)
         db.commit()
         db.refresh(db_song)
-        
+
     return db_song
 
+
 @router.delete("/{song_id}/tags/{tag_id}", response_model=schemas.SongDetail, tags=["Songs", "Tags"])
-def remove_tag_from_song(song_id: int, tag_id: int, db: Session = Depends(models.get_db)):
+def remove_tag_from_song(song_id: int, tag_id: int, db: Session = Depends(get_db)):
     db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
     db_tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
     if not db_song or not db_tag:
         raise HTTPException(status_code=404, detail="楽曲またはタグが見つかりません")
-        
+
     if db_tag in db_song.tags:
         db_song.tags.remove(db_tag)
         db.commit()
         db.refresh(db_song)
-        
+
     return db_song
 
 
 @router.post("/{song_id}/detach", tags=["Songs"])
-def detach_song_from_work(song_id: int, db: Session = Depends(models.get_db)):
+def detach_song_from_work(song_id: int, db: Session = Depends(get_db)):
     """
     指定された Song を現在の MusicalWork から切り離し、新しい独立した MusicalWork を作成して紐付けます。
     """
@@ -589,12 +606,12 @@ def detach_song_from_work(song_id: int, db: Session = Depends(models.get_db)):
     song.work_id = new_work.id
     db.commit()
     db.refresh(song)
-    
+
     return {"message": "Successfully detached and created a new MusicalWork.", "new_work_id": new_work.id}
 
 
 @router.post("/{song_id}/attach_to_song", tags=["Songs"])
-def attach_song_to_song(song_id: int, target_song_id: int = Query(...), db: Session = Depends(models.get_db)):
+def attach_song_to_song(song_id: int, target_song_id: int = Query(...), db: Session = Depends(get_db)):
     """
     指定された Song を、別の Song (target_song_id) と同じ作品 (MusicalWork) に結合します。
     対象の Song がまだ作品に属していない場合は、新しい MusicalWork を作成して両方を紐付けます。
@@ -627,7 +644,7 @@ def attach_song_to_song(song_id: int, target_song_id: int = Query(...), db: Sess
 
 
 @router.post("/{song_id}/merge", tags=["Songs"])
-def merge_song(song_id: int, target_song_id: int = Query(...), db: Session = Depends(models.get_db)):
+def merge_song(song_id: int, target_song_id: int = Query(...), db: Session = Depends(get_db)):
     """
     指定された Song を別の Song (target_song_id) に統合します。
     元の Song は削除され、関連データは target_song_id に引き継がれます。
@@ -646,6 +663,7 @@ def merge_song(song_id: int, target_song_id: int = Query(...), db: Session = Dep
     perform_song_merge(db, source_song, target_song)
     return {"message": "Successfully merged song.", "target_song_id": target_song_id}
 
+
 def perform_song_merge(db: Session, source_song: models.Song, target_song: models.Song):
     """
     指定された source_song を target_song に統合し、source_song を削除します。
@@ -653,12 +671,16 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
     target_song_id = target_song.id
 
     for album_link in list(source_song.album_links):
-        existing = db.query(models.AlbumTrack).filter(
-            models.AlbumTrack.album_id == album_link.album_id,
-            models.AlbumTrack.disc_number == album_link.disc_number,
-            models.AlbumTrack.track_number == album_link.track_number,
-            models.AlbumTrack.song_id == target_song_id
-        ).first()
+        existing = (
+            db.query(models.AlbumTrack)
+            .filter(
+                models.AlbumTrack.album_id == album_link.album_id,
+                models.AlbumTrack.disc_number == album_link.disc_number,
+                models.AlbumTrack.track_number == album_link.track_number,
+                models.AlbumTrack.song_id == target_song_id,
+            )
+            .first()
+        )
         if not existing:
             album_link.song_id = target_song_id
         else:
@@ -666,12 +688,16 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongArtistLink
     for artist_link in list(source_song.artist_links):
-        existing = db.query(models.SongArtistLink).filter(
-            models.SongArtistLink.song_id == target_song_id,
-            models.SongArtistLink.artist_id == artist_link.artist_id,
-            models.SongArtistLink.role_category == artist_link.role_category,
-            models.SongArtistLink.role_detail == artist_link.role_detail
-        ).first()
+        existing = (
+            db.query(models.SongArtistLink)
+            .filter(
+                models.SongArtistLink.song_id == target_song_id,
+                models.SongArtistLink.artist_id == artist_link.artist_id,
+                models.SongArtistLink.role_category == artist_link.role_category,
+                models.SongArtistLink.role_detail == artist_link.role_detail,
+            )
+            .first()
+        )
         if not existing:
             artist_link.song_id = target_song_id
         else:
@@ -679,10 +705,13 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongTieupLink
     for tieup_link in list(source_song.tieup_links):
-        existing = db.query(models.SongTieupLink).filter(
-            models.SongTieupLink.song_id == target_song_id,
-            models.SongTieupLink.tieup_id == tieup_link.tieup_id
-        ).first()
+        existing = (
+            db.query(models.SongTieupLink)
+            .filter(
+                models.SongTieupLink.song_id == target_song_id, models.SongTieupLink.tieup_id == tieup_link.tieup_id
+            )
+            .first()
+        )
         if not existing:
             tieup_link.song_id = target_song_id
         else:
@@ -694,10 +723,11 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongWorksLink
     for work_link in list(source_song.works):
-        existing = db.query(models.SongWorksLink).filter(
-            models.SongWorksLink.song_id == target_song_id,
-            models.SongWorksLink.work_id == work_link.work_id
-        ).first()
+        existing = (
+            db.query(models.SongWorksLink)
+            .filter(models.SongWorksLink.song_id == target_song_id, models.SongWorksLink.work_id == work_link.work_id)
+            .first()
+        )
         if not existing:
             work_link.song_id = target_song_id
         else:
@@ -716,7 +746,7 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
         db.flush()
         target_song.spotify_song_id = spotify_id
         target_song.spotify_song_title = spotify_title
-    
+
     if not target_song.jasrac_code and source_song.jasrac_code:
         jasrac_code = source_song.jasrac_code
         jasrac_title = source_song.jasrac_title
@@ -731,7 +761,7 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
     # Migrate boolean flags (Logical OR: if either is True, the merged song is True)
     if source_song.is_streaming_available and not target_song.is_streaming_available:
         target_song.is_streaming_available = True
-        
+
     if source_song.is_video and not target_song.is_video:
         target_song.is_video = True
 

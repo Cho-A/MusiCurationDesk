@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import os
+from typing import Any
+
 import requests
-from typing import Optional, Dict, Any
+
 
 class SetlistFMClient:
     BASE_URL = "https://api.setlist.fm/rest/1.0"
@@ -12,17 +15,12 @@ class SetlistFMClient:
     def _get_headers(self):
         if not self.api_key:
             raise ValueError("SETLISTFM_API_KEY environment variable is not set.")
-        return {
-            "Accept": "application/json",
-            "x-api-key": self.api_key
-        }
+        return {"Accept": "application/json", "x-api-key": self.api_key}
 
     def search_setlists(self, artist_name: str, p: int = 1, artist_mbid: str = None) -> dict[str, Any]:
         """Search for setlists by artist name or MBID."""
         url = f"{self.BASE_URL}/search/setlists"
-        params = {
-            "p": p
-        }
+        params = {"p": p}
         if artist_mbid:
             params["artistMbid"] = artist_mbid
         else:

@@ -1,8 +1,11 @@
 from __future__ import annotations
-from typing import Any, List, Optional
+
 from datetime import date, datetime, time
-from pydantic import BaseModel, Field, EmailStr, model_validator
-from datetime import date as dt_date, time as dt_time  # aliases for PerformanceUpdate field collision
+from datetime import date as dt_date  # aliases for PerformanceUpdate field collision
+from datetime import time as dt_time
+from typing import Any, Optional
+
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 # --- Artist (アーティスト) ---
 
@@ -58,7 +61,7 @@ class ArtistDetail(BaseModel):
     songs_contributed: list[SongContribution] = []
     members: list["ArtistRelationshipInfo"] = []
     tags: list["TagInfo"] = []
-    
+
     # 追加
     albums: list["AlbumMini"] = []
     performances: list["Performance"] = []
@@ -78,6 +81,7 @@ class ArtistMini(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ArtistRelationshipInfo(BaseModel):
     id: int
     name: str
@@ -88,6 +92,7 @@ class ArtistRelationshipInfo(BaseModel):
     class Config:
         from_attributes = True
 
+
 class TagInfo(BaseModel):
     id: int
     name: str
@@ -96,14 +101,17 @@ class TagInfo(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ArtistMemberCreate(BaseModel):
     member_artist_id: int
     start_date: date | None = None
     end_date: date | None = None
 
+
 class ArtistMemberUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
+
 
 class TagAssign(BaseModel):
     tag_id: int
@@ -113,7 +121,8 @@ class TagAssign(BaseModel):
 class TagCreate(BaseModel):
     name: str  # タグ名 (例: "バラード", "ライブ定番曲")
     color: str | None = None  # UI用 (例: "#FF0000")
-    parent_id: int | None = None # オプトイン階層用
+    parent_id: int | None = None  # オプトイン階層用
+
 
 class Tag(BaseModel):
     id: int
@@ -153,7 +162,7 @@ class Song(BaseModel):
     is_streaming_available: bool = True
     track_category: str | None = None
     primary_album_title: Optional[str] = None
-    
+
     # 検索一覧などでアーティスト情報を表示できるように追加
     artists: list["ArtistLinkInfo"] = Field(
         default=[],
@@ -165,16 +174,20 @@ class Song(BaseModel):
         from_attributes = True  # SQLAlchemyモデルをPydanticモデルに変換
         populate_by_name = True
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def set_primary_album_title(cls, data: Any):
-        if hasattr(data, 'primary_album') and data.primary_album:
-            if not getattr(data, 'primary_album_title', None):
-                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
+        if hasattr(data, "primary_album") and data.primary_album:
+            if not getattr(data, "primary_album_title", None):
+                album_title = (
+                    data.primary_album.album_group.title
+                    if getattr(data.primary_album, "album_group", None)
+                    else data.primary_album.main_title
+                )
                 if isinstance(data, dict):
-                    data['primary_album_title'] = album_title
+                    data["primary_album_title"] = album_title
                 else:
-                    setattr(data, 'primary_album_title', album_title)
+                    setattr(data, "primary_album_title", album_title)
         return data
 
 
@@ -184,6 +197,7 @@ class WorkArtistLinkCreate(BaseModel):
     artist_id: int
     role_category: str
     role_detail: str | None = None
+
 
 class WorkArtistLink(WorkArtistLinkCreate):
     id: int
@@ -195,6 +209,7 @@ class WorkArtistLink(WorkArtistLinkCreate):
 # --- SongArtistLink (アーティスト紐付け) ---
 class SongMainArtistUpdate(BaseModel):
     artist_id: int
+
 
 class SongArtistLinkCreate(BaseModel):
     song_id: int
@@ -237,7 +252,7 @@ class SongTieupLink(BaseModel):
 class TieupCreate(BaseModel):
     name: str  # "呪術廻戦", "チェンソーマン", "BLEACH 千年血戦篇"
     category: str | None = None  # "Anime", "Game", "Series"
-    parent_id: int | None = None # 階層化用 (親タイアップのID)
+    parent_id: int | None = None  # 階層化用 (親タイアップのID)
 
 
 class Tieup(BaseModel):
@@ -279,6 +294,7 @@ class ArtistLinkInfo(BaseModel):
     class Config:
         from_attributes = True
 
+
 class AlbumCardData(BaseModel):
     id: int
     main_title: str
@@ -288,28 +304,32 @@ class AlbumCardData(BaseModel):
     artist_names: list[str] | None = None
     album_group_id: int | None = None
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def extract_fields(cls, data: any) -> any:
         if isinstance(data, dict):
             return data
-        
-        raw_date = getattr(data, 'physical_release_date', None) or getattr(data, 'digital_release_date', None)
-        str_date = raw_date.isoformat() if hasattr(raw_date, 'isoformat') else str(raw_date) if raw_date else None
+
+        raw_date = getattr(data, "physical_release_date", None) or getattr(data, "digital_release_date", None)
+        str_date = raw_date.isoformat() if hasattr(raw_date, "isoformat") else str(raw_date) if raw_date else None
 
         # SQLAlchemy ORM fallback extraction
         return {
             "id": data.id,
             "main_title": data.main_title,
-            "version_title": getattr(data, 'version_title', None),
-            "cover_image_url": data.cover_image_url or (data.album_group.cover_image_url if getattr(data, 'album_group', None) else None),
+            "version_title": getattr(data, "version_title", None),
+            "cover_image_url": data.cover_image_url
+            or (data.album_group.cover_image_url if getattr(data, "album_group", None) else None),
             "release_date": str_date,
-            "artist_names": [link.artist.name for link in data.artist_links] if getattr(data, 'artist_links', None) else [],
-            "album_group_id": getattr(data, 'album_group_id', None)
+            "artist_names": [link.artist.name for link in data.artist_links]
+            if getattr(data, "artist_links", None)
+            else [],
+            "album_group_id": getattr(data, "album_group_id", None),
         }
 
     class Config:
         from_attributes = True
+
 
 class SongCardData(BaseModel):
     id: int
@@ -324,28 +344,32 @@ class SongCardData(BaseModel):
     track_category: str | None = None
     work_id: int | None = None
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def extract_fields(cls, data: any) -> any:
         print("DEBUG SongCardData data type:", type(data))
         if isinstance(data, dict):
             print("DEBUG dict keys:", data.keys())
             return data
-            
+
         # SQLAlchemy ORM fallback extraction
         artist_name = "Unknown Artist"
-        if getattr(data, 'artist_links', None):
+        if getattr(data, "artist_links", None):
             artist_name = data.artist_links[0].artist.name
-        elif getattr(data, 'work', None) and getattr(data.work, 'artist_links', None):
+        elif getattr(data, "work", None) and getattr(data.work, "artist_links", None):
             artist_name = data.work.artist_links[0].artist.name
 
         cover_url = None
         album_title = None
         # To avoid lazy load N+1, it's better if routers pass dicts or ensure eager loading
-        if getattr(data, 'album_links', None):
+        if getattr(data, "album_links", None):
             first_track = data.album_links[0] if data.album_links else None
             if first_track and first_track.album:
-                cover_url = first_track.album.cover_image_url or (first_track.album.album_group.cover_image_url if getattr(first_track.album, 'album_group', None) else None)
+                cover_url = first_track.album.cover_image_url or (
+                    first_track.album.album_group.cover_image_url
+                    if getattr(first_track.album, "album_group", None)
+                    else None
+                )
                 album_title = first_track.album.main_title
 
         return {
@@ -353,17 +377,16 @@ class SongCardData(BaseModel):
             "title": data.title,
             "artist_name": artist_name,
             "cover_image_url": cover_url,
-            "is_video": getattr(data, 'is_video', False),
-            "role": None, # Should be explicitly passed if needed
+            "is_video": getattr(data, "is_video", False),
+            "role": None,  # Should be explicitly passed if needed
             "album_title": album_title,
-            "version_name": getattr(data, 'version_name', None),
-            "is_streaming_available": getattr(data, 'is_streaming_available', True),
-            "work_id": getattr(data, 'work_id', None)
+            "version_name": getattr(data, "version_name", None),
+            "is_streaming_available": getattr(data, "is_streaming_available", True),
+            "work_id": getattr(data, "work_id", None),
         }
 
     class Config:
         from_attributes = True
-
 
 
 class WorkArtistLinkInfo(BaseModel):
@@ -390,7 +413,6 @@ class TieupLinkInfo(BaseModel):
         from_attributes = True
 
 
-
 class AlbumMini(BaseModel):
     id: int
     main_title: str
@@ -400,13 +422,13 @@ class AlbumMini(BaseModel):
     album_group_id: int | None = None
     release_date: str | None = None
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def set_computed_fields(cls, data: any) -> any:
         if isinstance(data, dict):
             if not data.get("cover_image_url") and data.get("album_group"):
                 data["cover_image_url"] = data["album_group"].get("cover_image_url")
-            
+
             if not data.get("release_date"):
                 if data.get("album_group") and data["album_group"].get("release_date"):
                     data["release_date"] = str(data["album_group"].get("release_date"))
@@ -414,21 +436,24 @@ class AlbumMini(BaseModel):
                     raw_date = data.get("physical_release_date") or data.get("digital_release_date")
                     if raw_date:
                         data["release_date"] = str(raw_date)
-        elif hasattr(data, '__dict__'):
-            if not getattr(data, 'cover_image_url', None) and getattr(data, 'album_group', None):
+        elif hasattr(data, "__dict__"):
+            if not getattr(data, "cover_image_url", None) and getattr(data, "album_group", None):
                 data.cover_image_url = data.album_group.cover_image_url
-            
-            if not getattr(data, 'release_date', None):
-                if getattr(data, 'album_group', None) and getattr(data.album_group, 'release_date', None):
+
+            if not getattr(data, "release_date", None):
+                if getattr(data, "album_group", None) and getattr(data.album_group, "release_date", None):
                     data.release_date = str(data.album_group.release_date)
                 else:
-                    raw_date = getattr(data, 'physical_release_date', None) or getattr(data, 'digital_release_date', None)
+                    raw_date = getattr(data, "physical_release_date", None) or getattr(
+                        data, "digital_release_date", None
+                    )
                     if raw_date:
                         data.release_date = str(raw_date)
         return data
 
     class Config:
         from_attributes = True
+
 
 class AlbumTrackInfo(BaseModel):
     album_id: int
@@ -441,6 +466,7 @@ class AlbumTrackInfo(BaseModel):
     song_id: int | None = None
     is_video: bool | None = None
     display_title: str | None = None
+
     class Config:
         from_attributes = True
 
@@ -450,6 +476,7 @@ class MusicalWorkBase(BaseModel):
     title: str
     jasrac_code: str | None = None
     iswc_code: str | None = None
+
 
 class MusicalWork(MusicalWorkBase):
     id: int
@@ -481,7 +508,7 @@ class SongDetail(BaseModel):
     work: MusicalWork | None = None
     primary_album_title: Optional[str] = None
     release_date: Optional[str] = None
-    
+
     other_versions: list["SongDetailMini"] = []
 
     artists: list[ArtistLinkInfo] = Field(
@@ -505,23 +532,29 @@ class SongDetail(BaseModel):
         from_attributes = True
         populate_by_name = True  # エイリアスが機能するために必要
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def set_primary_album_title(cls, data: Any):
-        if hasattr(data, 'primary_album') and data.primary_album:
-            if not getattr(data, 'primary_album_title', None):
-                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
+        if hasattr(data, "primary_album") and data.primary_album:
+            if not getattr(data, "primary_album_title", None):
+                album_title = (
+                    data.primary_album.album_group.title
+                    if getattr(data.primary_album, "album_group", None)
+                    else data.primary_album.main_title
+                )
                 if isinstance(data, dict):
-                    data['primary_album_title'] = album_title
+                    data["primary_album_title"] = album_title
                 else:
-                    setattr(data, 'primary_album_title', album_title)
-            if not getattr(data, 'release_date', None):
-                raw_date = getattr(data.primary_album, 'physical_release_date', None) or getattr(data.primary_album, 'digital_release_date', None)
+                    setattr(data, "primary_album_title", album_title)
+            if not getattr(data, "release_date", None):
+                raw_date = getattr(data.primary_album, "physical_release_date", None) or getattr(
+                    data.primary_album, "digital_release_date", None
+                )
                 if raw_date:
                     if isinstance(data, dict):
-                        data['release_date'] = str(raw_date)
+                        data["release_date"] = str(raw_date)
                     else:
-                        setattr(data, 'release_date', str(raw_date))
+                        setattr(data, "release_date", str(raw_date))
         return data
 
 
@@ -542,6 +575,7 @@ class VenueCreate(BaseModel):
     prefecture: str | None = None
     capacity: int | None = None
     notes: str | None = None
+
 
 class Venue(BaseModel):
     id: int
@@ -600,6 +634,7 @@ class PerformanceRoster(BaseModel):
     class Config:
         from_attributes = True
 
+
 class SongMini(BaseModel):
     id: int
     title: str
@@ -614,20 +649,26 @@ class SongMini(BaseModel):
     class Config:
         from_attributes = True
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def set_primary_album_title(cls, data: Any):
-        if hasattr(data, 'primary_album') and data.primary_album:
-            if not getattr(data, 'primary_album_title', None):
-                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
+        if hasattr(data, "primary_album") and data.primary_album:
+            if not getattr(data, "primary_album_title", None):
+                album_title = (
+                    data.primary_album.album_group.title
+                    if getattr(data.primary_album, "album_group", None)
+                    else data.primary_album.main_title
+                )
                 if isinstance(data, dict):
-                    data['primary_album_title'] = album_title
+                    data["primary_album_title"] = album_title
                 else:
-                    setattr(data, 'primary_album_title', album_title)
+                    setattr(data, "primary_album_title", album_title)
         return data
+
 
 class SongAliasCreate(BaseModel):
     alias_name: str
+
 
 class SongAlias(BaseModel):
     id: int
@@ -636,6 +677,7 @@ class SongAlias(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class SongUpdate(BaseModel):
     title: str | None = None
@@ -669,6 +711,7 @@ class SetlistEntryUpdate(BaseModel):
 
 class SetlistUpdatePayload(BaseModel):
     entries: list[SetlistEntryUpdate]
+
 
 class SetlistEntry(BaseModel):
     id: int
@@ -743,6 +786,7 @@ class PerformanceSummary(BaseModel):
     class Config:
         from_attributes = True
 
+
 # --- PerformanceDetail (詳細表示用) ---
 class PerformanceDetail(Performance):
     setlist_entries: list[SetlistEntry] = []
@@ -750,7 +794,6 @@ class PerformanceDetail(Performance):
 
     class Config:
         from_attributes = True
-
 
 
 # --- TourDetail (ツアー詳細・公演一覧用) ---
@@ -787,6 +830,12 @@ class AlbumUpdate(BaseModel):
     album_type: str | None = None
     media_format: str | None = None
 
+
+class BulkStreamingAvailabilityUpdate(BaseModel):
+    disc_number: int | None = None
+    is_streaming_available: bool
+
+
 class Album(BaseModel):
     id: int
     album_group_id: int | None = None
@@ -803,18 +852,22 @@ class Album(BaseModel):
     class Config:
         from_attributes = True
 
+
 class BulkDiscMergeRequest(BaseModel):
     target_album_id: int
     target_disc_number: int | None = None
+
 
 class BulkEditionMergeRequest(BaseModel):
     target_album_id: int
     source_album_ids: list[int]
 
+
 class AlbumDiscUpdate(BaseModel):
     title: str | None = None
     media_format: str | None = None
     edition: str | None = None
+
 
 class AlbumDiscCreate(BaseModel):
     disc_number: int
@@ -822,11 +875,9 @@ class AlbumDiscCreate(BaseModel):
     media_format: str | None = None
     edition: str | None = None
 
-class AlbumTrackCreate(BaseModel):
-    song_id: int
-    track_number: int
-    display_title: str | None = None
-    notes: str | None = None
+
+
+
 
 class AlbumDiscBase(BaseModel):
     id: int
@@ -837,6 +888,7 @@ class AlbumDiscBase(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class AlbumTrackForAlbum(BaseModel):
     id: int
@@ -853,10 +905,12 @@ class AlbumTrackForAlbum(BaseModel):
     class Config:
         from_attributes = True
 
+
 class AlbumDetail(Album):
     artist: ArtistMini | None = None
     discs: list[AlbumDiscBase] = []
     album_tracks: list[AlbumTrackForAlbum] = []
+
 
 class AlbumGroupBase(BaseModel):
     title: str
@@ -865,8 +919,10 @@ class AlbumGroupBase(BaseModel):
     album_type: str | None = None
     cover_image_url: str | None = None
 
+
 class AlbumGroupCreate(AlbumGroupBase):
     pass
+
 
 class AlbumGroupUpdate(BaseModel):
     title: str | None = None
@@ -875,17 +931,20 @@ class AlbumGroupUpdate(BaseModel):
     album_type: str | None = None
     cover_image_url: str | None = None
 
+
 class AlbumGroup(AlbumGroupBase):
     id: int
 
     class Config:
         from_attributes = True
 
+
 class AlbumGroupWithArtist(AlbumGroup):
     artist: ArtistMini | None = None
 
     class Config:
         from_attributes = True
+
 
 class AlbumGroupDetail(AlbumGroup):
     artist: ArtistMini | None = None
@@ -922,8 +981,10 @@ class AlbumTrackBase(BaseModel):
     notes: str | None = None
     spotify_track_id: str | None = None
 
+
 class AlbumTrackCreate(AlbumTrackBase):
     pass
+
 
 class AlbumTrackUpdate(BaseModel):
     track_number: int | None = None
@@ -1094,24 +1155,31 @@ class SongDetailMini(BaseModel):
     class Config:
         from_attributes = True
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def set_primary_album_title(cls, data: Any):
-        if hasattr(data, 'primary_album') and data.primary_album:
-            if not getattr(data, 'primary_album_title', None):
-                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
+        if hasattr(data, "primary_album") and data.primary_album:
+            if not getattr(data, "primary_album_title", None):
+                album_title = (
+                    data.primary_album.album_group.title
+                    if getattr(data.primary_album, "album_group", None)
+                    else data.primary_album.main_title
+                )
                 if isinstance(data, dict):
-                    data['primary_album_title'] = album_title
+                    data["primary_album_title"] = album_title
                 else:
-                    setattr(data, 'primary_album_title', album_title)
-            if not getattr(data, 'release_date', None):
-                raw_date = getattr(data.primary_album, 'physical_release_date', None) or getattr(data.primary_album, 'digital_release_date', None)
+                    setattr(data, "primary_album_title", album_title)
+            if not getattr(data, "release_date", None):
+                raw_date = getattr(data.primary_album, "physical_release_date", None) or getattr(
+                    data.primary_album, "digital_release_date", None
+                )
                 if raw_date:
                     if isinstance(data, dict):
-                        data['release_date'] = str(raw_date)
+                        data["release_date"] = str(raw_date)
                     else:
-                        setattr(data, 'release_date', str(raw_date))
+                        setattr(data, "release_date", str(raw_date))
         return data
+
 
 # --- CD Import (手動アルバムビルダー用) ---
 class CDImportDisc(BaseModel):
@@ -1119,6 +1187,7 @@ class CDImportDisc(BaseModel):
     title: str | None = None
     media_format: str | None = None
     edition: str | None = None
+
 
 class CDImportTrack(BaseModel):
     disc_number: int
@@ -1128,6 +1197,7 @@ class CDImportTrack(BaseModel):
     media_format: str | None = None
     notes: str | None = None
     song_id: int | None = None  # Noneの場合は新規楽曲として登録
+
 
 class CDImportRequest(BaseModel):
     target_album_id: int | None = None  # Noneの場合は新規アルバムとして作成
@@ -1139,7 +1209,7 @@ class CDImportRequest(BaseModel):
 
 
 # 循環参照解決のため
-TourDetail.update_forward_refs()
-AlbumTrackForAlbum.update_forward_refs()
-SongDetail.update_forward_refs()
-Song.update_forward_refs()
+TourDetail.model_rebuild()
+AlbumTrackForAlbum.model_rebuild()
+SongDetail.model_rebuild()
+Song.model_rebuild()

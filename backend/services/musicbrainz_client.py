@@ -1,22 +1,22 @@
 from __future__ import annotations
-import requests
+
 import time
+
+import requests
+
 
 class MusicBrainzClient:
     def __init__(self, user_agent="MusiCurationDesk/1.0 ( test@example.com )"):
         self.base_url = "https://musicbrainz.org/ws/2"
-        self.headers = {
-            "User-Agent": user_agent,
-            "Accept": "application/json"
-        }
-        
+        self.headers = {"User-Agent": user_agent, "Accept": "application/json"}
+
     def _make_request(self, endpoint, params):
         url = f"{self.base_url}/{endpoint}"
-        params['fmt'] = 'json'
-        
+        params["fmt"] = "json"
+
         # MusicBrainzの公式レートリミット（1秒間に1リクエスト）を遵守
         time.sleep(1)
-        
+
         try:
             response = requests.get(url, headers=self.headers, params=params)
             response.raise_for_status()
@@ -29,19 +29,19 @@ class MusicBrainzClient:
         """ISRC（国際標準レコーディングコード）からレコーディング情報を検索する"""
         params = {"query": f"isrc:{isrc}"}
         result = self._make_request("recording", params)
-        if result and result.get('recordings') and len(result['recordings']) > 0:
-            mb_id = result['recordings'][0]['id']
+        if result and result.get("recordings") and len(result["recordings"]) > 0:
+            mb_id = result["recordings"][0]["id"]
             return self.get_recording_details(mb_id)
         return None
-        
+
     def search_recording_by_title_artist(self, title: str, artist: str):
         """曲名とアーティスト名からレコーディング情報を検索する"""
         query = f'recording:"{title}" AND artist:"{artist}"'
         params = {"query": query}
         result = self._make_request("recording", params)
-        
-        if result and result.get('recordings') and len(result['recordings']) > 0:
-            mb_id = result['recordings'][0]['id']
+
+        if result and result.get("recordings") and len(result["recordings"]) > 0:
+            mb_id = result["recordings"][0]["id"]
             return self.get_recording_details(mb_id)
         return None
 
@@ -55,52 +55,66 @@ class MusicBrainzClient:
 
     def _map_instrument_to_category(self, instrument_name: str) -> str:
         instrument_name = instrument_name.lower()
-        if 'guitar' in instrument_name: return 'Guitar'
-        if 'bass' in instrument_name: return 'Bass'
-        if 'drum' in instrument_name or 'percussion' in instrument_name: return 'Drums & Percussion'
-        if 'keyboard' in instrument_name or 'piano' in instrument_name or 'synth' in instrument_name: return 'Keyboard & Synth'
-        if 'vocal' in instrument_name or 'choir' in instrument_name: return 'Vocal'
-        if 'violin' in instrument_name or 'cello' in instrument_name or 'strings' in instrument_name: return 'Strings'
-        if 'trumpet' in instrument_name or 'sax' in instrument_name or 'brass' in instrument_name or 'horn' in instrument_name: return 'Brass & Woodwinds'
-        return 'Other Instrument'
+        if "guitar" in instrument_name:
+            return "Guitar"
+        if "bass" in instrument_name:
+            return "Bass"
+        if "drum" in instrument_name or "percussion" in instrument_name:
+            return "Drums & Percussion"
+        if "keyboard" in instrument_name or "piano" in instrument_name or "synth" in instrument_name:
+            return "Keyboard & Synth"
+        if "vocal" in instrument_name or "choir" in instrument_name:
+            return "Vocal"
+        if "violin" in instrument_name or "cello" in instrument_name or "strings" in instrument_name:
+            return "Strings"
+        if (
+            "trumpet" in instrument_name
+            or "sax" in instrument_name
+            or "brass" in instrument_name
+            or "horn" in instrument_name
+        ):
+            return "Brass & Woodwinds"
+        return "Other Instrument"
 
     def extract_credits(self, mb_recording_data):
         """MusicBrainzのAPIレスポンスから、本アプリのRole形式に変換してクレジットを抽出する"""
         credits = []
         if not mb_recording_data:
             return credits
-            
+
         # 1. recording-artist relations (演奏参加、プロデューサーなど)
-        for rel in mb_recording_data.get('relations', []):
-            if rel.get('target-type') == 'artist':
-                artist_name = rel.get('artist', {}).get('name')
-                role_type = rel.get('type') # 例: "instrument", "producer", "vocal"
-                attributes = rel.get('attributes', [])
-                
+        for rel in mb_recording_data.get("relations", []):
+            if rel.get("target-type") == "artist":
+                artist_name = rel.get("artist", {}).get("name")
+                role_type = rel.get("type")  # 例: "instrument", "producer", "vocal"
+                attributes = rel.get("attributes", [])
+
                 # 詳細な役割（ギター、ベースなど）がある場合はそちらを優先
                 role_category = role_type.capitalize()
                 role_detail = None
-                
-                if role_type == 'instrument' and attributes:
+
+                if role_type == "instrument" and attributes:
                     specific_role = attributes[0]
                     role_category = self._map_instrument_to_category(specific_role)
                     role_detail = specific_role.title()
                 elif attributes:
                     role_detail = attributes[0].title()
-                    
-                credits.append({
-                    "artist_name": artist_name,
-                    "role_category": role_category,
-                    "role_detail": role_detail,
-                    "source": "MusicBrainz (Recording)"
-                })
-                
+
+                credits.append(
+                    {
+                        "artist_name": artist_name,
+                        "role_category": role_category,
+                        "role_detail": role_detail,
+                        "source": "MusicBrainz (Recording)",
+                    }
+                )
+
         # 2. work-artist relations (作詞、作曲など)
         # MusicBrainzではRecording(録音)とWork(楽曲)が分かれており、作詞作曲はWorkに紐づく
-        for work_rel in mb_recording_data.get('relations', []):
-            if work_rel.get('target-type') == 'work':
-                work_data = work_rel.get('work', {})
+        for work_rel in mb_recording_data.get("relations", []):
+            if work_rel.get("target-type") == "work":
+                work_data = work_rel.get("work", {})
                 # Workの情報をさらに取得する必要がある場合もあるが、一部は含まれていることがある
-                pass # 実装の複雑化を避けるため、一旦簡易版とする
+                pass  # 実装の複雑化を避けるため、一旦簡易版とする
 
         return credits
