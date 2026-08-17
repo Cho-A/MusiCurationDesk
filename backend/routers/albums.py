@@ -309,8 +309,6 @@ def update_album_track(
         if not song:
             raise HTTPException(status_code=404, detail="指定された楽曲が存在しません。")
         track.song_id = request.song_id
-    if request.is_unreleased is not None:
-        track.is_unreleased = request.is_unreleased
         
     db.commit()
     db.refresh(track)
@@ -449,6 +447,7 @@ def bulk_merge_disc(
     target_disc_number が指定されている場合はそのディスク内で、未指定の場合は全ディスクから
     曲名とバージョン名が一致するものを探してマージします。
     """
+    import unicodedata
     from backend.routers.songs import perform_song_merge
 
     source_tracks = db.query(models.AlbumTrack).filter(
@@ -474,14 +473,16 @@ def bulk_merge_disc(
         if not source_song:
             continue
             
-        s_title = source_song.title.lower().replace(" ", "").replace("　", "")
+        s_title = unicodedata.normalize('NFKC', source_song.title).lower().replace(" ", "").replace("　", "")
         match_found = False
 
         for t_track in target_tracks:
             target_song = db.query(models.Song).filter(models.Song.id == t_track.song_id).first()
             if target_song and source_song.id != target_song.id:
-                t_title = target_song.title.lower().replace(" ", "").replace("　", "")
-                if s_title == t_title and source_song.version_name == target_song.version_name:
+                t_title = unicodedata.normalize('NFKC', target_song.title).lower().replace(" ", "").replace("　", "")
+                
+                # トラック番号とタイトルの一致、またはタイトルの一致のみでマージを許可（手動インポート等での揺れを吸収するため）
+                if s_title == t_title:
                     perform_song_merge(db, source_song, target_song)
                     merged_count += 1
                     match_found = True

@@ -656,8 +656,8 @@ const SongDetail = () => {
                 boxSizing: 'border-box'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0, width: '100%', overflow: 'hidden' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
                   {v.title} {v.version_name && `(${v.version_name})`}
                 </span>
                 {!v.is_video && v.is_streaming_available === false && (
@@ -936,8 +936,8 @@ const SongDetail = () => {
 
         {/* 収録アルバム */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px', minWidth: 0 }}>
+            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
               <ListMusic size={18} />
               収録アルバム
             </h3>
@@ -1050,11 +1050,28 @@ const SongDetail = () => {
                               <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-tertiary)', padding: '4px 8px', borderRadius: '6px', whiteSpace: 'nowrap', fontWeight: 500 }} title={t.display_title || t.song_title || ''}>
                                 {t.is_video ? <Film size={12} color="#ff4d4d" /> : <Music size={12} color="#1DB954" />}
                                 D{t.disc_number}-T{t.track_number}
-                                {(t.display_title || (t.song_title && t.song_title !== displaySong.title)) && (
-                                  <span style={{ fontSize: '0.75rem', opacity: 0.8, marginLeft: '4px', fontWeight: 'normal' }}>
-                                    {t.display_title || t.song_title}
-                                  </span>
-                                )}
+                                {(() => {
+                                  const isDifferentVersion = t.version_name !== displaySong.version_name;
+                                  if (!isDifferentVersion) return null;
+                                  
+                                  const titleToShow = t.version_name ? `${t.song_title} (${t.version_name})` : t.song_title;
+                                  
+                                  return titleToShow ? (
+                                    <span style={{ 
+                                      fontSize: '0.75rem', 
+                                      opacity: 0.8, 
+                                      marginLeft: '4px', 
+                                      fontWeight: 'normal',
+                                      maxWidth: '150px',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      display: 'inline-block',
+                                      verticalAlign: 'bottom'
+                                    }}>
+                                      {titleToShow}
+                                    </span>
+                                  ) : null;
+                                })()}
                                 {t.track_category && (
                                   <span style={{
                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

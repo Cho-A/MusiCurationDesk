@@ -586,7 +586,6 @@ class AlbumTrack(Base):
     media_format = Column(String(50), nullable=True)
     notes = Column(String(255), nullable=True)
     display_title = Column(String(255), nullable=True)
-    is_unreleased = Column(Boolean, default=False, nullable=False)
     spotify_track_id = Column(String(100), nullable=True)
 
     __table_args__ = (
@@ -606,6 +605,10 @@ class AlbumTrack(Base):
     @property
     def song_title(self):
         return self.song.title if self.song else None
+
+    @property
+    def version_name(self):
+        return self.song.version_name if self.song else None
 
     @property
     def is_video(self):

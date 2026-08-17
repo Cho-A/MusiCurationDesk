@@ -16,10 +16,10 @@ const generateGradient = (text: string) => {
   return `linear-gradient(135deg, #${'00000'.substring(0, 6 - c1.length) + c1}, #${'00000'.substring(0, 6 - c2.length) + c2})`;
 };
 
-const FallbackCoverDetail = ({ title, size }: { title: string; size: string | number }) => (
+const FallbackCoverDetail = ({ title }: { title: string }) => (
   <div style={{
-    width: size,
-    height: size,
+    width: '100%',
+    height: '100%',
     background: generateGradient(title),
     borderRadius: '12px',
     display: 'flex',
@@ -28,7 +28,7 @@ const FallbackCoverDetail = ({ title, size }: { title: string; size: string | nu
     boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
     flexShrink: 0
   }}>
-    <Disc3 color="rgba(255,255,255,0.7)" size={typeof size === 'number' ? size * 0.4 : 100} />
+    <Disc3 color="rgba(255,255,255,0.7)" size={80} />
   </div>
 );
 
@@ -109,7 +109,7 @@ const AlbumGroupDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(initialAlbumId);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, is_unreleased: boolean, main_artist_id: number | null, main_artist_name: string}>({ display_title: '', notes: '', song_id: null, song_title: '', is_unreleased: false, main_artist_id: null, main_artist_name: '' });
+  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, main_artist_id: number | null, main_artist_name: string}>({ display_title: '', notes: '', song_id: null, song_title: '', main_artist_id: null, main_artist_name: '' });
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
   const [, setIsSearchingSong] = useState(false);
   const [trackArtistSearchResults, setTrackArtistSearchResults] = useState<{id: number, name: string}[]>([]);
@@ -130,6 +130,7 @@ const AlbumGroupDetail = () => {
   // For Disc Title Edit
   const [editingDiscId, setEditingDiscId] = useState<number | null>(null);
   const [discTitleForm, setDiscTitleForm] = useState('');
+  const [discFormatForm, setDiscFormatForm] = useState('CD');
 
   // For Edition Edit Modal
   const [isEditionModalOpen, setIsEditionModalOpen] = useState(false);
@@ -249,7 +250,6 @@ const AlbumGroupDetail = () => {
       notes: track.notes || '',
       song_id: track.song.id,
       song_title: track.song.title,
-      is_unreleased: track.is_unreleased || false,
       main_artist_id: null,
       main_artist_name: ''
     });
@@ -303,7 +303,7 @@ const AlbumGroupDetail = () => {
   const handleSaveArtist = async (artistId: number) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/albums/${id}`, {
+      const res = await fetch(`http://127.0.0.1:8000/album-groups/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ const AlbumGroupDetail = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ title: discTitleForm })
+        body: JSON.stringify({ title: discTitleForm, media_format: discFormatForm })
       });
       if (res.ok) {
         toast.success("ディスク名を更新しました");
@@ -375,8 +375,7 @@ const AlbumGroupDetail = () => {
         body: JSON.stringify({
           display_title: editForm.display_title || null,
           notes: editForm.notes || null,
-          song_id: editForm.song_id,
-          is_unreleased: editForm.is_unreleased
+          song_id: editForm.song_id
         })
       });
       
@@ -716,7 +715,7 @@ const AlbumGroupDetail = () => {
           />
         ) : (
           <div className="responsive-cover fallback-cover">
-            <FallbackCoverDetail title={albumGroup.title} size={280} />
+            <FallbackCoverDetail title={albumGroup.title} />
           </div>
         )}
         
@@ -905,14 +904,14 @@ const AlbumGroupDetail = () => {
 
       {/* トラックリスト */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '1.5rem', margin: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '24px', minWidth: 0 }}>
+          <h2 style={{ fontSize: '1.5rem', margin: 0, whiteSpace: 'nowrap' }}>
             収録曲
           </h2>
           {uniqueDiscs.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Jump to:</span>
-              <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flex: 1, justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>Jump to:</span>
+              <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px', minWidth: 0, flex: 1 }}>
                 {uniqueDiscs.map(discNum => (
                   <a 
                     key={discNum} 
@@ -935,6 +934,9 @@ const AlbumGroupDetail = () => {
         {/* Discごとにグループ化して表示 */}
         {uniqueDiscs.map((discNum) => {
           const tracks = groupedTracks[discNum];
+          const discData = album?.discs?.find(d => d.disc_number === discNum);
+          const formatStr = discData?.media_format && discData.media_format !== 'CD' ? ` (${discData.media_format})` : '';
+          const icon = discData?.media_format && discData.media_format !== 'CD' ? '📺' : '💿';
           
           return (
             <div key={discNum} id={`disc-${discNum}`} style={{ marginBottom: '32px', scrollMarginTop: '80px' }}>
@@ -944,14 +946,21 @@ const AlbumGroupDetail = () => {
                   borderBottom: '1px solid var(--border-color)', paddingBottom: '8px',
                   display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
-                  {(() => {
-                    const discData = album?.discs?.find(d => d.disc_number === discNum);
-                    const formatStr = discData?.media_format && discData.media_format !== 'CD' ? ` (${discData.media_format})` : '';
-                    const icon = discData?.media_format && discData.media_format !== 'CD' ? '📺' : '💿';
-                    return (
                       <>
                         {editingDiscId === discData?.id ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                            <select
+                              value={discFormatForm}
+                              onChange={(e) => setDiscFormatForm(e.target.value)}
+                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                            >
+                              <option value="CD">CD</option>
+                              <option value="DVD">DVD</option>
+                              <option value="Blu-ray">Blu-ray</option>
+                              <option value="Digital Media">Digital</option>
+                              <option value="Vinyl">Vinyl</option>
+                              <option value="Cassette">Cassette</option>
+                            </select>
                             <input 
                               type="text" 
                               value={discTitleForm}
@@ -1010,16 +1019,13 @@ const AlbumGroupDetail = () => {
                           </>
                         )}
                       </>
-                    );
-                  })()}
                 </h3>
               )}
               
               <div className="scrollable-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {tracks.sort((a, b) => a.track_number - b.track_number).map((track) => {
-                  // 映像フォーマット（Blu-ray/DVD）か、曲自体が映像フラグを持っている場合はサブスク未解禁フラグを出さない
-                  const isVideoTrack = track.song.is_video || (track.media_format && ['Blu-ray', 'DVD'].includes(track.media_format));
-                  const isUnreleased = !isVideoTrack && (track.song.spotify_song_id === null || track.song.is_streaming_available === false || track.is_unreleased === true);
+                  const isVideoTrack = track.song.is_video || (discData?.media_format && ['Blu-ray', 'DVD'].includes(discData.media_format));
+                  const isUnreleased = !isVideoTrack && (track.song.is_streaming_available === false || track.is_unreleased === true);
                   
                   return (
                     <div key={track.id} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -1035,7 +1041,7 @@ const AlbumGroupDetail = () => {
                           </div>
                           
                           {editingTrackId === track.id ? (
-                            <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: 'column' }} onClick={(e) => e.preventDefault()}>
+                            <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px' }}>マスター楽曲:</span>
                                 <div style={{ position: 'relative', flex: 1 }}>
@@ -1123,15 +1129,7 @@ const AlbumGroupDetail = () => {
                                   )}
                                 </div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', paddingLeft: '88px', justifyContent: 'space-between' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={editForm.is_unreleased}
-                                    onChange={(e) => setEditForm({ ...editForm, is_unreleased: e.target.checked })}
-                                  />
-                                  このトラック（バージョン）はサブスク未解禁とする
-                                </label>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', paddingLeft: '88px', justifyContent: 'flex-end' }}>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   <Button variant="primary" icon={Save} onClick={(e) => handleSaveTrack(e, track)}>保存</Button>
                                   <Button variant="secondary" icon={X} onClick={handleCancelEdit}>キャンセル</Button>
@@ -1233,7 +1231,7 @@ const AlbumGroupDetail = () => {
                     const res = await fetch(`http://127.0.0.1:8000/albums/${album!.id}/discs/${discNum}/tracks`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ song_id: songId, track_number: trackNum || tracks.length + 1 })
+                      body: JSON.stringify({ album_id: album!.id, disc_number: discNum, song_id: songId, track_number: trackNum || tracks.length + 1 })
                     });
                     if (res.ok) {
                       fetchAlbum();

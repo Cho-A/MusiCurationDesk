@@ -170,10 +170,11 @@ class Song(BaseModel):
     def set_primary_album_title(cls, data: Any):
         if hasattr(data, 'primary_album') and data.primary_album:
             if not getattr(data, 'primary_album_title', None):
+                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
                 if isinstance(data, dict):
-                    data['primary_album_title'] = data.primary_album.main_title
+                    data['primary_album_title'] = album_title
                 else:
-                    setattr(data, 'primary_album_title', data.primary_album.main_title)
+                    setattr(data, 'primary_album_title', album_title)
         return data
 
 
@@ -436,6 +437,7 @@ class AlbumTrackInfo(BaseModel):
     duration_ms: int | None = None
     album: AlbumMini
     song_title: str | None = None
+    version_name: str | None = None
     song_id: int | None = None
     is_video: bool | None = None
     display_title: str | None = None
@@ -508,10 +510,11 @@ class SongDetail(BaseModel):
     def set_primary_album_title(cls, data: Any):
         if hasattr(data, 'primary_album') and data.primary_album:
             if not getattr(data, 'primary_album_title', None):
+                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
                 if isinstance(data, dict):
-                    data['primary_album_title'] = data.primary_album.main_title
+                    data['primary_album_title'] = album_title
                 else:
-                    setattr(data, 'primary_album_title', data.primary_album.main_title)
+                    setattr(data, 'primary_album_title', album_title)
             if not getattr(data, 'release_date', None):
                 raw_date = getattr(data.primary_album, 'physical_release_date', None) or getattr(data.primary_album, 'digital_release_date', None)
                 if raw_date:
@@ -616,10 +619,11 @@ class SongMini(BaseModel):
     def set_primary_album_title(cls, data: Any):
         if hasattr(data, 'primary_album') and data.primary_album:
             if not getattr(data, 'primary_album_title', None):
+                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
                 if isinstance(data, dict):
-                    data['primary_album_title'] = data.primary_album.main_title
+                    data['primary_album_title'] = album_title
                 else:
-                    setattr(data, 'primary_album_title', data.primary_album.main_title)
+                    setattr(data, 'primary_album_title', album_title)
         return data
 
 class SongAliasCreate(BaseModel):
@@ -823,7 +827,6 @@ class AlbumTrackCreate(BaseModel):
     track_number: int
     display_title: str | None = None
     notes: str | None = None
-    is_unreleased: bool = False
 
 class AlbumDiscBase(BaseModel):
     id: int
@@ -844,7 +847,6 @@ class AlbumTrackForAlbum(BaseModel):
     display_title: str | None = None
     notes: str | None = None
     media_format: str | None = None
-    is_unreleased: bool = False
     spotify_track_id: str | None = None
     song: "Song"  # Songスキーマを参照
 
@@ -918,7 +920,6 @@ class AlbumTrackBase(BaseModel):
     duration_ms: int | None = None
     display_title: str | None = None
     notes: str | None = None
-    is_unreleased: bool = False
     spotify_track_id: str | None = None
 
 class AlbumTrackCreate(AlbumTrackBase):
@@ -932,7 +933,6 @@ class AlbumTrackUpdate(BaseModel):
     media_format: str | None = None
     display_title: str | None = None
     notes: str | None = None
-    is_unreleased: bool | None = None
 
 
 class AlbumTrack(AlbumTrackBase):
@@ -1099,10 +1099,11 @@ class SongDetailMini(BaseModel):
     def set_primary_album_title(cls, data: Any):
         if hasattr(data, 'primary_album') and data.primary_album:
             if not getattr(data, 'primary_album_title', None):
+                album_title = data.primary_album.album_group.title if getattr(data.primary_album, 'album_group', None) else data.primary_album.main_title
                 if isinstance(data, dict):
-                    data['primary_album_title'] = data.primary_album.main_title
+                    data['primary_album_title'] = album_title
                 else:
-                    setattr(data, 'primary_album_title', data.primary_album.main_title)
+                    setattr(data, 'primary_album_title', album_title)
             if not getattr(data, 'release_date', None):
                 raw_date = getattr(data.primary_album, 'physical_release_date', None) or getattr(data.primary_album, 'digital_release_date', None)
                 if raw_date:
