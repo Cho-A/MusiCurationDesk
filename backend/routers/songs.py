@@ -298,7 +298,7 @@ def patch_song(
         db.rollback()
         raise HTTPException(status_code=400, detail=f"更新エラー: {e}")
 
-    return read_song(song_id=song_id, db=db)
+    return get_song_by_id(song_id=song_id, db=db)
 
 @router.delete("/{song_id}", tags=["Songs"], status_code=204)
 def delete_song(song_id: int, db: Session = Depends(models.get_db)):
@@ -492,7 +492,7 @@ def link_song_to_tag(
     
     # 5. 更新された楽曲情報（タグリスト含む）を返す
     # (再度Eager Loadをかけて、完全な情報を返す)
-    updated_song = read_song(song_id=song_id, db=db)
+    updated_song = get_song_by_id(song_id=song_id, db=db)
     return updated_song
 
 # (POST /songs/generate-spotify-ids)
