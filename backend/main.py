@@ -1,5 +1,6 @@
 from __future__ import annotations
-import os
+
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -8,15 +9,19 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import models  # 先ほど作成したファイルをインポート
+from . import models
+from . import database
 from .routers import (
-    albums,
     album_groups,
+    albums,
     artists,
     auth,
+    dashboard,
     external,
+    external_search,
     goods_and_stores,
     links,
+    musicbrainz,
     performances,
     songs,
     tags,
@@ -24,9 +29,6 @@ from .routers import (
     tours,
     users,
     venues,
-    external_search,
-    dashboard,
-    musicbrainz,
     works,
 )
 
@@ -38,7 +40,7 @@ app = FastAPI(
 
 # --- 2. データベースの初期化 ---
 # (最初の起動時にDBとテーブルを作成)
-models.create_db_and_tables()
+database.create_db_and_tables()
 
 app.include_router(songs.router)
 app.include_router(artists.router)

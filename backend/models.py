@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import datetime
 
 from sqlalchemy import (
@@ -17,14 +18,10 @@ from sqlalchemy import (
     create_engine,
     text,
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import relationship
+from backend.database import Base
 
-# --- 1. データベース接続設定 (まずはSQLite) ---
-# (本番ではPostgreSQLのURLに変更します)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./music_curation_desk.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+
 
 # 楽曲タグ紐付け (多対多)
 song_tags = Table(
@@ -63,7 +60,7 @@ class SongArtistLink(Base):
     song_id = Column(Integer, ForeignKey("songs.id"))
     artist_id = Column(Integer, ForeignKey("artists.id"))
     role_category = Column(String(50), nullable=False)  # 例: "Guitar", "Vocal", "Producer"
-    role_detail = Column(String(100), nullable=True)    # 例: "Acoustic Guitar", "Lead Vocal"
+    role_detail = Column(String(100), nullable=True)  # 例: "Acoustic Guitar", "Lead Vocal"
 
     # 外部キーにインデックスを貼る (検索高速化)
     __table_args__ = (
@@ -193,13 +190,15 @@ class Artist(Base):
         members_list = []
         for rel in self.relationships_as_a:
             if rel.relationship_type == "member":
-                members_list.append({
-                    "id": rel.artist_b.id,
-                    "name": rel.artist_b.name,
-                    "image_url": rel.artist_b.image_url,
-                    "start_date": rel.start_date,
-                    "end_date": rel.end_date
-                })
+                members_list.append(
+                    {
+                        "id": rel.artist_b.id,
+                        "name": rel.artist_b.name,
+                        "image_url": rel.artist_b.image_url,
+                        "start_date": rel.start_date,
+                        "end_date": rel.end_date,
+                    }
+                )
         return members_list
 
     @property
@@ -223,13 +222,13 @@ class Artist(Base):
                         if album_link.album and album_link.album.cover_image_url:
                             cover_image_url = album_link.album.cover_image_url
                             break
-                            
+
                 contributions_map[song_id] = {
                     "song_id": song_id,
                     "title": link.song.title,
                     "roles": [],
                     "cover_image_url": cover_image_url,
-                    "is_video": link.song.is_video
+                    "is_video": link.song.is_video,
                 }
 
             # 役割をリストに追加
@@ -306,7 +305,7 @@ class WorkArtistLink(Base):
     work_id = Column(Integer, ForeignKey("musical_works.id"), nullable=False)
     artist_id = Column(Integer, ForeignKey("artists.id"), nullable=False)
     role_category = Column(String(50), nullable=False)  # "Lyricist", "Composer"
-    role_detail = Column(String(100), nullable=True)    # 補足
+    role_detail = Column(String(100), nullable=True)  # 補足
 
     __table_args__ = (
         Index("idx_work_artist_role", "work_id", "artist_id", "role_category"),
@@ -327,9 +326,7 @@ class SongAlias(Base):
     song_id = Column(Integer, ForeignKey("songs.id"), nullable=False)
     alias_name = Column(String(255), nullable=False, index=True)
 
-    __table_args__ = (
-        UniqueConstraint("song_id", "alias_name", name="uq_song_id_alias"),
-    )
+    __table_args__ = (UniqueConstraint("song_id", "alias_name", name="uq_song_id_alias"),)
 
     song = relationship("Song", back_populates="aliases")
 
@@ -356,7 +353,9 @@ class Song(Base):
     tieup_links = relationship("SongTieupLink", back_populates="song")
     setlist_entries = relationship("SetlistEntry", back_populates="song")
     album_links = relationship("AlbumTrack", back_populates="song")
-    works = relationship("SongWorksLink", back_populates="song", cascade="all, delete-orphan", order_by="SongWorksLink.order_index")
+    works = relationship(
+        "SongWorksLink", back_populates="song", cascade="all, delete-orphan", order_by="SongWorksLink.order_index"
+    )
     aliases = relationship("SongAlias", back_populates="song", cascade="all, delete-orphan")
 
     @property
@@ -364,13 +363,14 @@ class Song(Base):
         # 紐づいているアルバムがあれば、発売日が最も古いものを返す
         if self.album_links and len(self.album_links) > 0:
             import datetime
+
             MAX_DATE = datetime.date(9999, 12, 31)
-            
+
             def get_release_date(link):
                 d1 = link.album.physical_release_date
                 d2 = link.album.digital_release_date
                 return min(d1 if d1 else MAX_DATE, d2 if d2 else MAX_DATE)
-                
+
             sorted_links = sorted(self.album_links, key=get_release_date)
             return sorted_links[0].album
         return None
@@ -387,7 +387,7 @@ class Song(Base):
         Index(
             "uq_song_title_when_both_ids_null",
             "title",
-            unique=False, # release_date が消えたので、同名異曲を許容するため unique=False に変更
+            unique=False,  # release_date が消えたので、同名異曲を許容するため unique=False に変更
             sqlite_where=text("(spotify_song_id IS NULL) AND (jasrac_code IS NULL)"),
         ),
     )
@@ -434,9 +434,7 @@ class PerformanceRoster(Base):
     context = Column(String(255), nullable=True)  # 例: "〇〇曲のみ参加"
 
     # UNIQUE(performance_id, artist_id)
-    __table_args__ = (
-        UniqueConstraint("performance_id", "artist_id", name="_performance_artist_uc"),
-    )
+    __table_args__ = (UniqueConstraint("performance_id", "artist_id", name="_performance_artist_uc"),)
 
     performance = relationship("Performance", back_populates="roster_entries")
     artist = relationship("Artist")  # PerformanceRoster は Artist に紐づく
@@ -447,7 +445,7 @@ class Venue(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     prefecture = Column(String(50), nullable=True)  # 都道府県
-    capacity = Column(Integer, nullable=True)       # キャパシティ
+    capacity = Column(Integer, nullable=True)  # キャパシティ
     notes = Column(Text, nullable=True)
 
     performances = relationship("Performance", back_populates="venue")
@@ -456,7 +454,9 @@ class Venue(Base):
 class Performance(Base):
     __tablename__ = "performances"
     id = Column(Integer, primary_key=True, index=True)
-    artist_id = Column(Integer, ForeignKey("artists.id"), nullable=True) # 主催/メインアーティストがいない企画ステージに対応
+    artist_id = Column(
+        Integer, ForeignKey("artists.id"), nullable=True
+    )  # 主催/メインアーティストがいない企画ステージに対応
     tour_id = Column(Integer, ForeignKey("tours.id"), nullable=True)
     performance_type = Column(String(100))  # "Tour", "One-Man", "Festival"
     event_type = Column(String(50), default="Live")  # "Live", "Radio", "Signing", etc.
@@ -478,7 +478,7 @@ class Performance(Base):
         primaryjoin="Performance.artist_id == Artist.id",
         uselist=False,
         back_populates="performances",
-        overlaps="artist"
+        overlaps="artist",
     )
     tour = relationship("Tour", back_populates="performances")
     setlist_entries = relationship("SetlistEntry", back_populates="performance")
@@ -500,8 +500,8 @@ class SetlistEntry(Base):
     id = Column(Integer, primary_key=True, index=True)
     performance_id = Column(Integer, ForeignKey("performances.id"))
     song_id = Column(Integer, ForeignKey("songs.id"), nullable=True)
-    entry_type = Column(String(50), default="SONG", nullable=False) # "SONG", "SOLO", "JAM", "MC"
-    unresolved_song_name = Column(String(255), nullable=True) # IDがない場合のテキスト
+    entry_type = Column(String(50), default="SONG", nullable=False)  # "SONG", "SOLO", "JAM", "MC"
+    unresolved_song_name = Column(String(255), nullable=True)  # IDがない場合のテキスト
     order_index = Column(Integer)
     notes = Column(String(100), nullable=True)  # "Encore 1"
 
@@ -534,7 +534,9 @@ class Album(Base):
     spotify_album_id = Column(String(100), nullable=True, unique=True)
     cover_image_url = Column(String(500), nullable=True)
     album_type = Column(String(50), nullable=True)  # "album", "single", "compilation", "dvd", etc.
-    media_format = Column(String(50), default="CD", nullable=False)  # "CD", "Digital", "Vinyl", "Cassette", "DVD/BD", "Other"
+    media_format = Column(
+        String(50), default="CD", nullable=False
+    )  # "CD", "Digital", "Vinyl", "Cassette", "DVD/BD", "Other"
 
     artist = relationship("Artist", back_populates="albums")
     album_group = relationship("AlbumGroup", back_populates="albums")
@@ -560,6 +562,7 @@ class Album(Base):
         back_populates="album_child",
         cascade="all, delete-orphan",
     )
+
 
 class AlbumDisc(Base):
     __tablename__ = "album_discs"
@@ -655,7 +658,7 @@ class Tag(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)  # タグ名は重複禁止
     color = Column(String(20), nullable=True)  # UI用 (例: "#FF0000")
-    parent_id = Column(Integer, ForeignKey("tags.id"), nullable=True) # オプトイン階層化用
+    parent_id = Column(Integer, ForeignKey("tags.id"), nullable=True)  # オプトイン階層化用
 
     # 自己参照リレーション
     parent = relationship("Tag", remote_side=[id], back_populates="children")
@@ -871,16 +874,4 @@ class RefreshToken(Base):
     owner = relationship("User", back_populates="refresh_tokens")
 
 
-# --- 3. データベースの初期化関数 ---
-def create_db_and_tables():
-    # この関数を呼び出すと、SQLiteファイルと全テーブルが作成されます
-    Base.metadata.create_all(bind=engine)
 
-
-# データベースセッションを取得するための依存関係
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

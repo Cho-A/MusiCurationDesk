@@ -1,20 +1,22 @@
 from __future__ import annotations
-from typing import Annotated
+
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from . import auth_utils, models
+from .database import SessionLocal
 
 # トークンを取得する場所を指定 (ログインAPIのURL "/token" を指す)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 def get_db():
     """データベースセッションを取得する依存関係
     (main.py や models.py からインポートしても良いが、ここで定義してもOK)
     """
-    db = models.SessionLocal()
+    db = SessionLocal()
     try:
         yield db
     finally:
@@ -52,9 +54,8 @@ async def get_current_user(
 
     return user
 
-async def get_current_admin_user(
-    current_user: models.User = Depends(get_current_user)
-):
+
+async def get_current_admin_user(current_user: models.User = Depends(get_current_user)):
     """★ 管理者権限の門番 ★
     現在のユーザーが管理者(is_admin)であるかを確認する。
     管理者でない場合は 403 エラーを発生させて弾く。
