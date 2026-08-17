@@ -269,6 +269,12 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     ));
   };
 
+  const handleDiscFormatChange = (discNumber: number, newFormat: string) => {
+    setDiscs(prev => prev.map(d => 
+      d.disc_number === discNumber ? { ...d, media_format: newFormat } : d
+    ));
+  };
+
   const handleSubmit = async () => {
     if (!release) return;
     
@@ -335,7 +341,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
       padding: '40px 20px', overflowY: 'auto'
     }}>
       <div style={{
-        backgroundColor: '#121212', border: '1px solid var(--border-color)', borderRadius: '12px',
+        backgroundColor: '#121212', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '12px',
         width: '100%', maxWidth: '900px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
         display: 'flex', flexDirection: 'column'
       }}>
@@ -381,9 +387,25 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {discs.map((disc, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '80px', fontWeight: 'bold' }}>
+                  <div style={{ width: '100px', fontWeight: 'bold' }}>
                     Disc {disc.disc_number}
-                    <br/><span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{disc.media_format}</span>
+                    <br/>
+                    <select
+                      value={disc.media_format}
+                      onChange={(e) => handleDiscFormatChange(disc.disc_number, e.target.value)}
+                      style={{ 
+                        marginTop: '4px', width: '100%', padding: '4px', fontSize: '0.8rem', 
+                        backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
+                        border: '1px solid var(--border-color)', borderRadius: '4px' 
+                      }}
+                    >
+                      <option value="CD">CD</option>
+                      <option value="DVD">DVD</option>
+                      <option value="Blu-ray">Blu-ray</option>
+                      <option value="Digital Media">Digital</option>
+                      <option value="Vinyl">Vinyl</option>
+                      <option value="Cassette">Cassette</option>
+                    </select>
                   </div>
                   <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
                     <input
