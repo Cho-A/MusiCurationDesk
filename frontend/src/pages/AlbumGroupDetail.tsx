@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, Check, Edit2, Plus, X, AlertCircle, Save, GitMerge, Trash2 } from 'lucide-react';
+import { ArrowLeft, Disc3, Check, Edit2, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
+import { API_BASE_URL } from '../api/config';
 
 const generateGradient = (text: string) => {
   let hash = 0;
@@ -164,7 +165,7 @@ const AlbumGroupDetail = () => {
   };
 
   const fetchAlbum = useCallback(() => {
-    fetch(`http://127.0.0.1:8000/album-groups/${id}`)
+    fetch(`${API_BASE_URL}/album-groups/${id}`)
       .then(res => {
         if (!res.ok) throw new Error("Album group not found");
         return res.json();
@@ -241,6 +242,48 @@ const AlbumGroupDetail = () => {
     }
   }, [loading, albumGroup]);
 
+  const handleAlbumTypeChange = async (newType: string) => {
+    if (!albumGroup) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${API_BASE_URL}/album-groups/${albumGroup.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ album_type: newType })
+      });
+      if (res.ok) {
+        fetchAlbum();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleBulkStreamingUpdate = async (isStreamingAvailable: boolean, discNumber: number | null = null) => {
+    if (!selectedAlbumId) return;
+    const confirmMessage = discNumber 
+      ? `Disc ${discNumber}の全曲をサブスク${isStreamingAvailable ? '解禁済み' : '未解禁'}にしますか？`
+      : `このアルバムの全曲をサブスク${isStreamingAvailable ? '解禁済み' : '未解禁'}にしますか？`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${API_BASE_URL}/albums/${selectedAlbumId}/bulk-streaming-availability`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ 
+          disc_number: discNumber,
+          is_streaming_available: isStreamingAvailable 
+        })
+      });
+      if (res.ok) {
+        fetchAlbum(); // refresh to show updated status
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleEditClick = (e: React.MouseEvent, track: any) => {
     e.preventDefault();
     e.stopPropagation();
@@ -271,7 +314,7 @@ const AlbumGroupDetail = () => {
     }
     setIsSearchingSong(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/songs/?title_search=${encodeURIComponent(query)}&limit=5`);
+      const res = await fetch(`${API_BASE_URL}/songs/?title_search=${encodeURIComponent(query)}&limit=5`);
       if (res.ok) {
         const data = await res.json();
         setSongSearchResults(data);
@@ -290,7 +333,7 @@ const AlbumGroupDetail = () => {
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
+      const res = await fetch(`${API_BASE_URL}/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
       if (res.ok) {
         const data = await res.json();
         setArtistSearchResults(data);
@@ -303,7 +346,7 @@ const AlbumGroupDetail = () => {
   const handleSaveArtist = async (artistId: number) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/album-groups/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/album-groups/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -325,7 +368,7 @@ const AlbumGroupDetail = () => {
   const handleCreateArtistForAlbum = async (name: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/artists/`, {
+      const res = await fetch(`${API_BASE_URL}/artists/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ name })
@@ -345,7 +388,7 @@ const AlbumGroupDetail = () => {
   const handleSaveDiscTitle = async (discId: number) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/albums/${selectedAlbumId}/discs/${discId}`, {
+      const res = await fetch(`${API_BASE_URL}/albums/${selectedAlbumId}/discs/${discId}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -369,7 +412,7 @@ const AlbumGroupDetail = () => {
     e.stopPropagation();
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/albums/${selectedAlbumId}/tracks/${track.id}`, {
+      const res = await fetch(`${API_BASE_URL}/albums/${selectedAlbumId}/tracks/${track.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -383,7 +426,7 @@ const AlbumGroupDetail = () => {
 
       // Update Master Song title if modified manually
       if (editForm.song_id === track.song.id && editForm.song_title !== track.song.title) {
-        const songRes = await fetch(`http://127.0.0.1:8000/songs/${editForm.song_id}`, {
+        const songRes = await fetch(`${API_BASE_URL}/songs/${editForm.song_id}`, {
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
@@ -399,7 +442,7 @@ const AlbumGroupDetail = () => {
 
       // Save Main Artist if provided
       if (editForm.main_artist_id && editForm.song_id) {
-        const artistRes = await fetch(`http://127.0.0.1:8000/songs/${editForm.song_id}/main_artist`, {
+        const artistRes = await fetch(`${API_BASE_URL}/songs/${editForm.song_id}/main_artist`, {
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
@@ -426,7 +469,7 @@ const AlbumGroupDetail = () => {
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
+      const res = await fetch(`${API_BASE_URL}/artists/?name_search=${encodeURIComponent(query)}&limit=5`);
       if (res.ok) {
         const data = await res.json();
         setTrackArtistSearchResults(data);
@@ -439,7 +482,7 @@ const AlbumGroupDetail = () => {
   const handleCreateArtistForTrack = async (name: string) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/artists/`, {
+      const res = await fetch(`${API_BASE_URL}/artists/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ name })
@@ -477,7 +520,7 @@ const AlbumGroupDetail = () => {
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:8000/album-groups/?q=${encodeURIComponent(query)}&limit=10`);
+      const res = await fetch(`${API_BASE_URL}/album-groups/?q=${encodeURIComponent(query)}&limit=10`);
       if (res.ok) {
         const data = await res.json();
         setAlbumGroupSearchResults(data);
@@ -491,7 +534,7 @@ const AlbumGroupDetail = () => {
     if (!albumGroup || !titleEditForm.trim()) return;
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/album-groups/${albumGroup.id}`, {
+      const res = await fetch(`${API_BASE_URL}/album-groups/${albumGroup.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ title: titleEditForm })
@@ -510,7 +553,7 @@ const AlbumGroupDetail = () => {
     if (!albumGroup) return;
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/album-groups/${albumGroup.id}`, {
+      const res = await fetch(`${API_BASE_URL}/album-groups/${albumGroup.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ release_date: releaseDateEditForm || null })
@@ -529,7 +572,7 @@ const AlbumGroupDetail = () => {
     if (!album || !editionForm.album_group_id) return;
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/albums/${album.id}`, {
+      const res = await fetch(`${API_BASE_URL}/albums/${album.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
@@ -558,7 +601,7 @@ const AlbumGroupDetail = () => {
     if (!groupMergeTargetId || groupMergeSourceIds.length === 0) return;
     setBulkMergeLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/album-groups/${albumGroup?.id}/merge-editions`, {
+      const res = await fetch(`${API_BASE_URL}/album-groups/${albumGroup?.id}/merge-editions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -590,7 +633,7 @@ const AlbumGroupDetail = () => {
     
     setBulkMergeLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/albums/${bulkMergeSourceDisc.albumId}/discs/${bulkMergeSourceDisc.discNumber}/merge`, {
+      const res = await fetch(`${API_BASE_URL}/albums/${bulkMergeSourceDisc.albumId}/discs/${bulkMergeSourceDisc.discNumber}/merge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -619,7 +662,7 @@ const AlbumGroupDetail = () => {
     e.preventDefault();
     if (!crossSearchQuery.trim()) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/album-groups/?q=${encodeURIComponent(crossSearchQuery)}&limit=10`);
+      const res = await fetch(`${API_BASE_URL}/album-groups/?q=${encodeURIComponent(crossSearchQuery)}&limit=10`);
       if (res.ok) {
         const data = await res.json();
         setCrossSearchResults(data);
@@ -631,7 +674,7 @@ const AlbumGroupDetail = () => {
 
   const fetchCrossTargetAlbumGroup = async (groupId: number) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/album-groups/${groupId}`);
+      const res = await fetch(`${API_BASE_URL}/album-groups/${groupId}`);
       if (res.ok) {
         const data = await res.json();
         setCrossTargetAlbumGroup(data);
@@ -649,7 +692,7 @@ const AlbumGroupDetail = () => {
     
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://127.0.0.1:8000/albums/${album.id}`, {
+      const res = await fetch(`${API_BASE_URL}/albums/${album.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -720,12 +763,22 @@ const AlbumGroupDetail = () => {
         )}
         
         <div className="metadata-container">
-          <span style={{ 
-            fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', 
-            color: 'var(--text-secondary)', letterSpacing: '0.1em'
-          }}>
-            {albumGroup.album_type === 'single' ? 'Single' : albumGroup.album_type === 'dvd' ? 'Video' : 'Album'}
-          </span>
+          <select 
+            value={albumGroup.album_type || 'album'}
+            onChange={(e) => handleAlbumTypeChange(e.target.value)}
+            style={{ 
+              fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', 
+              color: 'var(--text-secondary)', letterSpacing: '0.1em',
+              background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '4px',
+              padding: '2px 8px', cursor: 'pointer', appearance: 'auto'
+            }}
+          >
+            <option value="album">ALBUM</option>
+            <option value="single">SINGLE</option>
+            <option value="ep">EP</option>
+            <option value="compilation">COMPILATION</option>
+            <option value="dvd">VIDEO</option>
+          </select>
           {isEditingTitle ? (
             <div className="title-action-wrapper">
               <input
@@ -905,9 +958,27 @@ const AlbumGroupDetail = () => {
       {/* トラックリスト */}
       <div>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '24px', minWidth: 0 }}>
-          <h2 style={{ fontSize: '1.5rem', margin: 0, whiteSpace: 'nowrap' }}>
-            収録曲
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <h2 style={{ fontSize: '1.5rem', margin: 0, whiteSpace: 'nowrap' }}>
+              収録曲
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                onClick={() => handleBulkStreamingUpdate(false)}
+                title="このアルバムの全曲をサブスク未解禁にする"
+                style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <CloudOff size={18} />
+              </button>
+              <button
+                onClick={() => handleBulkStreamingUpdate(true)}
+                title="このアルバムの全曲をサブスク解禁済みにする"
+                style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--spotify-color)', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Cloud size={18} />
+              </button>
+            </div>
+          </div>
           {uniqueDiscs.length > 1 && (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flex: 1, justifyContent: 'flex-end' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>Jump to:</span>
@@ -995,6 +1066,21 @@ const AlbumGroupDetail = () => {
                               </span>
                             )}
                             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <button
+                                onClick={() => handleBulkStreamingUpdate(false, discNum)}
+                                title="このディスクの全曲をサブスク未解禁にする"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
+                              >
+                                <CloudOff size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleBulkStreamingUpdate(true, discNum)}
+                                title="このディスクの全曲をサブスク解禁済みにする"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
+                              >
+                                <Cloud size={16} />
+                              </button>
+                              <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }} />
                               <button
                                 onClick={() => {
                                   setEditingDiscId(discData!.id);
@@ -1201,7 +1287,7 @@ const AlbumGroupDetail = () => {
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 if(window.confirm('このトラックを削除しますか？')) {
-                                  const res = await fetch(`http://127.0.0.1:8000/albums/tracks/${track.id}`, { method: 'DELETE' });
+                                  const res = await fetch(`${API_BASE_URL}/albums/tracks/${track.id}`, { method: 'DELETE' });
                                   if (res.ok) fetchAlbum();
                                 }
                               }}
@@ -1228,7 +1314,7 @@ const AlbumGroupDetail = () => {
                     if (!trackNumStr) return;
                     const trackNum = parseInt(trackNumStr, 10);
                     
-                    const res = await fetch(`http://127.0.0.1:8000/albums/${album!.id}/discs/${discNum}/tracks`, {
+                    const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discNum}/tracks`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ album_id: album!.id, disc_number: discNum, song_id: songId, track_number: trackNum || tracks.length + 1 })
@@ -1260,7 +1346,7 @@ const AlbumGroupDetail = () => {
               if (formatStr === null) return;
               const titleStr = window.prompt("ディスクのタイトル (任意)");
               
-              const res = await fetch(`http://127.0.0.1:8000/albums/${album!.id}/discs`, {
+              const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ disc_number: newDiscNum, media_format: formatStr, title: titleStr || null })
