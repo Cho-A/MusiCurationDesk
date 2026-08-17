@@ -64,6 +64,22 @@ def background_import_playlist(job_id: str, spotify_playlist_id: str):
     finally:
         db.close()
 
+def background_import_album(job_id: str, spotify_album_id: str):
+    db = models.SessionLocal()
+    try:
+        update_job_progress(job_id, "running", 5, "Initializing album import...")
+        importer = MusicImporter()
+        
+        def progress_cb(prog: int, msg: str):
+            update_job_progress(job_id, "running", prog, msg)
+            
+        result = importer.import_album_bulk(spotify_album_id, db, progress_callback=progress_cb)
+        update_job_progress(job_id, "completed", 100, f"Imported {result['imported_albums']} albums and {result['imported_tracks']} tracks.")
+    except Exception as e:
+        update_job_progress(job_id, "failed", 0, f"Error: {str(e)}")
+    finally:
+        db.close()
+
 
 @router.get("/artists")
 def search_artists(q: str = Query(..., description="Artist name query"), limit: int = Query(10, le=50)):
@@ -123,6 +139,16 @@ def import_artist_bulk(spotify_artist_id: str, background_tasks: BackgroundTasks
     
     background_tasks.add_task(background_import_artist, job_id, spotify_artist_id)
     return {"status": "accepted", "job_id": job_id}
+
+@router.post("/import/album/{spotify_album_id}")
+def import_album_bulk_endpoint(spotify_album_id: str, background_tasks: BackgroundTasks):
+    """SpotifyのアルバムIDを指定して、そのアルバムと全楽曲を非同期でインポートする。"""
+    job_id = str(uuid.uuid4())
+    import_jobs[job_id] = {"status": "queued", "progress": 0, "message": "Queued", "type": "album"}
+    
+    background_tasks.add_task(background_import_album, job_id, spotify_album_id)
+    return {"status": "accepted", "job_id": job_id}
+
 
 @router.post("/import/playlist/{spotify_playlist_id}")
 def import_playlist_bulk(spotify_playlist_id: str, background_tasks: BackgroundTasks):

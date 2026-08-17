@@ -32,6 +32,10 @@ class SpotifyClient:
         """特定のアーティストIDの情報を取得する"""
         return self.sp.artist(artist_id)
 
+    def get_album(self, album_id: str):
+        """特定のアルバムIDの情報を取得する"""
+        return self.sp.album(album_id, market='JP')
+
     def get_artist_albums(self, artist_id: str, limit: int = 50):
         """特定のアーティストのアルバム一覧を取得する"""
         results = self.sp.artist_albums(artist_id, album_type='album,single', limit=limit, country='JP')

@@ -3,6 +3,7 @@ import { UserCheck, ListMusic, DownloadCloud } from 'lucide-react';
 
 const AdminSpotify = () => {
   
+  const [albumId, setAlbumId] = useState('');
   const [artistId, setArtistId] = useState('');
   const [playlistId, setPlaylistId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,33 @@ const AdminSpotify = () => {
   };
 
   // (Auth logic removed since it is now protected by layout/route)
+
+  const handleAlbumImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!albumId) return;
+    
+    setLoading(true);
+    setError('');
+    setJobProgress(null);
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`http://127.0.0.1:8000/search/external/import/album/${albumId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error('Album import request failed');
+      const data = await res.json();
+      if (data.job_id) {
+        pollJobProgress(data.job_id);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error importing album');
+      setLoading(false);
+    }
+  };
 
   const handleArtistImport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +151,31 @@ const AdminSpotify = () => {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
+        {/* Album Bulk Import Card */}
+        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <DownloadCloud size={24} color="#1DB954" />
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>アルバム一括インポート</h2>
+          </div>
+          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            SpotifyのAlbum IDを入力すると、そのアルバムと全楽曲を自動でデータベースに取り込みます。
+          </p>
+          <form onSubmit={handleAlbumImport} style={{ display: 'flex', gap: '12px' }}>
+            <input 
+              type="text" 
+              placeholder="Spotify Album ID" 
+              value={albumId}
+              onChange={(e) => setAlbumId(e.target.value)}
+              style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+            />
+            <button type="submit" disabled={loading} style={{
+              padding: '0 24px', borderRadius: '8px', background: 'var(--spotify-color)', color: '#000', fontWeight: 600, border: 'none', cursor: loading ? 'wait' : 'pointer'
+            }}>
+              {loading ? 'インポート中...' : 'インポート開始'}
+            </button>
+          </form>
+        </div>
+
         {/* Artist Bulk Import Card */}
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

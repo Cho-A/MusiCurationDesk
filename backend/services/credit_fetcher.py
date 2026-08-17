@@ -257,6 +257,97 @@ class MusicImporter:
         if progress_callback: progress_callback(95, "Finalizing import...")
         return {"imported_albums": imported_albums, "imported_tracks": imported_tracks}
 
+    def import_album_bulk(self, spotify_album_id: str, db: Session, progress_callback=None) -> dict:
+        """特定のアルバムと楽曲を一括インポートする"""
+        imported_albums = 0
+        imported_tracks = 0
+        
+        if progress_callback: progress_callback(10, "Fetching album info...")
+        album = self.spotify.get_album(spotify_album_id)
+        
+        if not album:
+            if progress_callback: progress_callback(95, "Album not found. Finalizing import...")
+            return {"imported_albums": 0, "imported_tracks": 0}
+            
+        if progress_callback: progress_callback(20, f"Processing album: {album['name']}")
+        
+        # Album を DB に登録
+        db_album = db.query(models.Album).filter(models.Album.spotify_album_id == album['id']).first()
+        if not db_album:
+            release_date_str = album['release_date']
+            if len(release_date_str) == 4: release_date_str += "-01-01"
+            elif len(release_date_str) == 7: release_date_str += "-01"
+            
+            try:
+                r_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
+            except:
+                r_date = None
+
+            # Create or get AlbumGroup
+            artist_id = self._get_or_create_artist(album['artists'][0]['id'], album['artists'][0]['name'], db)
+            db_album_group = db.query(models.AlbumGroup).filter(
+                models.AlbumGroup.title == album['name'],
+                models.AlbumGroup.artist_id == artist_id
+            ).first()
+            if not db_album_group:
+                db_album_group = models.AlbumGroup(
+                    title=album['name'],
+                    artist_id=artist_id,
+                    release_date=r_date,
+                    album_type=album.get('album_type'),
+                    cover_image_url=album['images'][0]['url'] if album['images'] else None
+                )
+                db.add(db_album_group)
+                db.commit()
+                db.refresh(db_album_group)
+
+            db_album = models.Album(
+                main_title=album['name'],
+                digital_release_date=r_date,
+                cover_image_url=album['images'][0]['url'] if album['images'] else None,
+                spotify_album_id=album['id'],
+                album_type=album.get('album_type'),
+                artist_id=artist_id,
+                album_group_id=db_album_group.id
+            )
+            db.add(db_album)
+            db.commit()
+            db.refresh(db_album)
+            imported_albums += 1
+
+        # 3. アルバムのトラックを取得して保存
+        tracks = self.spotify.get_album_tracks(album['id'], limit=50)
+        total_tracks = len(tracks)
+        for j, track in enumerate(tracks):
+            track_prog = 30 + int(60 * (j/total_tracks))
+            if progress_callback: progress_callback(track_prog, f"[{album['name']}] Importing track {j+1}/{total_tracks}")
+            try:
+                song = self.import_track_from_spotify(track['id'], db, skip_mb_lookup=True)
+                imported_tracks += 1
+                
+                # AlbumTrack を作成 (duration_ms 含む)
+                existing_album_track = db.query(models.AlbumTrack).filter(
+                    models.AlbumTrack.album_id == db_album.id,
+                    models.AlbumTrack.song_id == song.id
+                ).first()
+                
+                if not existing_album_track:
+                    album_track = models.AlbumTrack(
+                        album_id=db_album.id,
+                        song_id=song.id,
+                        track_number=track.get('track_number', 1),
+                        disc_number=track.get('disc_number', 1),
+                        duration_ms=track.get('duration_ms', None),
+                        spotify_track_id=track['id']
+                    )
+                    db.add(album_track)
+                    db.commit()
+            except Exception as e:
+                print(f"Failed to import track {track['name']}: {e}")
+
+        if progress_callback: progress_callback(95, "Finalizing import...")
+        return {"imported_albums": imported_albums, "imported_tracks": imported_tracks}
+
     def import_playlist_bulk(self, spotify_playlist_id: str, db: Session, progress_callback=None) -> dict:
         """プレイリストに含まれる全アーティストを抽出し、それぞれの全楽曲を一括インポートする"""
         imported_artists_count = 0
