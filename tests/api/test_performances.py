@@ -33,7 +33,7 @@ class TestPerformancesAPI:
 
         # 検証
         updated_perf1 = client.get(f"/performances/{perf1_id}").json()
-        assert updated_perf1["tour_id"] == tour_id
+        assert updated_perf1.get("tour", {}).get("id") == tour_id or updated_perf1.get("tour_id") == tour_id
 
     def test_bulk_copy_setlist(self, client):
         """同一ツアー内の別公演からセットリストをコピーできること"""

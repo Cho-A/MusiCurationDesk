@@ -60,7 +60,7 @@ class TestSongsAPI:
         album_id = album_res.json()["id"]
 
         # 3. アルバムに曲を紐付ける
-        client.post(f"/album_tracks/", json={
+        client.post(f"/albums/{album_id}/discs/1/tracks", json={
             "album_id": album_id,
             "song_id": song_id,
             "track_number": 1,
@@ -117,12 +117,18 @@ class TestSongsAPI:
             }
         ]
 
-        response = client.get("/external/spotify/search?q=Mocked")
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Mocked Song"
-        assert data[0]["spotify_id"] == "test_spotify_id"
+        from backend.main import app
+        from backend import dependencies
+        app.dependency_overrides[dependencies.get_current_admin_user] = lambda: {"id": 1, "username": "admin"}
+        try:
+            response = client.get("/external/spotify/search?q=Mocked")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 1
+            assert data[0]["title"] == "Mocked Song"
+            assert data[0]["spotify_id"] == "test_spotify_id"
+        finally:
+            app.dependency_overrides.pop(dependencies.get_current_admin_user, None)
 
     def test_attach_song_to_song(self, client):
         """未統合の楽曲同士を結合した際、新しいMusicalWorkが自動作成されること"""
