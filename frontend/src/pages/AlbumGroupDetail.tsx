@@ -769,7 +769,7 @@ const AlbumGroupDetail = () => {
             style={{ 
               fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', 
               color: 'var(--text-secondary)', letterSpacing: '0.1em',
-              background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '4px',
+              background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px',
               padding: '2px 8px', cursor: 'pointer', appearance: 'auto'
             }}
           >
@@ -1023,7 +1023,7 @@ const AlbumGroupDetail = () => {
                             <select
                               value={discFormatForm}
                               onChange={(e) => setDiscFormatForm(e.target.value)}
-                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
                             >
                               <option value="CD">CD</option>
                               <option value="DVD">DVD</option>
@@ -1037,7 +1037,7 @@ const AlbumGroupDetail = () => {
                               value={discTitleForm}
                               onChange={(e) => setDiscTitleForm(e.target.value)}
                               placeholder="ディスク名を入力..."
-                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', width: '200px', fontSize: '0.9rem' }}
+                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', width: '200px', fontSize: '0.9rem' }}
                             />
                             <button onClick={() => handleSaveDiscTitle(discData!.id)} style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                               <Save size={14} />
