@@ -761,39 +761,40 @@ const AlbumGroupDetail = () => {
 
   return (
     <div style={{ padding: '32px', maxWidth: '1000px', margin: '0 auto', color: 'var(--text-primary)' }}>
-      {/* 戻るボタン */}
-      <button 
-        onClick={() => navigate(-1)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '8px', 
-          background: 'none', border: 'none', color: 'var(--text-secondary)',
-          cursor: 'pointer', marginBottom: '32px', fontSize: '1rem',
-          padding: 0
-        }}
-      >
-        <ArrowLeft size={20} />
-        戻る
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+        {/* 戻るボタン */}
+        <button 
+          onClick={() => navigate(-1)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px', 
+            background: 'none', border: 'none', color: 'var(--text-secondary)',
+            cursor: 'pointer', fontSize: '1rem',
+            padding: 0
+          }}
+        >
+          <ArrowLeft size={20} />
+          戻る
+        </button>
 
         <button 
           onClick={() => setIsEditMode(!isEditMode)} 
           style={{ 
             padding: '8px 16px', 
             borderRadius: '20px', 
-            border: 'none', 
-            background: isEditMode ? 'var(--accent-primary)' : 'var(--bg-secondary)', 
+            border: '1px solid var(--border-color)', 
+            background: isEditMode ? 'var(--accent-primary)' : 'transparent', 
             color: isEditMode ? '#fff' : 'var(--text-primary)', 
             cursor: 'pointer',
             fontWeight: 600,
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            marginLeft: '16px'
+            gap: '8px'
           }}
         >
           <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
         </button>
+      </div>
 
 
       {/* ヘッダーエリア */}
