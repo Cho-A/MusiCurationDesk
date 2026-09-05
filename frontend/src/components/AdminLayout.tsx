@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Database, Disc } from 'lucide-react';
+import { Database, Disc, FileText } from 'lucide-react';
 import PageHeader from './PageHeader';
 
 const AdminLayout = () => {
@@ -43,6 +43,25 @@ const AdminLayout = () => {
         >
           <Disc size={18} />
           MusicBrainz リリース検索
+        </NavLink>
+
+        <NavLink
+          to="/admin/manual"
+          style={({ isActive }) => ({
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 20px', borderRadius: '8px',
+            color: isActive ? '#fff' : 'var(--text-secondary)',
+            backgroundColor: isActive ? 'var(--text-primary)' : 'transparent',
+            fontWeight: 600, transition: 'all 0.2s ease',
+            textDecoration: 'none'
+          })}
+        >
+          {({ isActive }) => (
+            <>
+              <FileText size={18} color={isActive ? 'var(--bg-primary)' : 'currentColor'} />
+              <span style={{ color: isActive ? 'var(--bg-primary)' : 'inherit' }}>手動入力・カスタム</span>
+            </>
+          )}
         </NavLink>
       </div>
 

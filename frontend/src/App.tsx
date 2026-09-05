@@ -18,6 +18,7 @@ import ArtistDetail from './pages/ArtistDetail';
 import Albums from './pages/Albums';
 import AlbumGroupDetail from './pages/AlbumGroupDetail';
 import MusicBrainzImport from './pages/MusicBrainzImport';
+import ManualImport from './pages/ManualImport';
 import Terms from './pages/Terms';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
@@ -50,6 +51,7 @@ function App() {
               <Route index element={<AdminSpotify />} />
               <Route path="spotify" element={<AdminSpotify />} />
               <Route path="musicbrainz" element={<MusicBrainzImport />} />
+              <Route path="manual" element={<ManualImport />} />
             </Route>
           </Route>
           

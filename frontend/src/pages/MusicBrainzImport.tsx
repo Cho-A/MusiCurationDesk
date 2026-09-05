@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Disc, PlusCircle, CheckSquare, Square, DownloadCloud, Clipboard } from 'lucide-react';
+import { Search, Disc, PlusCircle, CheckSquare, Square, DownloadCloud } from 'lucide-react';
 import CDImportBuilderModal from '../components/CDImportBuilderModal';
-import SmartPasteModal from '../components/SmartPasteModal';
 import { API_BASE_URL } from '../api/config';
 
 interface MBRelease {
@@ -49,7 +48,6 @@ const MusicBrainzImport = () => {
 
   // モーダルステート
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-  const [isSmartPasteOpen, setIsSmartPasteOpen] = useState(false);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,17 +212,6 @@ const MusicBrainzImport = () => {
         >
           {loading && !bulkJobId ? '検索中...' : '検索'}
         </button>
-        <button 
-          type="button"
-          onClick={() => setIsSmartPasteOpen(true)}
-          style={{ 
-            backgroundColor: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', 
-            borderRadius: '8px', padding: '0 24px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
-          }}
-        >
-          <Clipboard size={18} />
-          スマートペースト (テキスト解析)
-        </button>
       </form>
 
       {/* バルクインポートプログレス */}
@@ -384,15 +371,6 @@ const MusicBrainzImport = () => {
         release={selectedRelease}
       />
 
-      <SmartPasteModal
-        isOpen={isSmartPasteOpen}
-        onClose={() => setIsSmartPasteOpen(false)}
-        onParseComplete={(fauxRelease) => {
-          setIsSmartPasteOpen(false);
-          setSelectedRelease(fauxRelease);
-          setIsBuilderOpen(true);
-        }}
-      />
     </div>
   );
 };

@@ -15,7 +15,7 @@ interface MBMedia {
   tracks: MBTrack[];
 }
 
-interface MBReleaseDetail {
+export interface MBReleaseDetail {
   id: string;
   title: string;
   date: string;
