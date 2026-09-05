@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, Check, Edit2, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff } from 'lucide-react';
+import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -116,6 +116,33 @@ const AlbumGroupDetail = () => {
   const [trackArtistSearchResults, setTrackArtistSearchResults] = useState<{id: number, name: string}[]>([]);
 
   // For Album Group Title Edit
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [duplicateForm, setDuplicateForm] = useState({ version_title: '', media_format: 'CD' });
+
+  const handleDuplicateAlbum = async () => {
+    if (!album) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/albums/${album.id}/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(duplicateForm)
+      });
+      if (res.ok) {
+        const newAlbum = await res.json();
+        fetchAlbum();
+        setSelectedAlbumId(newAlbum.id);
+        setIsDuplicateModalOpen(false);
+      } else {
+        alert("複製に失敗しました");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("通信エラーが発生しました");
+    }
+  };
+
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleEditForm, setTitleEditForm] = useState('');
 
@@ -748,6 +775,27 @@ const AlbumGroupDetail = () => {
         戻る
       </button>
 
+        <button 
+          onClick={() => setIsEditMode(!isEditMode)} 
+          style={{ 
+            padding: '8px 16px', 
+            borderRadius: '20px', 
+            border: 'none', 
+            background: isEditMode ? 'var(--accent-primary)' : 'var(--bg-secondary)', 
+            color: isEditMode ? '#fff' : 'var(--text-primary)', 
+            cursor: 'pointer',
+            fontWeight: 600,
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginLeft: '16px'
+          }}
+        >
+          <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
+        </button>
+
+
       {/* ヘッダーエリア */}
       <div className="responsive-detail-header">
         {albumGroup.cover_image_url || album?.cover_image_url ? (
@@ -779,7 +827,7 @@ const AlbumGroupDetail = () => {
             <option value="compilation">COMPILATION</option>
             <option value="dvd">VIDEO</option>
           </select>
-          {isEditingTitle ? (
+          {(isEditMode || isEditingTitle) ? (
             <div className="title-action-wrapper">
               <input
                 type="text"
@@ -804,9 +852,9 @@ const AlbumGroupDetail = () => {
               <h1 style={{ fontSize: '3rem', fontWeight: 900, margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
                 {albumGroup.title}
               </h1>
-              <button onClick={() => { setTitleEditForm(albumGroup.title); setIsEditingTitle(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-tertiary)', borderRadius: '50%' }} title="アルバム名を編集">
+              {/* <button onClick={() => { setTitleEditForm(albumGroup.title); setIsEditingTitle(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-tertiary)', borderRadius: '50%' }} title="アルバム名を編集">
                 <Edit2 size={24} />
-              </button>
+              </button> */}
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -832,6 +880,30 @@ const AlbumGroupDetail = () => {
                     {a.version_title || '通常盤'}
                   </button>
                 ))}
+
+            <button
+              onClick={() => {
+                setDuplicateForm({
+                  version_title: (album?.version_title ? album.version_title + ' (Copy)' : '通常盤 (Copy)'),
+                  media_format: album?.media_format || 'CD'
+                });
+                setIsDuplicateModalOpen(true);
+              }}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-secondary)',
+                borderRadius: '20px',
+                padding: '6px 16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginLeft: '8px'
+              }}
+            >
+              <Copy size={16} /> 複製
+            </button>
               </div>
             ) : (
               (album?.version_title && album.version_title !== '通常盤') ? (
@@ -840,6 +912,31 @@ const AlbumGroupDetail = () => {
                 </div>
               ) : null
             )}
+
+            <button
+              onClick={() => {
+                setDuplicateForm({
+                  version_title: (album?.version_title ? album.version_title + ' (Copy)' : '通常盤 (Copy)'),
+                  media_format: album?.media_format || 'CD'
+                });
+                setIsDuplicateModalOpen(true);
+              }}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-secondary)',
+                borderRadius: '20px',
+                padding: '6px 16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginLeft: '8px'
+              }}
+            >
+              <Copy size={16} /> 複製
+            </button>
+
             
             {/* 外部リンク（ストア等）プレースホルダー */}
             <a 
@@ -850,7 +947,7 @@ const AlbumGroupDetail = () => {
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             </a>
-            {album && (
+            {(album && isEditMode) && (
               <button 
                 onClick={handleOpenEditionModal} 
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-tertiary)', borderRadius: '50%' }}
@@ -880,9 +977,9 @@ const AlbumGroupDetail = () => {
                 ) : (
                   <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>アーティスト未設定</span>
                 )}
-                <button onClick={() => setIsEditingArtist(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>
+                {/* <button onClick={() => setIsEditingArtist(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>
                   <Edit2 size={16} />
-                </button>
+                </button> */}
               </>
             ) : (
               <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
@@ -927,7 +1024,7 @@ const AlbumGroupDetail = () => {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', color: 'var(--text-secondary)', marginTop: '8px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {isEditingReleaseDate ? (
+              {(isEditMode || isEditingReleaseDate) ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <input
                     type="date"
@@ -941,9 +1038,9 @@ const AlbumGroupDetail = () => {
               ) : (
                 <>
                   {releaseDate}
-                  <button onClick={() => { setReleaseDateEditForm(albumGroup.release_date || ''); setIsEditingReleaseDate(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }} title="発売日を編集">
+                  {/* <button onClick={() => { setReleaseDateEditForm(albumGroup.release_date || ''); setIsEditingReleaseDate(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }} title="発売日を編集">
                     <Edit2 size={14} />
-                  </button>
+                  </button> */}
                 </>
               )}
             </span>
@@ -1056,15 +1153,7 @@ const AlbumGroupDetail = () => {
                             ) : (
                               <span>{icon} Disc {discNum}{formatStr}</span>
                             )}
-                            {discData?.edition && (
-                              <span style={{ 
-                                fontSize: '0.75rem', backgroundColor: 'var(--accent-primary)', 
-                                color: '#fff', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px', // allow-hardcoded-color
-                                fontWeight: 'bold'
-                              }}>
-                                {discData.edition}
-                              </span>
-                            )}
+
                             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <button
                                 onClick={() => handleBulkStreamingUpdate(false, discNum)}
@@ -1706,6 +1795,53 @@ const AlbumGroupDetail = () => {
               >
                 {bulkMergeLoading ? '統合中...' : '一括統合を実行'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Duplicate Modal */}
+      {isDuplicateModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div style={{ background: 'var(--bg-secondary)', padding: '24px', borderRadius: '8px', width: '400px' }}>
+            <h3 style={{ marginTop: 0, color: 'var(--text-primary)' }}>バージョンの複製</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              現在のエディション情報を基に、新しいエディションを複製作成します。
+            </p>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary)' }}>新しいバージョン名 (Edition)</label>
+              <input
+                type="text"
+                value={duplicateForm.version_title}
+                onChange={e => setDuplicateForm({ ...duplicateForm, version_title: e.target.value })}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                placeholder="例: DVD通常版"
+              />
+            </div>
+            
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary)' }}>メディアフォーマット</label>
+              <select
+                value={duplicateForm.media_format}
+                onChange={e => setDuplicateForm({ ...duplicateForm, media_format: e.target.value })}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+              >
+                <option value="CD">CD</option>
+                <option value="DVD">DVD</option>
+                <option value="Blu-ray">Blu-ray</option>
+                <option value="DIGITAL">DIGITAL (Download)</option>
+                <option value="STREAMING">STREAMING</option>
+                <option value="VINYL">VINYL</option>
+                <option value="CASSETTE">CASSETTE</option>
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button onClick={() => setIsDuplicateModalOpen(false)} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', cursor: 'pointer' }}>キャンセル</button>
+              <button onClick={handleDuplicateAlbum} style={{ padding: '8px 16px', background: 'var(--accent-primary)', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>複製する</button>
             </div>
           </div>
         </div>
