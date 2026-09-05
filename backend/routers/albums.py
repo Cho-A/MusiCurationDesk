@@ -381,6 +381,67 @@ def update_bulk_streaming_availability(
     return {"message": f"Updated {len(song_ids)} songs"}
 
 
+# [POST] /albums/{album_id}/duplicate
+# ----------------------------------------------------
+@router.post("/{album_id}/duplicate", response_model=schemas.Album)
+def duplicate_album(album_id: int, request: schemas.AlbumDuplicateRequest, db: Session = Depends(get_db)):
+    # 1. Fetch original album
+    original_album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    if not original_album:
+        raise HTTPException(status_code=404, detail="Album not found")
+
+    # 2. Create new album
+    new_album = models.Album(
+        album_group_id=original_album.album_group_id,
+        main_title=original_album.main_title,
+        version_title=request.version_title or (original_album.version_title + " (Copy)" if original_album.version_title else "Copy"),
+        artist_id=original_album.artist_id,
+        physical_release_date=original_album.physical_release_date,
+        digital_release_date=original_album.digital_release_date,
+        spotify_album_id=None,  # Do not copy spotify ID as it must be unique
+        cover_image_url=original_album.cover_image_url,
+        album_type=original_album.album_type,
+        media_format=request.media_format or original_album.media_format
+    )
+    db.add(new_album)
+    db.flush()
+
+    # 3. Duplicate discs
+    original_discs = db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album_id).all()
+    disc_mapping = {}  # old_disc_number -> new_disc
+    for old_disc in original_discs:
+        new_disc = models.AlbumDisc(
+            album_id=new_album.id,
+            disc_number=old_disc.disc_number,
+            title=old_disc.title,
+            media_format=request.media_format or old_disc.media_format,
+            edition=request.version_title or old_disc.edition
+        )
+        db.add(new_disc)
+        disc_mapping[old_disc.disc_number] = new_disc
+
+    db.flush()
+
+    # 4. Duplicate tracks
+    original_tracks = db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == album_id).all()
+    for old_track in original_tracks:
+        new_track = models.AlbumTrack(
+            album_id=new_album.id,
+            song_id=old_track.song_id,
+            track_number=old_track.track_number,
+            disc_number=old_track.disc_number,
+            duration_ms=old_track.duration_ms,
+            display_title=old_track.display_title,
+            notes=old_track.notes,
+            spotify_track_id=None  # Do not copy spotify track ID
+        )
+        db.add(new_track)
+
+    db.commit()
+    db.refresh(new_album)
+    return new_album
+
+
 # [PUT] /albums/{album_id}/discs/{disc_id}
 # ----------------------------------------------------
 @router.put("/{album_id}/discs/{disc_id}", response_model=schemas.AlbumDiscBase)

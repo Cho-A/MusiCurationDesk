@@ -836,6 +836,12 @@ class BulkStreamingAvailabilityUpdate(BaseModel):
     is_streaming_available: bool
 
 
+class AlbumDuplicateRequest(BaseModel):
+    version_title: str | None = None
+    media_format: str | None = None
+
+
+
 class Album(BaseModel):
     id: int
     album_group_id: int | None = None
