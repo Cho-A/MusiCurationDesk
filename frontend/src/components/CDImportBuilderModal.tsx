@@ -147,6 +147,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
   const [discs, setDiscs] = useState<DiscState[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedDiscs, setExpandedDiscs] = useState<number[]>([]); // 追加: 展開されているDiscのリスト
+  const [isAutoMatchEnabled, setIsAutoMatchEnabled] = useState(true); // 追加: 自動マッチングを有効にするか
 
   // 楽曲検索サブモーダル用
   const [activeSongMatchIndex, setActiveSongMatchIndex] = useState<number | null>(null);
@@ -171,7 +172,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
           
           // 自動マッチングの実行
           if (release) {
-            autoMatch(release, albumData, songData);
+            autoMatch(release, albumData, songData, true);
           }
         }
       } catch (err) {
@@ -192,7 +193,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     }
   };
 
-  const autoMatch = (rel: MBReleaseDetail, availableAlbums: AlbumItem[], availableSongs: SongItem[]) => {
+  const autoMatch = (rel: MBReleaseDetail, availableAlbums: AlbumItem[], availableSongs: SongItem[], autoMatchEnabled: boolean = isAutoMatchEnabled) => {
     const initialMatches: TrackMatchState[] = [];
     const initialDiscs: DiscState[] = [];
     
@@ -206,7 +207,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
       media.tracks.forEach(track => {
         const normalizedMbTitle = normalizeTitle(track.title);
         // 記号などを除外した文字列で完全一致を探す
-        const exactMatch = availableSongs.find(s => normalizeTitle(s.title) === normalizedMbTitle);
+        const exactMatch = autoMatchEnabled ? availableSongs.find(s => normalizeTitle(s.title) === normalizedMbTitle) : undefined;
         
         if (exactMatch) {
           initialMatches.push({
@@ -233,11 +234,13 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     setDiscs(initialDiscs);
     
     // アルバム名も自動選択を試みる
-    const matchedAlbum = availableAlbums.find(a => a.main_title.toLowerCase().includes(rel.title.toLowerCase()));
-    if (matchedAlbum) {
-      setTargetAlbumId(matchedAlbum.id);
-    } else {
-      setTargetAlbumId('new');
+    if (autoMatchEnabled) {
+      const matchedAlbum = availableAlbums.find(a => a.main_title.toLowerCase().includes(rel.title.toLowerCase()));
+      if (matchedAlbum) {
+        setTargetAlbumId(matchedAlbum.id);
+      } else {
+        setTargetAlbumId('new');
+      }
     }
   };
 
@@ -435,6 +438,24 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
             <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '0.9rem' }}>
               CDの各トラックに対して、データベース上のどの音源を割り当てるか設定します。データベースにない曲は「✨ 新規楽曲として登録」を選択してください。
             </p>
+
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input 
+                type="checkbox" 
+                id="autoMatchCheckbox"
+                checked={isAutoMatchEnabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setIsAutoMatchEnabled(enabled);
+                  autoMatch(release, albums, songs, enabled);
+                }}
+                style={{ cursor: 'pointer' }}
+              />
+              <label htmlFor="autoMatchCheckbox" style={{ cursor: 'pointer', color: 'var(--text-primary)' }}>
+                既存の楽曲と自動でマッチングする（無効にすると全て新規楽曲としてインポートされます）
+              </label>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {discs.map(disc => {
                 const discMatches = matches.filter(m => m.disc_number === disc.disc_number);
