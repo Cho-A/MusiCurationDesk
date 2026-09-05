@@ -115,6 +115,7 @@ const SongDetail = () => {
 
   const [loading, setLoading] = useState(true);
   
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState("");
   const [editVersionNameValue, setEditVersionNameValue] = useState("");
@@ -517,6 +518,27 @@ const SongDetail = () => {
         戻る
       </button>
 
+        <button 
+          onClick={() => setIsEditMode(!isEditMode)} 
+          style={{ 
+            padding: '8px 16px', 
+            borderRadius: '20px', 
+            border: 'none', 
+            background: isEditMode ? 'var(--accent-primary)' : 'var(--bg-secondary)', 
+            color: isEditMode ? '#fff' : 'var(--text-primary)', 
+            cursor: 'pointer',
+            fontWeight: 600,
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginLeft: '16px'
+          }}
+        >
+          <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
+        </button>
+
+
       {/* 楽曲 (Work) 固定ヘッダー */}
       <div style={{ 
         background: 'var(--bg-secondary)',
@@ -526,7 +548,7 @@ const SongDetail = () => {
           楽曲 (WORK)
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-          {isEditingWorkTitle ? (
+          {(isEditMode || isEditingWorkTitle) ? (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input 
                 type="text" 
@@ -542,7 +564,7 @@ const SongDetail = () => {
               <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
                 {baseSong.work?.title || baseSong.title}
               </h1>
-              {baseSong.work && (
+              {/* baseSong.work && (
                 <button 
                   onClick={() => { setEditWorkTitleValue(baseSong.work!.title); setIsEditingWorkTitle(true); }}
                   style={{ background: 'var(--bg-tertiary)', border: 'none', padding: '8px', borderRadius: '50%', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -550,7 +572,7 @@ const SongDetail = () => {
                 >
                   <Edit2 size={20} />
                 </button>
-              )}
+              ) */}
             </div>
           )}
         </div>
@@ -589,7 +611,7 @@ const SongDetail = () => {
             </button>
           )}
         </div>
-        {isEditingWorkCredits && baseSong.work && (
+        {(isEditMode || isEditingWorkCredits) && baseSong.work && (
           <SongCreditEditor 
             songId={baseSong.work.id} 
             existingCredits={baseSong.work.artist_links.map(a => ({
@@ -697,7 +719,7 @@ const SongDetail = () => {
                     </span>
                   )}
                 </h2>
-                <button 
+                {/* <button 
                   onClick={() => { 
                     setEditTitleValue(displaySong.title); 
                     setEditVersionNameValue(displaySong.version_name || "");
@@ -712,7 +734,7 @@ const SongDetail = () => {
                   title="バージョン名を編集"
                 >
                   <Edit2 size={14} />
-                </button>
+                </button> */}
               </div>
               {displaySong.version_name && (
                 <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: '1.4', marginTop: '4px' }}>
@@ -721,7 +743,7 @@ const SongDetail = () => {
               )}
               {/* Main Artist Display and Edit */}
               <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                {isEditingMainArtist ? (
+                {(isEditMode || isEditingMainArtist) ? (
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '250px' }}>
                     <input 
                       type="text"
@@ -764,13 +786,13 @@ const SongDetail = () => {
                     <span style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 500 }}>
                       {mainArtists.length > 0 ? mainArtists.map((ma: any) => ma.artist_name).join(', ') : 'アーティスト未設定'}
                     </span>
-                    <button 
+                    {/* <button 
                       onClick={() => { setMainArtistSearchQuery(""); setIsEditingMainArtist(true); setMainArtistSearchResults([]); }}
                       style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
                       title="メインアーティストを編集"
                     >
                       <Edit2 size={14} />
-                    </button>
+                    </button> */}
                   </>
                 )}
               </div>
@@ -824,7 +846,7 @@ const SongDetail = () => {
             </div>
           )}
           
-          {isEditingTitle && (
+          {(isEditMode || isEditingTitle) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <input
                 type="text"
