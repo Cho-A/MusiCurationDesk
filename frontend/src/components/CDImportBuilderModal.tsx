@@ -40,6 +40,7 @@ interface CDImportBuilderModalProps {
   isOpen: boolean;
   onClose: () => void;
   release: MBReleaseDetail | null;
+  appendMode?: boolean;
 }
 
 interface TrackMatchState {
@@ -138,7 +139,7 @@ const AlbumSearchCombobox: React.FC<{
   );
 };
 
-const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release }) => {
+const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false }) => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [songs, setSongs] = useState<SongItem[]>([]);
   
@@ -289,8 +290,9 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     const payload = {
       target_album_id: targetAlbumId === 'new' ? null : targetAlbumId,
       title: release.title,
-      release_date: release.date ? `${release.date}-01-01`.slice(0,10) : null, // 簡易的な日付パース(実際はYYYY-MM-DDを想定)
+      release_date: release.date ? `${release.date}-01-01`.slice(0,10) : null,
       album_type: "physical",
+      append_mode: appendMode,
       discs: discs.map(d => ({
         disc_number: d.disc_number,
         title: d.title || null,
@@ -374,10 +376,16 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
               targetAlbumId={targetAlbumId} 
               setTargetAlbumId={setTargetAlbumId} 
             />
-            {targetAlbumId !== 'new' && (
+            {targetAlbumId !== 'new' && !appendMode && (
               <div style={{ marginTop: '12px', color: 'var(--error-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <AlertCircle size={16} />
                 既存のアルバムを選択した場合、現在のSpotifyのトラックリストはすべて削除され、CD版のトラックリストで上書きされます。
+              </div>
+            )}
+            {targetAlbumId !== 'new' && appendMode && (
+              <div style={{ marginTop: '12px', color: 'var(--spotify-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <AlertCircle size={16} />
+                既存のアルバムにディスクを追記します。既存の曲は削除されません。
               </div>
             )}
           </div>

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff } from 'lucide-react';
+import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff, Scissors, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
+import SmartPasteModal from '../components/SmartPasteModal';
+import CDImportBuilderModal from '../components/CDImportBuilderModal';
 import { API_BASE_URL } from '../api/config';
 
 const generateGradient = (text: string) => {
@@ -110,7 +112,7 @@ const AlbumGroupDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(initialAlbumId);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, main_artist_id: number | null, main_artist_name: string}>({ display_title: '', notes: '', song_id: null, song_title: '', main_artist_id: null, main_artist_name: '' });
+  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, main_artist_id: number | null, main_artist_name: string, disc_number: number}>({ display_title: '', notes: '', song_id: null, song_title: '', main_artist_id: null, main_artist_name: '', disc_number: 1 });
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
   const [, setIsSearchingSong] = useState(false);
   const [trackArtistSearchResults, setTrackArtistSearchResults] = useState<{id: number, name: string}[]>([]);
@@ -145,11 +147,16 @@ const AlbumGroupDetail = () => {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleEditForm, setTitleEditForm] = useState('');
+  const [releaseDateEditForm, setReleaseDateEditForm] = useState('');
+
+  // Smart Import for Append
+  const [isSmartPasteOpen, setIsSmartPasteOpen] = useState(false);
+  const [isCDImportBuilderOpen, setIsCDImportBuilderOpen] = useState(false);
+  const [selectedFauxRelease, setSelectedFauxRelease] = useState<any>(null);
 
   // For Album Release Date Edit
   const [isEditingReleaseDate, setIsEditingReleaseDate] = useState(false);
-  const [releaseDateEditForm, setReleaseDateEditForm] = useState('');
-
+  
   // For Album Artist Edit
   const [isEditingArtist, setIsEditingArtist] = useState(false);
   const [artistSearchQuery, setArtistSearchQuery] = useState('');
@@ -321,7 +328,8 @@ const AlbumGroupDetail = () => {
       song_id: track.song.id,
       song_title: track.song.title,
       main_artist_id: null,
-      main_artist_name: ''
+      main_artist_name: '',
+      disc_number: track.disc_number
     });
     setSongSearchResults([]);
   };
@@ -445,7 +453,8 @@ const AlbumGroupDetail = () => {
         body: JSON.stringify({
           display_title: editForm.display_title || null,
           notes: editForm.notes || null,
-          song_id: editForm.song_id
+          song_id: editForm.song_id,
+          disc_number: editForm.disc_number
         })
       });
       
@@ -753,7 +762,10 @@ const AlbumGroupDetail = () => {
     return acc;
   }, {} as Record<number, typeof album.album_tracks>) || {};
 
-  const uniqueDiscs = Object.keys(groupedTracks).map(Number).sort((a, b) => a - b);
+  const uniqueDiscs = Array.from(new Set([
+    ...(album?.discs?.map(d => d.disc_number) || []),
+    ...Object.keys(groupedTracks).map(Number)
+  ])).sort((a, b) => a - b);
   const isDigital = album?.discs?.every(d => ['DIGITAL', 'STREAMING', 'Digital Media'].includes(d.media_format || ''));
   const isSingleDiscNoTitle = 
     uniqueDiscs.length === 1 && 
@@ -1139,7 +1151,7 @@ const AlbumGroupDetail = () => {
         
         {/* Discごとにグループ化して表示 */}
         {uniqueDiscs.map((discNum) => {
-          const tracks = groupedTracks[discNum];
+          const tracks = groupedTracks[discNum] || [];
           const discData = album?.discs?.find(d => d.disc_number === discNum);
           const formatStr = discData?.media_format && discData.media_format !== 'CD' ? ` (${discData.media_format})` : '';
           const icon = discData?.media_format && discData.media_format !== 'CD' ? '📺' : '💿';
@@ -1193,6 +1205,37 @@ const AlbumGroupDetail = () => {
                             )}
 
                             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <button
+                                onClick={async () => {
+                                  const trackNum = window.prompt(`Disc ${discNum} を分割します。\n新しいディスク(Disc ${discNum + 1})に移動させる最初のトラック番号を入力してください:\n(例: 16番以降を移動する場合は 16)`);
+                                  if (!trackNum) return;
+                                  const trackNumInt = parseInt(trackNum, 10);
+                                  if (isNaN(trackNumInt) || trackNumInt < 2) {
+                                    alert('有効なトラック番号を入力してください');
+                                    return;
+                                  }
+                                  try {
+                                    const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discNum}/split`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ split_from_track_number: trackNumInt })
+                                    });
+                                    if (res.ok) {
+                                      toast.success(`Disc ${discNum} を分割しました！`);
+                                      fetchAlbum();
+                                    } else {
+                                      alert("分割に失敗しました");
+                                    }
+                                  } catch (e) {
+                                    console.error(e);
+                                    alert("通信エラーが発生しました");
+                                  }
+                                }}
+                                title="このディスクを分割する"
+                                style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px' }}
+                              >
+                                <Scissors size={14} /> 分割
+                              </button>
                               <button
                                 onClick={() => handleBulkStreamingUpdate(false, discNum)}
                                 title="このディスクの全曲をサブスク未解禁にする"
@@ -1300,6 +1343,14 @@ const AlbumGroupDetail = () => {
                                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                                   placeholder="備考(例: Live)"
                                   style={{ width: '120px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                                />
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={editForm.disc_number}
+                                  onChange={(e) => setEditForm({ ...editForm, disc_number: parseInt(e.target.value) || 1 })}
+                                  title="Disc番号"
+                                  style={{ width: '60px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                 />
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
@@ -1487,6 +1538,13 @@ const AlbumGroupDetail = () => {
             icon={Disc3}
           >
             新しいディスクを追加
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setIsSmartPasteOpen(true)}
+            icon={FileText}
+          >
+            スマートインポートで追加
           </Button>
         </div>
       </div>
@@ -1884,6 +1942,21 @@ const AlbumGroupDetail = () => {
           </div>
         </div>
       )}
+      <CDImportBuilderModal 
+        isOpen={isCDImportBuilderOpen}
+        onClose={() => setIsCDImportBuilderOpen(false)}
+        release={selectedFauxRelease}
+        appendMode={true}
+      />
+      <SmartPasteModal 
+        isOpen={isSmartPasteOpen}
+        onClose={() => setIsSmartPasteOpen(false)}
+        onParseComplete={(fauxRelease) => {
+          setIsSmartPasteOpen(false);
+          setSelectedFauxRelease(fauxRelease);
+          setIsCDImportBuilderOpen(true);
+        }}
+      />
     </div>
   );
 };
