@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session, joinedload
 
 from backend.dependencies import get_db
@@ -206,9 +206,10 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             if not album:
                 raise HTTPException(status_code=404, detail="対象のアルバムが見つかりません。")
 
-            # 既存のトラックとディスクをすべて削除して上書き
-            db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == album.id).delete()
-            db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album.id).delete()
+            # 既存のトラックとディスクをすべて削除して上書き (append_modeがFalseの場合)
+            if not request.append_mode:
+                db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == album.id).delete()
+                db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album.id).delete()
 
             # アルバムメタデータを更新
             album.main_title = request.title
@@ -624,6 +625,87 @@ def delete_album_track(track_id: int, db: Session = Depends(get_db)):
     db.delete(track)
     db.commit()
     return {"status": "success"}
+
+
+# [DELETE] /albums/{album_id}/discs/{disc_id}
+# ----------------------------------------------------
+@router.delete("/{album_id}/discs/{disc_id}")
+def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)):
+    disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.id == disc_id, models.AlbumDisc.album_id == album_id).first()
+    if not disc:
+        raise HTTPException(status_code=404, detail="Disc not found")
+        
+    db.delete(disc)
+    db.commit()
+    return {"status": "success"}
+
+
+# [POST] /albums/{album_id}/discs/{disc_number}/split
+# ----------------------------------------------------
+@router.post("/{album_id}/discs/{disc_number}/split", response_model=schemas.Album)
+def split_album_disc(
+    album_id: int, 
+    disc_number: int, 
+    split_from_track_number: int = Body(..., embed=True), 
+    db: Session = Depends(get_db)
+):
+    """
+    指定したトラック番号以降のトラックを次のディスク(disc_number + 1)に移動します。
+    """
+    album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+        
+    # 以降のディスク番号をずらす処理
+    existing_discs = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.album_id == album_id,
+        models.AlbumDisc.disc_number > disc_number
+    ).order_by(models.AlbumDisc.disc_number.desc()).all()
+    
+    for d in existing_discs:
+        d.disc_number += 1
+        
+    existing_tracks_to_shift = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number > disc_number
+    ).all()
+    
+    for t in existing_tracks_to_shift:
+        t.disc_number += 1
+        
+    # 新しいディスクを作成
+    new_disc = models.AlbumDisc(
+        album_id=album_id,
+        disc_number=disc_number + 1,
+        title=None,
+        media_format="CD" 
+    )
+    # 元のディスクのフォーマットを引き継ぐ
+    orig_disc = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.album_id == album_id,
+        models.AlbumDisc.disc_number == disc_number
+    ).first()
+    if orig_disc:
+        new_disc.media_format = orig_disc.media_format
+        
+    db.add(new_disc)
+    
+    # 対象のトラックを移動
+    tracks_to_move = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number == disc_number,
+        models.AlbumTrack.track_number >= split_from_track_number
+    ).order_by(models.AlbumTrack.track_number.asc()).all()
+    
+    # track_number を1から振り直す
+    for i, t in enumerate(tracks_to_move, start=1):
+        t.disc_number = disc_number + 1
+        t.track_number = i
+        
+    db.commit()
+    db.refresh(album)
+    return album
+
 
 
 # [POST] /albums/{album_id}/discs/{disc_number}/tracks/{track_number}/split

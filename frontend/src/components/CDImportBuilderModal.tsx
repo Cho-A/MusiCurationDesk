@@ -41,6 +41,7 @@ interface CDImportBuilderModalProps {
   onClose: () => void;
   release: MBReleaseDetail | null;
   appendMode?: boolean;
+  initialTargetAlbumId?: number | null;
 }
 
 interface TrackMatchState {
@@ -139,11 +140,11 @@ const AlbumSearchCombobox: React.FC<{
   );
 };
 
-const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false }) => {
+const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false, initialTargetAlbumId = null }) => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [songs, setSongs] = useState<SongItem[]>([]);
   
-  const [targetAlbumId, setTargetAlbumId] = useState<number | 'new'>('new');
+  const [targetAlbumId, setTargetAlbumId] = useState<number | 'new'>(initialTargetAlbumId || 'new');
   const [matches, setMatches] = useState<TrackMatchState[]>([]);
   const [discs, setDiscs] = useState<DiscState[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,6 +158,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
   // マスタデータ（アルバム一覧と楽曲一覧）をフェッチ
   useEffect(() => {
     if (!isOpen) return;
+    setTargetAlbumId(initialTargetAlbumId || 'new');
     
     const fetchMasters = async () => {
       try {

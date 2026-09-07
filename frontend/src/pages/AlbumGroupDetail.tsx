@@ -1207,6 +1207,29 @@ const AlbumGroupDetail = () => {
                             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <button
                                 onClick={async () => {
+                                  if (!discData?.id) return;
+                                  if (window.confirm(`Disc ${discNum} を削除しますか？\n(このディスクに含まれるトラックもすべて削除されます)`)) {
+                                    try {
+                                      const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discData.id}`, { method: 'DELETE' });
+                                      if (res.ok) {
+                                        toast.success(`Disc ${discNum} を削除しました`);
+                                        fetchAlbum();
+                                      } else {
+                                        toast.error("削除に失敗しました");
+                                      }
+                                    } catch (e) {
+                                      console.error(e);
+                                      toast.error("エラーが発生しました");
+                                    }
+                                  }
+                                }}
+                                title="このディスクを削除する"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error-color)', padding: '4px', marginRight: '8px' }}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                              <button
+                                onClick={async () => {
                                   const trackNum = window.prompt(`Disc ${discNum} を分割します。\n新しいディスク(Disc ${discNum + 1})に移動させる最初のトラック番号を入力してください:\n(例: 16番以降を移動する場合は 16)`);
                                   if (!trackNum) return;
                                   const trackNumInt = parseInt(trackNum, 10);
@@ -1947,6 +1970,7 @@ const AlbumGroupDetail = () => {
         onClose={() => setIsCDImportBuilderOpen(false)}
         release={selectedFauxRelease}
         appendMode={true}
+        initialTargetAlbumId={selectedAlbumId}
       />
       <SmartPasteModal 
         isOpen={isSmartPasteOpen}
