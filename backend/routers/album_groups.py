@@ -86,6 +86,19 @@ def delete_album_group(group_id: int, db: Session = Depends(get_db)):
     if not db_group:
         raise HTTPException(status_code=404, detail="Album group not found")
 
+    # グループに属するすべてのアルバムを取得
+    albums = db.query(models.Album).filter(models.Album.album_group_id == group_id).all()
+    album_ids = [a.id for a in albums]
+
+    if album_ids:
+        # 紐づくAlbumTrackとAlbumDiscを削除
+        db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id.in_(album_ids)).delete(synchronize_session=False)
+        db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id.in_(album_ids)).delete(synchronize_session=False)
+
+        # 紐づくAlbum自身を削除
+        db.query(models.Album).filter(models.Album.album_group_id == group_id).delete(synchronize_session=False)
+
+    # AlbumGroup自身を削除
     db.delete(db_group)
     db.commit()
     return {"ok": True}

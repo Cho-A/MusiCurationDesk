@@ -394,14 +394,15 @@ def duplicate_album(album_id: int, request: schemas.AlbumDuplicateRequest, db: S
     new_album = models.Album(
         album_group_id=original_album.album_group_id,
         main_title=original_album.main_title,
-        version_title=request.version_title or (original_album.version_title + " (Copy)" if original_album.version_title else "Copy"),
+        version_title=request.version_title
+        or (original_album.version_title + " (Copy)" if original_album.version_title else "Copy"),
         artist_id=original_album.artist_id,
         physical_release_date=original_album.physical_release_date,
         digital_release_date=original_album.digital_release_date,
         spotify_album_id=None,  # Do not copy spotify ID as it must be unique
         cover_image_url=original_album.cover_image_url,
         album_type=original_album.album_type,
-        media_format=request.media_format or original_album.media_format
+        media_format=request.media_format or original_album.media_format,
     )
     db.add(new_album)
     db.flush()
@@ -415,7 +416,7 @@ def duplicate_album(album_id: int, request: schemas.AlbumDuplicateRequest, db: S
             disc_number=old_disc.disc_number,
             title=old_disc.title,
             media_format=request.media_format or old_disc.media_format,
-            edition=request.version_title or old_disc.edition
+            edition=request.version_title or old_disc.edition,
         )
         db.add(new_disc)
         disc_mapping[old_disc.disc_number] = new_disc
@@ -433,7 +434,7 @@ def duplicate_album(album_id: int, request: schemas.AlbumDuplicateRequest, db: S
             duration_ms=old_track.duration_ms,
             display_title=old_track.display_title,
             notes=old_track.notes,
-            spotify_track_id=None  # Do not copy spotify track ID
+            spotify_track_id=None,  # Do not copy spotify track ID
         )
         db.add(new_track)
 
@@ -605,7 +606,6 @@ def create_album_track(
         track_number=request.track_number,
         display_title=request.display_title,
         notes=request.notes,
-        
     )
     db.add(new_track)
     db.commit()

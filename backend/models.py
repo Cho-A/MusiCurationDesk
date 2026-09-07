@@ -19,9 +19,8 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import relationship
+
 from backend.database import Base
-
-
 
 # 楽曲タグ紐付け (多対多)
 song_tags = Table(
@@ -872,6 +871,3 @@ class RefreshToken(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     owner = relationship("User", back_populates="refresh_tokens")
-
-
-

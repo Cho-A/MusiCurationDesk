@@ -841,7 +841,6 @@ class AlbumDuplicateRequest(BaseModel):
     media_format: str | None = None
 
 
-
 class Album(BaseModel):
     id: int
     album_group_id: int | None = None
@@ -880,9 +879,6 @@ class AlbumDiscCreate(BaseModel):
     title: str | None = None
     media_format: str | None = None
     edition: str | None = None
-
-
-
 
 
 class AlbumDiscBase(BaseModel):

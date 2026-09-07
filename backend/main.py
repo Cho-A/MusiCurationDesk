@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -9,8 +8,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import models
-from . import database
+from . import database, models
 from .routers import (
     album_groups,
     albums,
