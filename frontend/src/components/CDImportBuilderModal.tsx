@@ -42,6 +42,7 @@ interface CDImportBuilderModalProps {
   release: MBReleaseDetail | null;
   appendMode?: boolean;
   initialTargetAlbumId?: number | null;
+  baseDiscNumber?: number;
 }
 
 interface TrackMatchState {
@@ -140,7 +141,7 @@ const AlbumSearchCombobox: React.FC<{
   );
 };
 
-const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false, initialTargetAlbumId = null }) => {
+const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false, initialTargetAlbumId = null, baseDiscNumber = 0 }) => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [songs, setSongs] = useState<SongItem[]>([]);
   
@@ -201,8 +202,9 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     const initialDiscs: DiscState[] = [];
     
     rel.media.forEach(media => {
+      const computedDiscNumber = media.position + baseDiscNumber;
       initialDiscs.push({
-        disc_number: media.position,
+        disc_number: computedDiscNumber,
         title: media.title || '',
         media_format: media.format
       });
@@ -214,7 +216,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         
         if (exactMatch) {
           initialMatches.push({
-            disc_number: media.position,
+            disc_number: computedDiscNumber,
             track_number: parseInt(track.number, 10) || track.position,
             mb_title: track.title,
             song_id: exactMatch.id,
@@ -223,7 +225,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
           });
         } else {
           initialMatches.push({
-            disc_number: media.position,
+            disc_number: computedDiscNumber,
             track_number: parseInt(track.number, 10) || track.position,
             mb_title: track.title,
             song_id: null,
@@ -236,8 +238,8 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     setMatches(initialMatches);
     setDiscs(initialDiscs);
     
-    // アルバム名も自動選択を試みる
-    if (autoMatchEnabled) {
+    // アルバム名も自動選択を試みる (追記モード時はスキップ)
+    if (autoMatchEnabled && !appendMode) {
       const matchedAlbum = availableAlbums.find(a => a.main_title.toLowerCase().includes(rel.title.toLowerCase()));
       if (matchedAlbum) {
         setTargetAlbumId(matchedAlbum.id);

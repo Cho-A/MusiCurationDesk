@@ -223,18 +223,11 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                 album.total_tracks = (album.total_tracks or 0) + len(request.tracks)
             db.commit()
 
-        # 既存の最大ディスク番号を取得
-        disc_offset = 0
-        if request.append_mode and album:
-            max_disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album.id).order_by(models.AlbumDisc.disc_number.desc()).first()
-            if max_disc:
-                disc_offset = max_disc.disc_number
-
         # ディスク情報の保存
         for disc_req in request.discs:
             album_disc = models.AlbumDisc(
                 album_id=album.id,
-                disc_number=disc_req.disc_number + disc_offset,
+                disc_number=disc_req.disc_number,
                 title=disc_req.title,
                 media_format=disc_req.media_format,
                 edition=disc_req.edition,
@@ -256,7 +249,7 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             album_track = models.AlbumTrack(
                 album_id=album.id,
                 song_id=song_id,
-                disc_number=track_req.disc_number + disc_offset,
+                disc_number=track_req.disc_number,
                 track_number=track_req.track_number,
                 media_format=track_req.media_format,
                 notes=track_req.notes,

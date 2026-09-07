@@ -1971,6 +1971,7 @@ const AlbumGroupDetail = () => {
         release={selectedFauxRelease}
         appendMode={true}
         initialTargetAlbumId={selectedAlbumId}
+        baseDiscNumber={album?.discs?.length ? Math.max(...album.discs.map(d => d.disc_number)) : 0}
       />
       <SmartPasteModal 
         isOpen={isSmartPasteOpen}
