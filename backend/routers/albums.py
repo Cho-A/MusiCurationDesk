@@ -206,25 +206,35 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             if not album:
                 raise HTTPException(status_code=404, detail="対象のアルバムが見つかりません。")
 
-            # 既存のトラックとディスクをすべて削除して上書き (append_modeがFalseの場合)
             if not request.append_mode:
+                # 既存のトラックとディスクをすべて削除して上書き (append_modeがFalseの場合)
                 db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == album.id).delete()
                 db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album.id).delete()
 
-            # アルバムメタデータを更新
-            album.main_title = request.title
-            if request.release_date:
-                album.physical_release_date = request.release_date
-            if request.album_type:
-                album.album_type = request.album_type
-            album.total_tracks = len(request.tracks)
+                # アルバムメタデータを更新
+                album.main_title = request.title
+                if request.release_date:
+                    album.physical_release_date = request.release_date
+                if request.album_type:
+                    album.album_type = request.album_type
+                album.total_tracks = len(request.tracks)
+            else:
+                # 追記モードの場合はメタデータは上書きせず、既存の最大ディスク番号を取得してずらす
+                album.total_tracks = (album.total_tracks or 0) + len(request.tracks)
             db.commit()
+
+        # 既存の最大ディスク番号を取得
+        disc_offset = 0
+        if request.append_mode and album:
+            max_disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album.id).order_by(models.AlbumDisc.disc_number.desc()).first()
+            if max_disc:
+                disc_offset = max_disc.disc_number
 
         # ディスク情報の保存
         for disc_req in request.discs:
             album_disc = models.AlbumDisc(
                 album_id=album.id,
-                disc_number=disc_req.disc_number,
+                disc_number=disc_req.disc_number + disc_offset,
                 title=disc_req.title,
                 media_format=disc_req.media_format,
                 edition=disc_req.edition,
@@ -246,7 +256,7 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             album_track = models.AlbumTrack(
                 album_id=album.id,
                 song_id=song_id,
-                disc_number=track_req.disc_number,
+                disc_number=track_req.disc_number + disc_offset,
                 track_number=track_req.track_number,
                 media_format=track_req.media_format,
                 notes=track_req.notes,
