@@ -1976,6 +1976,7 @@ const AlbumGroupDetail = () => {
       <SmartPasteModal 
         isOpen={isSmartPasteOpen}
         onClose={() => setIsSmartPasteOpen(false)}
+        appendMode={true}
         onParseComplete={(fauxRelease) => {
           setIsSmartPasteOpen(false);
           setSelectedFauxRelease(fauxRelease);

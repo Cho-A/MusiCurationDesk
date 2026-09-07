@@ -27,6 +27,7 @@ interface SmartPasteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onParseComplete: (release: MBReleaseDetail) => void;
+  appendMode?: boolean;
 }
 
 interface ParsedRow {
@@ -38,10 +39,10 @@ interface ParsedRow {
   originalText: string;
 }
 
-const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onParseComplete }) => {
+const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onParseComplete, appendMode = false }) => {
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [text, setText] = useState('');
-  const [releaseTitle, setReleaseTitle] = useState('New Custom Release');
+  const [releaseTitle, setReleaseTitle] = useState('');
   const [rows, setRows] = useState<ParsedRow[]>([]);
   
   if (!isOpen) return null;
@@ -149,7 +150,7 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
 
     const fauxRelease: MBReleaseDetail = {
       id: `smart-paste-${Date.now()}`,
-      title: releaseTitle || 'New Custom Release',
+      title: releaseTitle || (appendMode ? '' : 'New Custom Release'),
       date: new Date().toISOString().split('T')[0],
       barcode: '',
       media: medias
@@ -202,17 +203,24 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>作品タイトル (オプション)</label>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  {appendMode ? '追加するディスク（メディア）の名称 (任意)' : '作品タイトル (オプション)'}
+                </label>
                 <input 
                   type="text" 
                   value={releaseTitle}
                   onChange={e => setReleaseTitle(e.target.value)}
-                  placeholder="例: UNISON SQUARE GARDEN 20th Anniversary LIVE..."
+                  placeholder={appendMode ? "例: 特典DVD、ボーナスCD" : "例: UNISON SQUARE GARDEN 20th Anniversary LIVE..."}
                   style={{ 
                     width: '100%', padding: '12px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', 
                     border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '1rem', boxSizing: 'border-box'
                   }}
                 />
+                {appendMode && (
+                  <div style={{ marginTop: '4px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                    入力した名称は追加されるディスクのタイトルとして使用されます。アルバム自体のタイトルは変更されません。
+                  </div>
+                )}
               </div>
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
