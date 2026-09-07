@@ -670,6 +670,11 @@ def merge_album_disc_up(album_id: int, disc_id: int, db: Session = Depends(get_d
         models.AlbumTrack.disc_number == target_disc.disc_number
     ).all()
     
+    # UNIQUE制約を回避するため一時的に大きな値に退避
+    for track in target_tracks:
+        track.disc_number += 1000
+    db.flush()
+    
     for track in target_tracks:
         track.disc_number = prev_disc.disc_number
         track.track_number += max_track
@@ -679,17 +684,22 @@ def merge_album_disc_up(album_id: int, disc_id: int, db: Session = Depends(get_d
         models.AlbumDisc.album_id == album_id,
         models.AlbumDisc.disc_number > target_disc.disc_number
     ).all()
-    
-    for d in shift_discs:
-        d.disc_number -= 1
-        
     shift_tracks = db.query(models.AlbumTrack).filter(
         models.AlbumTrack.album_id == album_id,
         models.AlbumTrack.disc_number > target_disc.disc_number
     ).all()
     
+    for d in shift_discs:
+        d.disc_number += 1000
     for t in shift_tracks:
-        t.disc_number -= 1
+        t.disc_number += 1000
+    db.flush()
+    
+    for d in shift_discs:
+        d.disc_number -= 1001
+    for t in shift_tracks:
+        t.disc_number -= 1001
+    db.flush()
         
     # 対象ディスク自体を削除
     db.delete(target_disc)
@@ -721,7 +731,7 @@ def split_album_disc(
     ).order_by(models.AlbumDisc.disc_number.desc()).all()
     
     for d in existing_discs:
-        d.disc_number += 1
+        d.disc_number += 1000
         
     existing_tracks_to_shift = db.query(models.AlbumTrack).filter(
         models.AlbumTrack.album_id == album_id,
@@ -729,7 +739,16 @@ def split_album_disc(
     ).all()
     
     for t in existing_tracks_to_shift:
-        t.disc_number += 1
+        t.disc_number += 1000
+        
+    db.flush()
+    
+    for d in existing_discs:
+        d.disc_number -= 999
+    for t in existing_tracks_to_shift:
+        t.disc_number -= 999
+        
+    db.flush()
         
     # 新しいディスクを作成
     new_disc = models.AlbumDisc(
@@ -755,6 +774,10 @@ def split_album_disc(
         models.AlbumTrack.track_number >= split_from_track_number
     ).order_by(models.AlbumTrack.track_number.asc()).all()
     
+    for t in tracks_to_move:
+        t.disc_number += 1000
+    db.flush()
+
     # track_number を1から振り直す
     for i, t in enumerate(tracks_to_move, start=1):
         t.disc_number = disc_number + 1
