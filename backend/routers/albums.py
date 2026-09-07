@@ -217,10 +217,6 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                     album.physical_release_date = request.release_date
                 if request.album_type:
                     album.album_type = request.album_type
-                album.total_tracks = len(request.tracks)
-            else:
-                # 追記モードの場合はメタデータは上書きせず、既存の最大ディスク番号を取得してずらす
-                album.total_tracks = (album.total_tracks or 0) + len(request.tracks)
             db.commit()
 
         # ディスク情報の保存
