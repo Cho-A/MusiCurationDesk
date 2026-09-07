@@ -370,27 +370,34 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
           
           {/* Step 1: ターゲットアルバムの選択 */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem' }}>1. どのアルバムに保存しますか？</h3>
-            <AlbumSearchCombobox 
-              albums={albums} 
-              releaseTitle={release.title} 
-              targetAlbumId={targetAlbumId} 
-              setTargetAlbumId={setTargetAlbumId} 
-            />
-            {targetAlbumId !== 'new' && !appendMode && (
-              <div style={{ marginTop: '12px', color: 'var(--error-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <AlertCircle size={16} />
-                既存のアルバムを選択した場合、現在のSpotifyのトラックリストはすべて削除され、CD版のトラックリストで上書きされます。
-              </div>
-            )}
-            {targetAlbumId !== 'new' && appendMode && (
+          {!appendMode ? (
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem' }}>1. どのアルバムに保存しますか？</h3>
+              <AlbumSearchCombobox 
+                albums={albums} 
+                releaseTitle={release.title} 
+                targetAlbumId={targetAlbumId} 
+                setTargetAlbumId={setTargetAlbumId} 
+              />
+              {targetAlbumId !== 'new' && (
+                <div style={{ marginTop: '12px', color: 'var(--error-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertCircle size={16} />
+                  既存のアルバムを選択した場合、現在のSpotifyのトラックリストはすべて削除され、CD版のトラックリストで上書きされます。
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '1.1rem' }}>対象のアルバム（追記モード）</h3>
+              <p style={{ margin: 0, color: 'var(--spotify-color)', fontWeight: 'bold' }}>
+                {albums.find(a => a.id === targetAlbumId)?.main_title || '読み込み中...'}
+              </p>
               <div style={{ marginTop: '12px', color: 'var(--spotify-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <AlertCircle size={16} />
-                既存のアルバムにディスクを追記します。既存の曲は削除されません。
+                既存のアルバムに新しいディスクを追記します。既存の曲は削除されません。
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Step 2: ディスク情報の確認と編集 */}
           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
