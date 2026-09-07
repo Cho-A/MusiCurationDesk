@@ -4,6 +4,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 
 from backend.dependencies import get_db
 
@@ -635,6 +636,64 @@ def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="Disc not found")
         
     db.delete(disc)
+    db.commit()
+    return {"status": "success"}
+
+
+# [POST] /albums/{album_id}/discs/{disc_id}/merge-up
+# ----------------------------------------------------
+@router.post("/{album_id}/discs/{disc_id}/merge-up")
+def merge_album_disc_up(album_id: int, disc_id: int, db: Session = Depends(get_db)):
+    # 対象ディスクを取得
+    target_disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.id == disc_id, models.AlbumDisc.album_id == album_id).first()
+    if not target_disc:
+        raise HTTPException(status_code=404, detail="Disc not found")
+        
+    # 前のディスクを取得
+    prev_disc = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.album_id == album_id,
+        models.AlbumDisc.disc_number < target_disc.disc_number
+    ).order_by(models.AlbumDisc.disc_number.desc()).first()
+    
+    if not prev_disc:
+        raise HTTPException(status_code=400, detail="Cannot merge because there is no previous disc")
+        
+    # 前のディスクの最大トラック番号を取得
+    max_track = db.query(func.max(models.AlbumTrack.track_number)).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number == prev_disc.disc_number
+    ).scalar() or 0
+    
+    # 対象ディスクのトラックを更新
+    target_tracks = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number == target_disc.disc_number
+    ).all()
+    
+    for track in target_tracks:
+        track.disc_number = prev_disc.disc_number
+        track.track_number += max_track
+        
+    # 以降のトラック・ディスクの連番を前倒しする
+    shift_discs = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.album_id == album_id,
+        models.AlbumDisc.disc_number > target_disc.disc_number
+    ).all()
+    
+    for d in shift_discs:
+        d.disc_number -= 1
+        
+    shift_tracks = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number > target_disc.disc_number
+    ).all()
+    
+    for t in shift_tracks:
+        t.disc_number -= 1
+        
+    # 対象ディスク自体を削除
+    db.delete(target_disc)
+    
     db.commit()
     return {"status": "success"}
 

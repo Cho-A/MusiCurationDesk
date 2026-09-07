@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff, Scissors, FileText } from 'lucide-react';
+import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff, Scissors, FileText, ArrowUpCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -1027,9 +1027,11 @@ const AlbumGroupDetail = () => {
                 ) : (
                   <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>アーティスト未設定</span>
                 )}
-                {/* <button onClick={() => setIsEditingArtist(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>
-                  <Edit2 size={16} />
-                </button> */}
+                {isEditMode && (
+                  <button onClick={() => setIsEditingArtist(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>
+                    <Edit2 size={16} />
+                  </button>
+                )}
               </>
             ) : (
               <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
@@ -1228,6 +1230,31 @@ const AlbumGroupDetail = () => {
                               >
                                 <Trash2 size={16} />
                               </button>
+                              {discNum > 1 && (
+                                <button
+                                  onClick={async () => {
+                                    if (!discData?.id) return;
+                                    if (window.confirm(`Disc ${discNum} を直前のディスク(Disc ${discNum - 1})と結合しますか？\n(このディスクのトラックは前のディスクの末尾に追加されます)`)) {
+                                      try {
+                                        const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discData.id}/merge-up`, { method: 'POST' });
+                                        if (res.ok) {
+                                          toast.success(`Disc ${discNum} を直前のディスクと結合しました`);
+                                          fetchAlbum();
+                                        } else {
+                                          toast.error("結合に失敗しました");
+                                        }
+                                      } catch (e) {
+                                        console.error(e);
+                                        toast.error("エラーが発生しました");
+                                      }
+                                    }
+                                  }}
+                                  title="前のディスクと結合する"
+                                  style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px' }}
+                                >
+                                  <ArrowUpCircle size={14} /> 結合
+                                </button>
+                              )}
                               <button
                                 onClick={async () => {
                                   const trackNum = window.prompt(`Disc ${discNum} を分割します。\n新しいディスク(Disc ${discNum + 1})に移動させる最初のトラック番号を入力してください:\n(例: 16番以降を移動する場合は 16)`);
