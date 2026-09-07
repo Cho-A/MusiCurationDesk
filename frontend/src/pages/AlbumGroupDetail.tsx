@@ -759,6 +759,28 @@ const AlbumGroupDetail = () => {
     uniqueDiscs.length === 1 && 
     (!album?.discs || album.discs.length === 0 || !album.discs[0].title);
 
+  const handleGroupDelete = async () => {
+    if (!albumGroup) return;
+    if (!window.confirm("このアルバムおよび含まれる全バージョン・トラック情報を完全に削除しますか？\nこの操作は取り消せません。")) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${API_BASE_URL}/album-groups/${albumGroup.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to delete album group");
+      
+      toast.success('アルバムを削除しました');
+      navigate('/albums');
+    } catch (err) {
+      console.error(err);
+      toast.error('アルバムの削除に失敗しました');
+    }
+  };
+
   return (
     <div style={{ padding: '32px', maxWidth: '1000px', margin: '0 auto', color: 'var(--text-primary)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
@@ -776,24 +798,53 @@ const AlbumGroupDetail = () => {
           戻る
         </button>
 
-        <button 
-          onClick={() => setIsEditMode(!isEditMode)} 
-          style={{ 
-            padding: '8px 16px', 
-            borderRadius: '20px', 
-            border: '1px solid var(--border-color)', 
-            background: isEditMode ? 'var(--accent-primary)' : 'transparent', 
-            color: isEditMode ? '#fff' : 'var(--text-primary)', 
-            cursor: 'pointer',
-            fontWeight: 600,
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {isEditMode && (
+            <button 
+              onClick={handleGroupDelete}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: '1px solid #ef4444',
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: '#ef4444',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Trash2 size={16} /> アルバムを削除
+            </button>
+          )}
+
+          <button 
+            onClick={() => {
+              if (!isEditMode) {
+                setTitleEditForm(albumGroup?.title || '');
+                setReleaseDateEditForm(albumGroup?.release_date || '');
+              }
+              setIsEditMode(!isEditMode);
+            }} 
+            style={{ 
+              padding: '8px 16px', 
+              borderRadius: '20px', 
+              border: '1px solid var(--border-color)', 
+              background: isEditMode ? 'var(--accent-primary)' : 'transparent', 
+              color: isEditMode ? '#fff' : 'var(--text-primary)', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
+          </button>
+        </div>
       </div>
 
 
@@ -812,22 +863,32 @@ const AlbumGroupDetail = () => {
         )}
         
         <div className="metadata-container">
-          <select 
-            value={albumGroup.album_type || 'album'}
-            onChange={(e) => handleAlbumTypeChange(e.target.value)}
-            style={{ 
+          {isEditMode ? (
+            <select 
+              value={albumGroup.album_type || 'album'}
+              onChange={(e) => handleAlbumTypeChange(e.target.value)}
+              style={{ 
+                fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', 
+                color: 'var(--text-secondary)', letterSpacing: '0.1em',
+                background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px',
+                padding: '2px 8px', cursor: 'pointer', appearance: 'auto'
+              }}
+            >
+              <option value="album">ALBUM</option>
+              <option value="single">SINGLE</option>
+              <option value="ep">EP</option>
+              <option value="compilation">COMPILATION</option>
+              <option value="dvd">VIDEO</option>
+            </select>
+          ) : (
+            <span style={{ 
               fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', 
               color: 'var(--text-secondary)', letterSpacing: '0.1em',
-              background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px',
-              padding: '2px 8px', cursor: 'pointer', appearance: 'auto'
-            }}
-          >
-            <option value="album">ALBUM</option>
-            <option value="single">SINGLE</option>
-            <option value="ep">EP</option>
-            <option value="compilation">COMPILATION</option>
-            <option value="dvd">VIDEO</option>
-          </select>
+              padding: '2px 8px'
+            }}>
+              {albumGroup.album_type === 'dvd' ? 'VIDEO' : (albumGroup.album_type || 'ALBUM')}
+            </span>
+          )}
           {(isEditMode || isEditingTitle) ? (
             <div className="title-action-wrapper">
               <input
@@ -881,30 +942,6 @@ const AlbumGroupDetail = () => {
                     {a.version_title || '通常盤'}
                   </button>
                 ))}
-
-            <button
-              onClick={() => {
-                setDuplicateForm({
-                  version_title: (album?.version_title ? album.version_title + ' (Copy)' : '通常盤 (Copy)'),
-                  media_format: album?.media_format || 'CD'
-                });
-                setIsDuplicateModalOpen(true);
-              }}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-secondary)',
-                borderRadius: '20px',
-                padding: '6px 16px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginLeft: '8px'
-              }}
-            >
-              <Copy size={16} /> 複製
-            </button>
               </div>
             ) : (
               (album?.version_title && album.version_title !== '通常盤') ? (
@@ -1109,7 +1146,7 @@ const AlbumGroupDetail = () => {
           
           return (
             <div key={discNum} id={`disc-${discNum}`} style={{ marginBottom: '32px', scrollMarginTop: '80px' }}>
-              {(!isSingleDiscNoTitle && !isDigital) && (
+              {((!isSingleDiscNoTitle && !isDigital) || isEditMode) && (
                 <h3 style={{ 
                   margin: '0 0 16px 0', fontSize: '1.2rem', color: 'var(--text-secondary)',
                   borderBottom: '1px solid var(--border-color)', paddingBottom: '8px',
