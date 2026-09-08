@@ -505,11 +505,7 @@ class MusicImporter:
                 tracks = m.get("tracks", [])
                 for track in tracks:
                     track_title = track.get("title", "Unknown Track")
-                    track_num = track.get("number", "1")
-                    try:
-                        track_num_int = int(track_num)
-                    except ValueError:
-                        track_num_int = track.get("position", 1)
+                    track_num_int = track.get("position", 1)
 
                     # 楽曲の作成または名寄せ
                     media_format = (m.get("format") or "").lower()
