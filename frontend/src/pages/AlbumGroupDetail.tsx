@@ -8,6 +8,7 @@ import Button from '../components/Button';
 import SmartPasteModal from '../components/SmartPasteModal';
 import CDImportBuilderModal from '../components/CDImportBuilderModal';
 import { API_BASE_URL } from '../api/config';
+import { useAuth } from '../context/AuthContext';
 
 const generateGradient = (text: string) => {
   let hash = 0;
@@ -105,6 +106,7 @@ const AlbumGroupDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { isAuthenticated } = useAuth();
   const initialAlbumId = searchParams.get('album_id') ? parseInt(searchParams.get('album_id')!, 10) : null;
   const hasScrolledRef = useRef(false);
 
@@ -199,7 +201,7 @@ const AlbumGroupDetail = () => {
   };
 
   const fetchAlbum = useCallback(() => {
-    fetch(`${API_BASE_URL}/album-groups/${id}`)
+    fetch(`${API_BASE_URL}/album-groups/${id}?t=${Date.now()}`)
       .then(res => {
         if (!res.ok) throw new Error("Album group not found");
         return res.json();
@@ -311,10 +313,48 @@ const AlbumGroupDetail = () => {
         })
       });
       if (res.ok) {
+        toast.success(discNumber ? `Disc ${discNumber}の全曲をサブスク${isStreamingAvailable ? '解禁済み' : '未解禁'}に設定しました` : `全曲をサブスク${isStreamingAvailable ? '解禁済み' : '未解禁'}に設定しました`);
         fetchAlbum(); // refresh to show updated status
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.detail || "一括設定に失敗しました");
       }
     } catch (err) {
       console.error(err);
+      toast.error("通信エラーが発生しました");
+    }
+  };
+
+  const handleAlbumVersionDelete = async () => {
+    if (!album) return;
+    if (!window.confirm("現在表示されているこのバージョン（エディション）を削除しますか？\n（他のバージョンは残ります。これが最後のバージョンの場合、アルバム全体が削除されます）")) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${API_BASE_URL}/albums/${album.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        toast.success("バージョンを削除しました。");
+        fetch(`${API_BASE_URL}/album-groups/${id}?t=${Date.now()}`)
+          .then(checkRes => {
+            if (!checkRes.ok) {
+              navigate('/albums');
+            } else {
+              // 削除されたバージョンIDが選択されたままにならないようクリア
+              setSelectedAlbumId(null);
+              fetchAlbum();
+            }
+          });
+      } else {
+        toast.error("削除に失敗しました");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("エラーが発生しました");
     }
   };
 
@@ -435,10 +475,13 @@ const AlbumGroupDetail = () => {
         toast.success("ディスク名を更新しました");
         setEditingDiscId(null);
         fetchAlbum();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(`更新に失敗しました: ${errorData.detail || '不明なエラー'}`);
       }
     } catch (err) {
       console.error(err);
-      toast.error("更新に失敗しました");
+      toast.error("通信エラーが発生しました");
     }
   };
 
@@ -832,30 +875,32 @@ const AlbumGroupDetail = () => {
             </button>
           )}
 
-          <button 
-            onClick={() => {
-              if (!isEditMode) {
-                setTitleEditForm(albumGroup?.title || '');
-                setReleaseDateEditForm(albumGroup?.release_date || '');
-              }
-              setIsEditMode(!isEditMode);
-            }} 
-            style={{ 
-              padding: '8px 16px', 
-              borderRadius: '20px', 
-              border: '1px solid var(--border-color)', 
-              background: isEditMode ? 'var(--accent-primary)' : 'transparent', 
-              color: isEditMode ? '#fff' : 'var(--text-primary)', 
-              cursor: 'pointer',
-              fontWeight: 600,
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
-          </button>
+          {isAuthenticated && (
+            <button 
+              onClick={() => {
+                if (!isEditMode) {
+                  setTitleEditForm(albumGroup?.title || '');
+                  setReleaseDateEditForm(albumGroup?.release_date || '');
+                }
+                setIsEditMode(!isEditMode);
+              }} 
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '20px', 
+                border: '1px solid var(--border-color)', 
+                background: isEditMode ? 'var(--accent-primary)' : 'transparent', 
+                color: isEditMode ? '#fff' : 'var(--text-primary)', 
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -931,7 +976,7 @@ const AlbumGroupDetail = () => {
               </button> */}
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             {albumGroup.albums && albumGroup.albums.length > 1 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 {sortedAlbums.map(a => (
@@ -963,29 +1008,51 @@ const AlbumGroupDetail = () => {
               ) : null
             )}
 
-            <button
-              onClick={() => {
-                setDuplicateForm({
-                  version_title: (album?.version_title ? album.version_title + ' (Copy)' : '通常盤 (Copy)'),
-                  media_format: album?.media_format || 'CD'
-                });
-                setIsDuplicateModalOpen(true);
-              }}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-secondary)',
-                borderRadius: '20px',
-                padding: '6px 16px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginLeft: '8px'
-              }}
-            >
-              <Copy size={16} /> 複製
-            </button>
+            {isEditMode && (
+              <>
+                <button
+                  onClick={() => {
+                    setDuplicateForm({
+                      version_title: (album?.version_title ? album.version_title + ' (Copy)' : '通常盤 (Copy)'),
+                      media_format: album?.media_format || 'CD'
+                    });
+                    setIsDuplicateModalOpen(true);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-secondary)',
+                    borderRadius: '20px',
+                    padding: '6px 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginLeft: '8px'
+                  }}
+                >
+                  <Copy size={16} /> 複製
+                </button>
+                <button
+                  onClick={handleAlbumVersionDelete}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #ef4444',
+                    color: '#ef4444',
+                    borderRadius: '20px',
+                    padding: '6px 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginLeft: '8px'
+                  }}
+                  title="このバージョンを削除"
+                >
+                  <Trash2 size={16} /> 削除
+                </button>
+              </>
+            )}
 
             
             {/* 外部リンク（ストア等）プレースホルダー */}
@@ -1006,7 +1073,7 @@ const AlbumGroupDetail = () => {
                 <Edit2 size={18} />
               </button>
             )}
-            {albumGroup.albums && albumGroup.albums.length > 1 && (
+            {(albumGroup.albums && albumGroup.albums.length > 1 && isEditMode) && (
               <button
                 onClick={() => setIsGroupMergeModalOpen(true)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)', borderRadius: '20px', marginLeft: '8px', fontSize: '0.9rem', fontWeight: 600 }}
@@ -1014,6 +1081,48 @@ const AlbumGroupDetail = () => {
               >
                 <GitMerge size={16} /> 複数統合
               </button>
+            )}
+            {/* アルバム全体カテゴリ一括設定 */}
+            {(album && isEditMode) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
+                <select
+                  id="album-category-select"
+                  defaultValue=""
+                  style={{ fontSize: '0.8rem', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  <option value="">カテゴリなし</option>
+                  <option value="Live">Live</option>
+                  <option value="MV">MV</option>
+                  <option value="Studio">Studio</option>
+                  <option value="Acoustic">Acoustic</option>
+                  <option value="Cover">Cover</option>
+                  <option value="Instrumental">Instrumental</option>
+                </select>
+                <button
+                  onClick={async () => {
+                    const sel = document.getElementById('album-category-select') as HTMLSelectElement;
+                    const category = sel?.value || null;
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/albums/${album.id}/bulk-set-category`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ track_category: category })
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        toast.success(`${data.updated}曲にカテゴリ「${category || 'なし'}」を一括設定しました`);
+                        fetchAlbum();
+                      } else {
+                        toast.error('カテゴリ設定に失敗しました');
+                      }
+                    } catch (e) { console.error(e); }
+                  }}
+                  title="このアルバム全曲にカテゴリを一括設定"
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+                >
+                  全曲一括設定
+                </button>
+              </div>
             )}
           </div>
           
@@ -1111,22 +1220,24 @@ const AlbumGroupDetail = () => {
             <h2 style={{ fontSize: '1.5rem', margin: 0, whiteSpace: 'nowrap' }}>
               収録曲
             </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button
-                onClick={() => handleBulkStreamingUpdate(false)}
-                title="このアルバムの全曲をサブスク未解禁にする"
-                style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <CloudOff size={18} />
-              </button>
-              <button
-                onClick={() => handleBulkStreamingUpdate(true)}
-                title="このアルバムの全曲をサブスク解禁済みにする"
-                style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--spotify-color)', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Cloud size={18} />
-              </button>
-            </div>
+            {isEditMode && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <button
+                  onClick={() => handleBulkStreamingUpdate(false)}
+                  title="このアルバムの全曲をサブスク未解禁にする"
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <CloudOff size={18} />
+                </button>
+                <button
+                  onClick={() => handleBulkStreamingUpdate(true)}
+                  title="このアルバムの全曲をサブスク解禁済みにする"
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--spotify-color)', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Cloud size={18} />
+                </button>
+              </div>
+            )}
           </div>
           {uniqueDiscs.length > 1 && (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0, flex: 1, justifyContent: 'flex-end' }}>
@@ -1206,42 +1317,19 @@ const AlbumGroupDetail = () => {
                               <span>{icon} Disc {discNum}{formatStr}</span>
                             )}
 
-                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <button
-                                onClick={async () => {
-                                  if (!discData?.id) return;
-                                  if (window.confirm(`Disc ${discNum} を削除しますか？\n(このディスクに含まれるトラックもすべて削除されます)`)) {
-                                    try {
-                                      const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discData.id}`, { method: 'DELETE' });
-                                      if (res.ok) {
-                                        toast.success(`Disc ${discNum} を削除しました`);
-                                        fetchAlbum();
-                                      } else {
-                                        toast.error("削除に失敗しました");
-                                      }
-                                    } catch (e) {
-                                      console.error(e);
-                                      toast.error("エラーが発生しました");
-                                    }
-                                  }
-                                }}
-                                title="このディスクを削除する"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error-color)', padding: '4px', marginRight: '8px' }}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                              {discNum > 1 && (
+                            {isEditMode && (
+                              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                                 <button
                                   onClick={async () => {
                                     if (!discData?.id) return;
-                                    if (window.confirm(`Disc ${discNum} を直前のディスク(Disc ${discNum - 1})と結合しますか？\n(このディスクのトラックは前のディスクの末尾に追加されます)`)) {
+                                    if (window.confirm(`Disc ${discNum} を削除しますか？\n(このディスクに含まれるトラックもすべて削除されます)`)) {
                                       try {
-                                        const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discData.id}/merge-up`, { method: 'POST' });
+                                        const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discData.id}`, { method: 'DELETE' });
                                         if (res.ok) {
-                                          toast.success(`Disc ${discNum} を直前のディスクと結合しました`);
+                                          toast.success(`Disc ${discNum} を削除しました`);
                                           fetchAlbum();
                                         } else {
-                                          toast.error("結合に失敗しました");
+                                          toast.error("削除に失敗しました");
                                         }
                                       } catch (e) {
                                         console.error(e);
@@ -1249,79 +1337,149 @@ const AlbumGroupDetail = () => {
                                       }
                                     }
                                   }}
-                                  title="前のディスクと結合する"
-                                  style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px' }}
+                                  title="このディスクを削除する"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error-color)', padding: '4px', marginRight: '8px' }}
                                 >
-                                  <ArrowUpCircle size={14} /> 結合
+                                  <Trash2 size={16} />
                                 </button>
-                              )}
-                              <button
-                                onClick={async () => {
-                                  const trackNum = window.prompt(`Disc ${discNum} を分割します。\n新しいディスク(Disc ${discNum + 1})に移動させる最初のトラック番号を入力してください:\n(例: 16番以降を移動する場合は 16)`);
-                                  if (!trackNum) return;
-                                  const trackNumInt = parseInt(trackNum, 10);
-                                  if (isNaN(trackNumInt) || trackNumInt < 2) {
-                                    alert('有効なトラック番号を入力してください');
-                                    return;
-                                  }
-                                  try {
-                                    const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discNum}/split`, {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ split_from_track_number: trackNumInt })
-                                    });
-                                    if (res.ok) {
-                                      toast.success(`Disc ${discNum} を分割しました！`);
-                                      fetchAlbum();
-                                    } else {
-                                      alert("分割に失敗しました");
+                                {discNum > 1 && (
+                                  <button
+                                    onClick={async () => {
+                                      if (!discData?.id) return;
+                                      if (window.confirm(`Disc ${discNum} を直前のディスク(Disc ${discNum - 1})と結合しますか？\n(このディスクのトラックは前のディスクの末尾に追加されます)`)) {
+                                        try {
+                                          const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discData.id}/merge-up`, { method: 'POST' });
+                                          if (res.ok) {
+                                            toast.success(`Disc ${discNum} を直前のディスクと結合しました`);
+                                            fetchAlbum();
+                                          } else {
+                                            toast.error("結合に失敗しました");
+                                          }
+                                        } catch (e) {
+                                          console.error(e);
+                                          toast.error("エラーが発生しました");
+                                        }
+                                      }
+                                    }}
+                                    title="前のディスクと結合する"
+                                    style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px', whiteSpace: 'nowrap' }}
+                                  >
+                                    <ArrowUpCircle size={14} /> 結合
+                                  </button>
+                                )}
+                                <button
+                                  onClick={async () => {
+                                    const trackNum = window.prompt(`Disc ${discNum} を分割します。\n新しいディスク(Disc ${discNum + 1})に移動させる最初のトラック番号を入力してください:\n(例: 16番以降を移動する場合は 16)`);
+                                    if (!trackNum) return;
+                                    const trackNumInt = parseInt(trackNum, 10);
+                                    if (isNaN(trackNumInt) || trackNumInt < 2) {
+                                      alert('有効なトラック番号を入力してください');
+                                      return;
                                     }
-                                  } catch (e) {
-                                    console.error(e);
-                                    alert("通信エラーが発生しました");
-                                  }
-                                }}
-                                title="このディスクを分割する"
-                                style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px' }}
-                              >
-                                <Scissors size={14} /> 分割
-                              </button>
-                              <button
-                                onClick={() => handleBulkStreamingUpdate(false, discNum)}
-                                title="このディスクの全曲をサブスク未解禁にする"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
-                              >
-                                <CloudOff size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleBulkStreamingUpdate(true, discNum)}
-                                title="このディスクの全曲をサブスク解禁済みにする"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
-                              >
-                                <Cloud size={16} />
-                              </button>
-                              <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }} />
-                              <button
-                                onClick={() => {
-                                  setEditingDiscId(discData!.id);
-                                  setDiscTitleForm(discData!.title || '');
-                                }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
-                                title="ディスク名を編集"
-                              >
-                                <Edit2 size={16} />
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  setBulkMergeSourceDisc({albumId: album!.id, discNumber: discNum, title: discData?.title || null});
-                                  setIsBulkMergeModalOpen(true);
-                                }} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }} 
-                                title="ディスクの一括統合 (開発者用)"
-                              >
-                                <GitMerge size={16} />
-                              </button>
-                            </div>
+                                    try {
+                                      const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/discs/${discNum}/split`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ split_from_track_number: trackNumInt })
+                                      });
+                                      if (res.ok) {
+                                        toast.success(`Disc ${discNum} を分割しました！`);
+                                        fetchAlbum();
+                                      } else {
+                                        alert("分割に失敗しました");
+                                      }
+                                    } catch (e) {
+                                      console.error(e);
+                                      alert("通信エラーが発生しました");
+                                    }
+                                  }}
+                                  title="このディスクを分割する"
+                                  style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px', whiteSpace: 'nowrap' }}
+                                >
+                                  <Scissors size={14} /> 分割
+                                </button>
+                                <button
+                                  onClick={() => handleBulkStreamingUpdate(false, discNum)}
+                                  title="このディスクの全曲をサブスク未解禁にする"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
+                                >
+                                  <CloudOff size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleBulkStreamingUpdate(true, discNum)}
+                                  title="このディスクの全曲をサブスク解禁済みにする"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
+                                >
+                                  <Cloud size={16} />
+                                </button>
+                                <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }} />
+                                <button
+                                  onClick={() => {
+                                    if (discData?.id) {
+                                      setEditingDiscId(discData.id);
+                                      setDiscTitleForm(discData.title || '');
+                                      setDiscFormatForm(discData.media_format || 'CD');
+                                    } else {
+                                      toast.error("ディスクのメタデータが未登録です");
+                                    }
+                                  }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
+                                  title="ディスク名を編集"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setBulkMergeSourceDisc({albumId: album!.id, discNumber: discNum, title: discData?.title || null});
+                                    setIsBulkMergeModalOpen(true);
+                                  }} 
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }} 
+                                  title="ディスクの一括統合 (開発者用)"
+                                >
+                                  <GitMerge size={16} />
+                                </button>
+                                {/* カテゴリ一括設定 */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '4px' }}>
+                                  <select
+                                    id={`disc-category-select-${discNum}`}
+                                    defaultValue=""
+                                    style={{ fontSize: '0.75rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                                  >
+                                    <option value="">カテゴリなし</option>
+                                    <option value="Live">Live</option>
+                                    <option value="MV">MV</option>
+                                    <option value="Studio">Studio</option>
+                                    <option value="Acoustic">Acoustic</option>
+                                    <option value="Cover">Cover</option>
+                                    <option value="Instrumental">Instrumental</option>
+                                  </select>
+                                  <button
+                                    onClick={async () => {
+                                      const sel = document.getElementById(`disc-category-select-${discNum}`) as HTMLSelectElement;
+                                      const category = sel?.value || null;
+                                      try {
+                                        const res = await fetch(`${API_BASE_URL}/albums/${album!.id}/bulk-set-category`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ track_category: category, disc_number: discNum })
+                                        });
+                                        if (res.ok) {
+                                          const data = await res.json();
+                                          toast.success(`${data.updated}曲にカテゴリ「${category || 'なし'}」を設定しました`);
+                                          fetchAlbum();
+                                        } else {
+                                          toast.error('カテゴリ設定に失敗しました');
+                                        }
+                                      } catch (e) { console.error(e); }
+                                    }}
+                                    title="このディスクの全曲にカテゴリを一括設定"
+                                    style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', cursor: 'pointer', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                  >
+                                    一括設定
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </>
                         )}
                       </>
@@ -1488,7 +1646,7 @@ const AlbumGroupDetail = () => {
                                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                   fontSize: '0.7rem', color: 'var(--text-secondary)',
                                   border: '1px solid var(--border-color)', borderRadius: '12px',
-                                  padding: '1px 8px', marginLeft: 'auto', textTransform: 'lowercase',
+                                  padding: '1px 8px', textTransform: 'lowercase',
                                   whiteSpace: 'nowrap'
                                 }}>
                                   {track.song.track_category}

@@ -8,6 +8,7 @@ import AttachWorkModal from '../components/AttachWorkModal';
 import MergeSongModal from '../components/MergeSongModal';
 import type { SongCardData } from '../types/models';
 import { API_BASE_URL } from '../api/config';
+import { useAuth } from '../context/AuthContext';
 
 interface ArtistLink {
   artist_id: number;
@@ -67,9 +68,10 @@ interface OtherVersion {
   title: string;
   is_video?: boolean;
   version_name?: string;
+  track_category?: string | null;
   is_streaming_available?: boolean;
   spotify_song_title?: string;
-  album_links?: AlbumTrackInfo[]; // 実際のAPIではother_versionsにはalbum_linksが含まれないかもしれない。必要ならAPI改修が必要。
+  album_links?: AlbumTrackInfo[];
   primary_album_title?: string;
   release_date?: string;
 }
@@ -79,6 +81,7 @@ interface SongDetailData {
   title: string;
   is_video: boolean;
   version_name?: string;
+  track_category?: string | null;
   is_streaming_available?: boolean;
   spotify_song_id?: string | null;
   spotify_song_title?: string;
@@ -103,6 +106,7 @@ interface SongDetailData {
 const SongDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   // Base data fetched from API（URLのidが変わった時だけAPIを叩く）
   const [baseSong, setBaseSong] = useState<SongDetailData | null>(null);
@@ -120,6 +124,7 @@ const SongDetail = () => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState("");
   const [editVersionNameValue, setEditVersionNameValue] = useState("");
+  const [editTrackCategoryValue, setEditTrackCategoryValue] = useState("");
   const [editStreamingValue, setEditStreamingValue] = useState(true);
   const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
@@ -153,6 +158,17 @@ const SongDetail = () => {
   useEffect(() => {
     if (id) fetchBaseSong(id);
   }, [id]);
+
+  // 編集フォームの初期値をselectedVersionIdが変わった時に同期
+  useEffect(() => {
+    if (!baseSong) return;
+    const allVers = [baseSong, ...(baseSong.other_versions || [])];
+    const current = allVers.find(v => v.id === selectedVersionId) ?? baseSong;
+    setEditTitleValue(current.title || '');
+    setEditVersionNameValue(current.version_name || '');
+    setEditTrackCategoryValue((current as SongDetailData).track_category || (current as OtherVersion).track_category || '');
+    setEditStreamingValue(current.is_streaming_available ?? true);
+  }, [selectedVersionId, baseSong]);
 
   // バージョン切り替え：URLをreplaceしてAPIから完全なデータを再取得する（履歴は積まない）
   const handleVersionSelect = (versionId: number) => {
@@ -526,7 +542,7 @@ const SongDetail = () => {
     }
   };
   const handleDeleteVersion = async () => {
-    if (!selectedVersionId) return;
+    if (!selectedVersionId || !baseSong) return;
     if (!window.confirm("このバージョン（Song）を削除しますか？\n※アルバムのトラックとして紐づいている場合は削除できません。\n本当に削除してよろしいですか？")) return;
     
     try {
@@ -539,7 +555,18 @@ const SongDetail = () => {
       });
       if (res.ok) {
         toast.success("バージョンを削除しました");
-        navigate("/songs");
+        
+        if (baseSong.other_versions && baseSong.other_versions.length > 0) {
+          const sorted = [...baseSong.other_versions].sort((a, b) => {
+            const dateA = a.release_date || '9999-12-31';
+            const dateB = b.release_date || '9999-12-31';
+            if (dateA !== dateB) return dateA.localeCompare(dateB);
+            return a.id - b.id;
+          });
+          navigate(`/songs/${sorted[0].id}`, { replace: true });
+        } else {
+          navigate("/songs");
+        }
       } else {
         const errorData = await res.json();
         alert(`削除に失敗しました: ${errorData.detail || '不明なエラー'}`);
@@ -554,20 +581,20 @@ const SongDetail = () => {
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' }}>
       {/* 戻るボタン & 編集ボタン */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <button 
           onClick={() => navigate(-1)}
           style={{
             display: 'flex', alignItems: 'center', gap: '8px', 
             background: 'none', border: 'none', color: 'var(--text-secondary)',
-            cursor: 'pointer', fontSize: '1rem'
+            cursor: 'pointer', fontSize: '1rem', whiteSpace: 'nowrap'
           }}
         >
           <ArrowLeft size={20} />
           戻る
         </button>
 
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           {isEditMode && (
             <button 
               onClick={handleDeleteVersion}
@@ -582,7 +609,8 @@ const SongDetail = () => {
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                whiteSpace: 'nowrap'
               }}
             >
               <Trash2 size={16} /> バージョンを削除
@@ -603,31 +631,35 @@ const SongDetail = () => {
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                whiteSpace: 'nowrap'
               }}
             >
               <Trash2 size={16} /> 楽曲(Work)を削除
             </button>
           )}
 
-          <button 
-            onClick={() => setIsEditMode(!isEditMode)} 
-            style={{ 
-              padding: '8px 16px', 
-              borderRadius: '20px', 
-              border: 'none', 
-              background: isEditMode ? 'var(--accent-primary)' : 'var(--bg-secondary)', 
-              color: isEditMode ? '#fff' : 'var(--text-primary)', 
-              cursor: 'pointer',
-              fontWeight: 600,
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
-          </button>
+          {isAuthenticated && (
+            <button 
+              onClick={() => setIsEditMode(!isEditMode)} 
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '20px', 
+                border: 'none', 
+                background: isEditMode ? 'var(--accent-primary)' : 'var(--bg-secondary)', 
+                color: isEditMode ? '#fff' : 'var(--text-primary)', 
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -639,17 +671,17 @@ const SongDetail = () => {
         <div style={{ fontSize: '0.9rem', color: 'var(--spotify-color)', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.1em' }}>
           楽曲 (WORK)
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
           {(isEditMode || isEditingWorkTitle) ? (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
               <input 
                 type="text" 
                 value={editWorkTitleValue} 
                 onChange={(e) => setEditWorkTitleValue(e.target.value)}
-                style={{ fontSize: '1.5rem', padding: '8px', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+                style={{ fontSize: '1.5rem', padding: '8px', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', flex: '1 1 200px', minWidth: '0' }}
               />
-              <button onClick={handleUpdateWorkTitle} style={{ background: 'var(--success-color)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>保存</button>
-              <button onClick={() => setIsEditingWorkTitle(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>キャンセル</button>
+              <button onClick={handleUpdateWorkTitle} style={{ background: 'var(--success-color)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>保存</button>
+              <button onClick={() => setIsEditingWorkTitle(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>キャンセル</button>
             </div>
           ) : (
             <div className="title-action-wrapper" style={{ alignItems: 'center' }}>
@@ -775,6 +807,19 @@ const SongDetail = () => {
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
                   {v.title} {v.version_name && `(${v.version_name})`}
                 </span>
+                {v.track_category && (
+                  <span style={{
+                    fontSize: '0.75rem',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    background: v.id === selectedVersionId ? 'rgba(255,255,255,0.2)' : 'var(--bg-primary)',
+                    color: v.id === selectedVersionId ? '#fff' : 'var(--text-secondary)',
+                    border: v.id === selectedVersionId ? 'none' : '1px solid var(--border-color)',
+                    flexShrink: 0
+                  }}>
+                    {v.track_category}
+                  </span>
+                )}
                 {!v.is_video && v.is_streaming_available === false && (
                   <span style={{color: 'var(--error-color)', fontSize: '0.75rem', border: '1px solid #ff4d4d', padding: '1px 4px', borderRadius: '4px', flexShrink: 0}}>
                     サブスク未解禁
@@ -805,6 +850,19 @@ const SongDetail = () => {
               <div className="title-action-wrapper">
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {displaySong.title}
+                  {displaySong.track_category && (
+                    <span style={{
+                      fontSize: '0.9rem',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border-color)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {displaySong.track_category}
+                    </span>
+                  )}
                   {!displaySong.is_video && displaySong.is_streaming_available === false && (
                     <span style={{color: 'var(--error-color)', fontSize: '0.9rem', border: '1px solid #ff4d4d', padding: '2px 6px', borderRadius: '4px', flexShrink: 0, whiteSpace: 'nowrap'}}>
                       サブスク未解禁
@@ -948,7 +1006,7 @@ const SongDetail = () => {
                 style={{
                   fontSize: '1rem', color: 'var(--text-primary)',
                   background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-                  borderRadius: '4px', padding: '8px 12px', width: '250px', outline: 'none'
+                  borderRadius: '4px', padding: '8px 12px', minWidth: '200px', flex: '1 1 auto', outline: 'none'
                 }}
               />
               <input
@@ -959,9 +1017,26 @@ const SongDetail = () => {
                 style={{
                   fontSize: '1rem', color: 'var(--text-primary)',
                   background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-                  borderRadius: '4px', padding: '8px 12px', width: '250px', outline: 'none'
+                  borderRadius: '4px', padding: '8px 12px', minWidth: '200px', flex: '1 1 auto', outline: 'none'
                 }}
               />
+              <select
+                value={editTrackCategoryValue}
+                onChange={(e) => setEditTrackCategoryValue(e.target.value)}
+                style={{
+                  fontSize: '1rem', color: 'var(--text-primary)',
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                  borderRadius: '4px', padding: '8px 12px', outline: 'none', cursor: 'pointer'
+                }}
+              >
+                <option value="">カテゴリなし</option>
+                <option value="Live">Live</option>
+                <option value="MV">MV</option>
+                <option value="Studio">Studio</option>
+                <option value="Acoustic">Acoustic</option>
+                <option value="Cover">Cover</option>
+                <option value="Instrumental">Instrumental</option>
+              </select>
               {!displaySong.is_video && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', cursor: 'pointer' }}>
                   <input 
@@ -977,6 +1052,7 @@ const SongDetail = () => {
                 const payload = {
                   title: editTitleValue,
                   version_name: editVersionNameValue.trim() || null,
+                  track_category: editTrackCategoryValue || null,
                   is_streaming_available: displaySong.is_video ? true : editStreamingValue
                 };
                 const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}`, {
