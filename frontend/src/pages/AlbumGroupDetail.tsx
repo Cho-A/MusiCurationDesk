@@ -460,19 +460,27 @@ const AlbumGroupDetail = () => {
     }
   };
 
-  const handleSaveDiscTitle = async (discId: number) => {
+  const handleSaveDiscTitle = async (discId: number | null, discNumber: number) => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`${API_BASE_URL}/albums/${selectedAlbumId}/discs/${discId}`, {
-        method: 'PUT',
+      const payload = discId 
+        ? { title: discTitleForm, media_format: discFormatForm }
+        : { disc_number: discNumber, title: discTitleForm, media_format: discFormatForm };
+      const url = discId 
+        ? `${API_BASE_URL}/albums/${selectedAlbumId}/discs/${discId}`
+        : `${API_BASE_URL}/albums/${selectedAlbumId}/discs`;
+      const method = discId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ title: discTitleForm, media_format: discFormatForm })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
-        toast.success("ディスク名を更新しました");
+        toast.success(discId ? "ディスク名を更新しました" : "ディスク情報を登録しました");
         setEditingDiscId(null);
         fetchAlbum();
       } else {
@@ -1278,7 +1286,7 @@ const AlbumGroupDetail = () => {
                   display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
                       <>
-                        {editingDiscId === discData?.id ? (
+                        {editingDiscId === (discData?.id || -discNum) ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                             <select
                               value={discFormatForm}
@@ -1299,7 +1307,7 @@ const AlbumGroupDetail = () => {
                               placeholder="ディスク名を入力..."
                               style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', width: '200px', fontSize: '0.9rem' }}
                             />
-                            <button onClick={() => handleSaveDiscTitle(discData!.id)} style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <button onClick={() => handleSaveDiscTitle(discData?.id || null, discNum)} style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                               <Save size={14} />
                             </button>
                             <button onClick={() => setEditingDiscId(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
@@ -1415,13 +1423,9 @@ const AlbumGroupDetail = () => {
                                 <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }} />
                                 <button
                                   onClick={() => {
-                                    if (discData?.id) {
-                                      setEditingDiscId(discData.id);
-                                      setDiscTitleForm(discData.title || '');
-                                      setDiscFormatForm(discData.media_format || 'CD');
-                                    } else {
-                                      toast.error("ディスクのメタデータが未登録です");
-                                    }
+                                    setEditingDiscId(discData?.id || -discNum);
+                                    setDiscTitleForm(discData?.title || '');
+                                    setDiscFormatForm(discData?.media_format || 'CD');
                                   }}
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
                                   title="ディスク名を編集"

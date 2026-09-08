@@ -633,6 +633,30 @@ def create_album_disc(album_id: int, request: schemas.AlbumDiscCreate, db: Sessi
     db.add(new_disc)
     db.commit()
     db.refresh(new_disc)
+
+    # メディアフォーマットに基づくis_videoの自動更新
+    if request.media_format:
+        format_lower = request.media_format.lower()
+        if format_lower in ["dvd", "blu-ray", "bd", "blu-ray disc", "video"]:
+            is_video = True
+        elif format_lower in ["cd", "digital", "vinyl", "cassette", "lp", "ep", "sacd"]:
+            is_video = False
+        else:
+            is_video = None
+
+        if is_video is not None:
+            tracks = (
+                db.query(models.AlbumTrack)
+                .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number == request.disc_number)
+                .all()
+            )
+            if tracks:
+                song_ids = list(set([t.song_id for t in tracks]))
+                db.query(models.Song).filter(models.Song.id.in_(song_ids)).update(
+                    {"is_video": is_video}, synchronize_session=False
+                )
+                db.commit()
+
     return new_disc
 
 
