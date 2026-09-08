@@ -52,24 +52,56 @@ class TestAlbumsAPI:
         assert data["main_title"] == "After Update"
         assert data["artist_id"] == 999
 
-    def test_update_album_disc(self, client, db_session):
-        """ディスク情報が更新できること"""
-        from backend.models import Album, AlbumDisc
+    def test_update_album_disc_media_format_side_effect(self, client, db_session):
+        """ディスクのフォーマット更新で、紐づく楽曲のis_videoフラグが連動して更新されること"""
+        from backend.models import Album, AlbumDisc, AlbumTrack, Song
         
         album = Album(main_title="Album For Disc Update")
         db_session.add(album)
         db_session.commit()
         db_session.refresh(album)
         
-        disc = AlbumDisc(album_id=album.id, disc_number=1, title="Original Disc Name")
+        disc = AlbumDisc(album_id=album.id, disc_number=1, title="Original Disc Name", media_format="CD")
         db_session.add(disc)
-        db_session.commit()
-        db_session.refresh(disc)
         
+        # 紐づく楽曲を作成
+        song = Song(title="Test Song", is_video=False)
+        db_session.add(song)
+        db_session.commit()
+        db_session.refresh(song)
+        
+        # トラックを作成
+        track = AlbumTrack(album_id=album.id, disc_number=1, track_number=1, song_id=song.id)
+        db_session.add(track)
+        db_session.commit()
+        
+        # タイトル変更のみ (media_formatは指定しない)
         update_response = client.put(
             f"/albums/{album.id}/discs/{disc.id}",
             json={"title": "Updated Disc Name"}
         )
         assert update_response.status_code == 200
-        data = update_response.json()
-        assert data["title"] == "Updated Disc Name"
+        assert update_response.json()["title"] == "Updated Disc Name"
+        
+        db_session.refresh(song)
+        assert song.is_video is False, "タイトルのみの更新でis_videoが変わってはならない"
+        
+        # media_formatをDVDに変更
+        update_response2 = client.put(
+            f"/albums/{album.id}/discs/{disc.id}",
+            json={"media_format": "DVD"}
+        )
+        assert update_response2.status_code == 200
+        
+        db_session.refresh(song)
+        assert song.is_video is True, "DVDに変更されたためis_videoがTrueになるべき"
+
+        # media_formatをCDに戻す
+        update_response3 = client.put(
+            f"/albums/{album.id}/discs/{disc.id}",
+            json={"media_format": "CD"}
+        )
+        assert update_response3.status_code == 200
+        
+        db_session.refresh(song)
+        assert song.is_video is False, "CDに変更されたためis_videoがFalseになるべき"
