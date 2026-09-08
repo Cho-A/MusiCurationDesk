@@ -660,6 +660,55 @@ def create_album_disc(album_id: int, request: schemas.AlbumDiscCreate, db: Sessi
     return new_disc
 
 
+# [POST] /albums/{album_id}/discs/reorder
+# ----------------------------------------------------
+@router.post("/{album_id}/discs/reorder", response_model=schemas.Album)
+def reorder_album_discs(album_id: int, request: schemas.AlbumDiscReorderRequest, db: Session = Depends(get_db)):
+    """
+    指定された「元のディスク番号の順序」に従い、ディスクとトラックの disc_number を更新します。
+    """
+    album = db.query(models.Album).filter(models.Album.id == album_id).first()
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+
+    old_order = request.original_disc_numbers
+    new_order_map = {old_disc: idx + 1 for idx, old_disc in enumerate(old_order)}
+    
+    # 影響を受けるディスクとトラックを取得
+    discs_to_update = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.album_id == album_id,
+        models.AlbumDisc.disc_number.in_(old_order)
+    ).all()
+    
+    tracks_to_update = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number.in_(old_order)
+    ).all()
+
+    # Step 1: Unique制約違反を避けるため、一旦負の値に退避する
+    for disc in discs_to_update:
+        disc.disc_number = -disc.disc_number
+    for track in tracks_to_update:
+        track.disc_number = -track.disc_number
+        
+    db.commit()
+
+    # Step 2: 負の値から新しい正のディスク番号に更新する
+    for disc in discs_to_update:
+        old_disc = -disc.disc_number
+        if old_disc in new_order_map:
+            disc.disc_number = new_order_map[old_disc]
+            
+    for track in tracks_to_update:
+        old_disc = -track.disc_number
+        if old_disc in new_order_map:
+            track.disc_number = new_order_map[old_disc]
+            
+    db.commit()
+    db.refresh(album)
+    return album
+
+
 # [POST] /albums/{album_id}/discs/{disc_number}/tracks
 # ----------------------------------------------------
 @router.post("/{album_id}/discs/{disc_number}/tracks", response_model=schemas.AlbumTrackForAlbum)

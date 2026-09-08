@@ -884,6 +884,10 @@ class AlbumDiscUpdate(BaseModel):
     edition: str | None = None
 
 
+class AlbumDiscReorderRequest(BaseModel):
+    original_disc_numbers: list[int]
+
+
 class AlbumDiscCreate(BaseModel):
     disc_number: int
     title: str | None = None

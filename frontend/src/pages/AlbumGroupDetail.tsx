@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff, Scissors, FileText, ArrowUpCircle } from 'lucide-react';
+import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff, Scissors, FileText, ArrowUpCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -684,6 +684,33 @@ const AlbumGroupDetail = () => {
       toast.error('エディションの更新に失敗しました');
     }
   };
+
+  const handleReorderDisc = async (direction: 'up' | 'down', currentIdx: number, uniqueDiscsArray: number[]) => {
+    if (!album) return;
+    const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+    if (targetIdx < 0 || targetIdx >= uniqueDiscsArray.length) return;
+
+    // Create a new array based on uniqueDiscsArray
+    const newOrder = [...uniqueDiscsArray];
+    // Swap
+    const temp = newOrder[currentIdx];
+    newOrder[currentIdx] = newOrder[targetIdx];
+    newOrder[targetIdx] = temp;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/albums/${album.id}/discs/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ original_disc_numbers: newOrder })
+      });
+      if (!res.ok) throw new Error("Failed to reorder discs");
+      toast.success("ディスクの順序を変更しました");
+      fetchAlbum();
+    } catch (err) {
+      console.error(err);
+      toast.error("ディスクの順序変更に失敗しました");
+    }
+  };
   const handleGroupMergeSubmit = async () => {
     if (!groupMergeTargetId || groupMergeSourceIds.length === 0) return;
     setBulkMergeLoading(true);
@@ -1271,7 +1298,7 @@ const AlbumGroupDetail = () => {
         </div>
         
         {/* Discごとにグループ化して表示 */}
-        {uniqueDiscs.map((discNum) => {
+        {uniqueDiscs.map((discNum, discIdx) => {
           const tracks = groupedTracks[discNum] || [];
           const discData = album?.discs?.find(d => d.disc_number === discNum);
           const formatStr = discData?.media_format && discData.media_format !== 'CD' ? ` (${discData.media_format})` : '';
@@ -1327,6 +1354,24 @@ const AlbumGroupDetail = () => {
 
                             {isEditMode && (
                               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                {discIdx > 0 && (
+                                  <button
+                                    onClick={() => handleReorderDisc('up', discIdx, uniqueDiscs)}
+                                    title="このディスクを上(前)に移動"
+                                    style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', borderRadius: '4px', marginRight: '4px' }}
+                                  >
+                                    <ArrowUp size={16} />
+                                  </button>
+                                )}
+                                {discIdx < uniqueDiscs.length - 1 && (
+                                  <button
+                                    onClick={() => handleReorderDisc('down', discIdx, uniqueDiscs)}
+                                    title="このディスクを下(後)に移動"
+                                    style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', borderRadius: '4px', marginRight: '8px' }}
+                                  >
+                                    <ArrowDown size={16} />
+                                  </button>
+                                )}
                                 <button
                                   onClick={async () => {
                                     if (!discData?.id) return;

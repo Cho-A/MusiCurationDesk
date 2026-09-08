@@ -154,3 +154,52 @@ class TestAlbumsAPI:
         assert disc2 is not None
         assert disc2.title == "Bonus DVD"
         assert disc2.media_format == "DVD"
+
+    def test_reorder_album_discs(self, client, db_session):
+        """ディスクの並び替え(reorder)が正しく行われること"""
+        from backend.models import Album, AlbumDisc, AlbumTrack
+        
+        album = Album(main_title="Album For Reorder")
+        db_session.add(album)
+        db_session.commit()
+        db_session.refresh(album)
+
+        # 3枚のディスクを作成
+        for i in range(1, 4):
+            disc = AlbumDisc(album_id=album.id, disc_number=i, title=f"Disc {i}")
+            db_session.add(disc)
+            # 各ディスクに1曲ずつトラックを作成
+            track = AlbumTrack(album_id=album.id, disc_number=i, track_number=1, song_id=1) # song_id=1 exists from conftest or will fail constraint? 
+            # Wait, song_id=1 might not exist. Let's create a dummy song.
+            db_session.add(track)
+
+        # song_id 制約を回避するためSongを作成
+        from backend.models import Song
+        song = Song(title="Dummy")
+        db_session.add(song)
+        db_session.commit()
+        db_session.refresh(song)
+
+        for track in db_session.query(AlbumTrack).filter(AlbumTrack.album_id == album.id).all():
+            track.song_id = song.id
+        db_session.commit()
+
+        # 並び替え: 元の[1, 2, 3] を [3, 1, 2] にする
+        # つまり、Disc 3 -> Disc 1, Disc 1 -> Disc 2, Disc 2 -> Disc 3
+        payload = {
+            "original_disc_numbers": [3, 1, 2]
+        }
+        response = client.post(f"/albums/{album.id}/discs/reorder", json=payload)
+        assert response.status_code == 200
+
+        # DBを確認
+        discs = db_session.query(AlbumDisc).filter(AlbumDisc.album_id == album.id).order_by(AlbumDisc.disc_number).all()
+        assert len(discs) == 3
+        assert discs[0].title == "Disc 3"
+        assert discs[1].title == "Disc 1"
+        assert discs[2].title == "Disc 2"
+
+        tracks = db_session.query(AlbumTrack).filter(AlbumTrack.album_id == album.id).order_by(AlbumTrack.disc_number).all()
+        assert tracks[0].disc_number == 1
+        assert tracks[1].disc_number == 2
+        assert tracks[2].disc_number == 3
