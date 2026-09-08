@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film, X, SplitSquareHorizontal } from 'lucide-react';
+import { ArrowLeft, Disc3, Edit2, Link as LinkIcon, Unlink, Music, Video, ListMusic, Check, Film, X, SplitSquareHorizontal, Trash2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import SongCreditEditor from '../components/SongCreditEditor';
 import SongTagEditor from '../components/SongTagEditor';
 import AttachWorkModal from '../components/AttachWorkModal';
@@ -503,41 +504,132 @@ const SongDetail = () => {
   const lyricists = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Lyricist').map((l: WorkArtistLink) => l.artist_name);
   const composers = (baseSong.work?.artist_links ?? []).filter((l: WorkArtistLink) => l.role_category === 'Composer').map((l: WorkArtistLink) => l.artist_name);
 
+  const handleDeleteWork = async () => {
+    if (!baseSong?.work_id) return;
+    if (!window.confirm("この楽曲（Work）を削除しますか？\n紐づいているバージョンやクレジットなどの情報も一緒に削除される可能性があります。\n本当に削除してよろしいですか？")) return;
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${API_BASE_URL}/works/${baseSong.work_id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        toast.success("楽曲（Work）を削除しました");
+        navigate('/songs');
+      } else {
+        alert("削除に失敗しました");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("通信エラーが発生しました");
+    }
+  };
+  const handleDeleteVersion = async () => {
+    if (!selectedVersionId) return;
+    if (!window.confirm("このバージョン（Song）を削除しますか？\n※アルバムのトラックとして紐づいている場合は削除できません。\n本当に削除してよろしいですか？")) return;
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        toast.success("バージョンを削除しました");
+        navigate("/songs");
+      } else {
+        const errorData = await res.json();
+        alert(`削除に失敗しました: ${errorData.detail || '不明なエラー'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("通信エラーが発生しました");
+    }
+  };
+
+
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', color: 'var(--text-primary)' }}>
-      {/* 戻るボタン */}
-      <button 
-        onClick={() => navigate(-1)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '8px', 
-          background: 'none', border: 'none', color: 'var(--text-secondary)',
-          cursor: 'pointer', marginBottom: '24px', fontSize: '1rem'
-        }}
-      >
-        <ArrowLeft size={20} />
-        戻る
-      </button>
-
+      {/* 戻るボタン & 編集ボタン */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <button 
-          onClick={() => setIsEditMode(!isEditMode)} 
-          style={{ 
-            padding: '8px 16px', 
-            borderRadius: '20px', 
-            border: 'none', 
-            background: isEditMode ? 'var(--accent-primary)' : 'var(--bg-secondary)', 
-            color: isEditMode ? '#fff' : 'var(--text-primary)', 
-            cursor: 'pointer',
-            fontWeight: 600,
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginLeft: '16px'
+          onClick={() => navigate(-1)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px', 
+            background: 'none', border: 'none', color: 'var(--text-secondary)',
+            cursor: 'pointer', fontSize: '1rem'
           }}
         >
-          <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
+          <ArrowLeft size={20} />
+          戻る
         </button>
 
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          {isEditMode && (
+            <button 
+              onClick={handleDeleteVersion}
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '20px', 
+                border: '1px solid #ef4444',
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: '#ef4444',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Trash2 size={16} /> バージョンを削除
+            </button>
+          )}
+
+          {(isEditMode && baseSong?.work_id) && (
+            <button 
+              onClick={handleDeleteWork}
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '20px', 
+                border: '1px solid #ef4444',
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: '#ef4444',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Trash2 size={16} /> 楽曲(Work)を削除
+            </button>
+          )}
+
+          <button 
+            onClick={() => setIsEditMode(!isEditMode)} 
+            style={{ 
+              padding: '8px 16px', 
+              borderRadius: '20px', 
+              border: 'none', 
+              background: isEditMode ? 'var(--accent-primary)' : 'var(--bg-secondary)', 
+              color: isEditMode ? '#fff' : 'var(--text-primary)', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Edit2 size={16} /> {isEditMode ? '編集モード終了' : '編集モード'}
+          </button>
+        </div>
+      </div>
 
       {/* 楽曲 (Work) 固定ヘッダー */}
       <div style={{ 
@@ -786,13 +878,13 @@ const SongDetail = () => {
                     <span style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 500 }}>
                       {mainArtists.length > 0 ? mainArtists.map((ma: any) => ma.artist_name).join(', ') : 'アーティスト未設定'}
                     </span>
-                    {/* <button 
+                    <button 
                       onClick={() => { setMainArtistSearchQuery(""); setIsEditingMainArtist(true); setMainArtistSearchResults([]); }}
                       style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
                       title="メインアーティストを編集"
                     >
                       <Edit2 size={14} />
-                    </button> */}
+                    </button>
                   </>
                 )}
               </div>
