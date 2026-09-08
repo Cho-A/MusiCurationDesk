@@ -670,6 +670,16 @@ def merge_album_disc_up(album_id: int, disc_id: int, db: Session = Depends(get_d
         models.AlbumTrack.disc_number == target_disc.disc_number
     ).all()
     
+    # 【修正】対象を先にすべてメモリ上に取得しておく（Identity Mapによるバグ回避）
+    shift_discs = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.album_id == album_id,
+        models.AlbumDisc.disc_number > target_disc.disc_number
+    ).all()
+    shift_tracks = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number > target_disc.disc_number
+    ).all()
+    
     # UNIQUE制約を回避するため一時的に大きな値に退避
     for track in target_tracks:
         track.disc_number += 1000
@@ -680,15 +690,6 @@ def merge_album_disc_up(album_id: int, disc_id: int, db: Session = Depends(get_d
         track.track_number += max_track
         
     # 以降のトラック・ディスクの連番を前倒しする
-    shift_discs = db.query(models.AlbumDisc).filter(
-        models.AlbumDisc.album_id == album_id,
-        models.AlbumDisc.disc_number > target_disc.disc_number
-    ).all()
-    shift_tracks = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number > target_disc.disc_number
-    ).all()
-    
     for d in shift_discs:
         d.disc_number += 1000
     for t in shift_tracks:
@@ -773,6 +774,9 @@ def split_album_disc(
         models.AlbumTrack.disc_number == disc_number,
         models.AlbumTrack.track_number >= split_from_track_number
     ).order_by(models.AlbumTrack.track_number.asc()).all()
+    
+    if not tracks_to_move:
+        raise HTTPException(status_code=400, detail="指定されたトラック番号以降のトラックが存在しません。")
     
     for t in tracks_to_move:
         t.disc_number += 1000

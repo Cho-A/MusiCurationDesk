@@ -123,3 +123,18 @@ def remove_credit_from_work(
     db.delete(db_link)
     db.commit()
     return None
+
+# [DELETE] /works/{work_id}
+# ----------------------------------------------------
+@router.delete("/{work_id}", status_code=204, tags=["MusicalWorks"])
+def delete_work(work_id: int, db: Session = Depends(get_db)):
+    """
+    指定された楽曲 (MusicalWork) を削除します。
+    """
+    db_work = db.query(models.MusicalWork).filter(models.MusicalWork.id == work_id).first()
+    if not db_work:
+        raise HTTPException(status_code=404, detail="Work not found")
+        
+    db.delete(db_work)
+    db.commit()
+    return {"status": "success"}

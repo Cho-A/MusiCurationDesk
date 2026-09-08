@@ -434,6 +434,34 @@ def update_song_main_artist(song_id: int, request: schemas.SongMainArtistUpdate,
     db.commit()
     return {"message": "メインアーティストを更新しました"}
 
+# [DELETE] /songs/{song_id}
+# ----------------------------------------------------
+@router.delete("/{song_id}", status_code=204, tags=["Songs"])
+def delete_song(song_id: int, db: Session = Depends(get_db)):
+    """
+    楽曲（バージョン）自体を削除します。
+    ※AlbumTrackなどに紐づいている場合は外部キー制約でエラーになるか、カスケード削除されます。
+    """
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+    if not db_song:
+        raise HTTPException(status_code=404, detail="楽曲が見つかりません。")
+
+    # SongArtistLinkの関連削除
+    db.query(models.SongArtistLink).filter(models.SongArtistLink.song_id == song_id).delete()
+    
+    # 関連するAlbumTrackがある場合は削除できないようにする（あるいはカスケード削除するか）
+    # 今回は安全のためAlbumTrackが紐づいている場合はエラーにする
+    tracks = db.query(models.AlbumTrack).filter(models.AlbumTrack.song_id == song_id).all()
+    if tracks:
+        raise HTTPException(status_code=400, detail="この楽曲はまだアルバムに紐づいているため削除できません。先にアルバムのトラックから除外してください。")
+
+    # 関連するタグ等の削除
+    db.query(models.TagSongLink).filter(models.TagSongLink.song_id == song_id).delete()
+
+    db.delete(db_song)
+    db.commit()
+    return
+
 
 # [DELETE] /songs/{song_id}/artists/{artist_id}
 # ----------------------------------------------------

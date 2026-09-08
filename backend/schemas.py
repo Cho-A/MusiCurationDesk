@@ -1206,6 +1206,7 @@ class CDImportRequest(BaseModel):
     title: str
     release_date: date | None = None
     album_type: str | None = "physical"
+    append_mode: bool = False
     discs: list[CDImportDisc] = []
     tracks: list[CDImportTrack]
 

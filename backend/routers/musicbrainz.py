@@ -7,7 +7,7 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
-from .. import dependencies, models
+from .. import dependencies, models, database
 from ..services import musicbrainz_fetcher
 from ..services.credit_fetcher import MusicImporter
 
@@ -47,8 +47,9 @@ def update_mb_job_progress(job_id: str, status: str, progress: int, message: str
 
 
 def background_import_mb_bulk(job_id: str, release_ids: List[str]):
-    db = models.SessionLocal()
+    db = None
     try:
+        db = database.SessionLocal()
         update_mb_job_progress(job_id, "running", 5, "Initializing MB bulk import...")
         importer = MusicImporter()
 
@@ -65,7 +66,8 @@ def background_import_mb_bulk(job_id: str, release_ids: List[str]):
     except Exception as e:
         update_mb_job_progress(job_id, "failed", 0, f"Error: {str(e)}")
     finally:
-        db.close()
+        if db:
+            db.close()
 
 
 @router.post("/import/bulk")
