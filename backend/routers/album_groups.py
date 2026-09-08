@@ -82,6 +82,28 @@ def update_album_group(group_id: int, group_update: schemas.AlbumGroupUpdate, db
             album.physical_release_date = update_data["release_date"]
             album.digital_release_date = update_data["release_date"]
 
+    # UIからアルバムグループのメインアーティストが変更された場合、紐づくすべての楽曲のメインアーティストも同期する
+    if "artist_id" in update_data and update_data["artist_id"] is not None:
+        new_artist_id = update_data["artist_id"]
+        # このアルバムグループに属するすべてのアルバムのトラックの楽曲IDを取得
+        albums = db.query(models.Album).filter(models.Album.album_group_id == group_id).all()
+        album_ids = [a.id for a in albums]
+        if album_ids:
+            tracks = db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id.in_(album_ids)).all()
+            song_ids = list(set([t.song_id for t in tracks]))
+            if song_ids:
+                # 既存の "Artist" ロールのリンクを削除
+                db.query(models.SongArtistLink).filter(
+                    models.SongArtistLink.song_id.in_(song_ids),
+                    models.SongArtistLink.role_category == "Artist"
+                ).delete(synchronize_session=False)
+                # 新しいアーティストリンクを作成
+                new_links = [
+                    models.SongArtistLink(song_id=sid, artist_id=new_artist_id, role_category="Artist")
+                    for sid in song_ids
+                ]
+                db.add_all(new_links)
+
     db.commit()
     db.refresh(db_group)
     return db_group

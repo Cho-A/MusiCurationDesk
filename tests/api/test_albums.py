@@ -203,3 +203,60 @@ class TestAlbumsAPI:
         assert tracks[0].disc_number == 1
         assert tracks[1].disc_number == 2
         assert tracks[2].disc_number == 3
+
+    def test_import_cd_apply_artist_to_existing_tracks(self, client, db_session):
+        """インポート時に apply_artist_to_tracks がTrueの場合、既存楽曲のメインアーティストも設定されること"""
+        from backend.models import Album, AlbumGroup, Artist, Song, SongArtistLink
+        from datetime import date
+
+        artist = Artist(name="Import Artist")
+        db_session.add(artist)
+        db_session.commit()
+        db_session.refresh(artist)
+
+        group = AlbumGroup(title="Target Group", release_date=date(2023, 1, 1), artist_id=artist.id)
+        db_session.add(group)
+        db_session.commit()
+        db_session.refresh(group)
+
+        album = Album(main_title="Target Album", album_group_id=group.id)
+        db_session.add(album)
+        db_session.commit()
+        db_session.refresh(album)
+
+        existing_song = Song(title="Existing Song")
+        db_session.add(existing_song)
+        db_session.commit()
+        db_session.refresh(existing_song)
+
+        payload = {
+            "target_album_id": album.id,
+            "title": "Target Album",
+            "apply_artist_to_tracks": True,
+            "discs": [
+                {
+                    "disc_number": 1,
+                    "title": "Disc 1",
+                    "media_format": "CD"
+                }
+            ],
+            "tracks": [
+                {
+                    "disc_number": 1,
+                    "track_number": 1,
+                    "title": "Existing Song",
+                    "song_id": existing_song.id
+                }
+            ]
+        }
+
+        response = client.post("/albums/import-cd", json=payload)
+        assert response.status_code == 200
+
+        # SongArtistLink が作成されているか確認
+        links = db_session.query(SongArtistLink).filter(
+            SongArtistLink.song_id == existing_song.id,
+            SongArtistLink.role_category == "Artist"
+        ).all()
+        assert len(links) == 1
+        assert links[0].artist_id == artist.id

@@ -259,12 +259,18 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                 db.flush()
                 song_id = new_song.id
 
-                # アルバムのメインアーティストを紐付ける (apply_artist_to_tracksがTrueの場合のみ)
-                if request.apply_artist_to_tracks and album.album_group and album.album_group.artist_id:
-                    artist_link = models.SongArtistLink(
-                        song_id=new_song.id, artist_id=album.album_group.artist_id, role_category="Artist"
-                    )
-                    db.add(artist_link)
+            # アルバムのメインアーティストを紐付ける (apply_artist_to_tracksがTrueの場合)
+            if request.apply_artist_to_tracks and album.album_group and album.album_group.artist_id:
+                # 既存の "Artist" リンクがあれば削除
+                db.query(models.SongArtistLink).filter(
+                    models.SongArtistLink.song_id == song_id,
+                    models.SongArtistLink.role_category == "Artist"
+                ).delete(synchronize_session=False)
+                
+                artist_link = models.SongArtistLink(
+                    song_id=song_id, artist_id=album.album_group.artist_id, role_category="Artist"
+                )
+                db.add(artist_link)
 
             # AlbumTrackを作成
             album_track = models.AlbumTrack(
