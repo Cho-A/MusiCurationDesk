@@ -142,6 +142,22 @@ const SongCard: React.FC<SongCardProps> = ({ song, onClick, isDashboard = false 
               🎵 音源
             </span>
           )}
+          {song.version_name && (
+            <span style={{ 
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              fontSize: '0.7rem', 
+              background: 'var(--bg-tertiary)', 
+              color: 'var(--text-secondary)',
+              padding: '2px 6px', 
+              borderRadius: '6px', 
+              border: '1px solid var(--border-color)', 
+              flexShrink: 0, 
+              fontWeight: 600,
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}>
+              {song.version_name}
+            </span>
+          )}
           {!song.is_video && song.is_streaming_available === false && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: '4px',

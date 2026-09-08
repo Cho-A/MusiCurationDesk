@@ -22,4 +22,5 @@ export interface SongCardData {
   work_id?: number | null;
   isrc?: string | null;
   primary_album_title?: string | null;
+  release_date?: string | null;
 }

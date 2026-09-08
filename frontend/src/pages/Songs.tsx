@@ -26,10 +26,12 @@ const Songs = () => {
   const [importingTrackId, setImportingTrackId] = useState<string | null>(null);
   const [, setHasSearched] = useState(false);
   
+  const [groupByWork, setGroupByWork] = useState(false);
+
   // 初期ロード時：最近追加された楽曲を取得
   const fetchLocalSongs = () => {
     setLoading(true);
-    fetch(`${API_BASE_URL}/songs/recent?limit=10`)
+    fetch(`${API_BASE_URL}/songs/recent?limit=50`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch songs');
         return res.json();
@@ -107,45 +109,87 @@ const Songs = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, searchMode]);
 
-  return (
-    <div style={{ padding: '48px 32px', maxWidth: '1200px', margin: '0 auto' }}>
+  const filterByWork = (songsList: SongCardData[]) => {
+    if (!groupByWork) return songsList;
+
+    // work_idごとに「最も古いバージョン」を代表曲として決定
+    const representativeSongs = new Map<number, SongCardData>();
+    
+    songsList.forEach(song => {
+      if (song.work_id == null) return;
       
+      const existing = representativeSongs.get(song.work_id);
+      if (!existing) {
+        representativeSongs.set(song.work_id, song);
+      } else {
+        // リリース日が古いもの、同じならIDが小さいものを優先
+        const date1 = song.release_date || '9999-12-31';
+        const date2 = existing.release_date || '9999-12-31';
+        if (date1 < date2) {
+          representativeSongs.set(song.work_id, song);
+        } else if (date1 === date2 && song.id < existing.id) {
+          representativeSongs.set(song.work_id, song);
+        }
+      }
+    });
+
+    const seenWorkIds = new Set<number>();
+    const result: SongCardData[] = [];
+    
+    for (const song of songsList) {
+      if (song.work_id == null) {
+        result.push(song);
+      } else {
+        if (!seenWorkIds.has(song.work_id)) {
+          seenWorkIds.add(song.work_id);
+          result.push(representativeSongs.get(song.work_id)!);
+        }
+      }
+    }
+    return result;
+  };
+
+  const displayedSearchResults = filterByWork(searchResults);
+  const displayedRecentSongs = filterByWork(songs);
+
+  return (
+    <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '60px' }}>
       <PageHeader
-        title="Songs"
-        subtitle="楽曲の検索・追加・管理を行います"
+        title="楽曲の管理"
+        subtitle="ローカルデータベースの検索やSpotifyからのインポートを行います"
       />
 
-      {/* 検索タブ切り替え */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', justifyContent: 'center' }}>
+      {/* タブ切り替え */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
         <button
           onClick={() => setSearchMode('local')}
           style={{
-            padding: '8px 16px',
-            background: searchMode === 'local' ? '#1DB954' : 'var(--bg-tertiary)',
-            color: searchMode === 'local' ? '#fff' : 'var(--text-primary)',
+            padding: '10px 24px',
+            borderRadius: '24px',
             border: 'none',
-            borderRadius: '20px',
+            background: searchMode === 'local' ? 'var(--primary-color)' : 'var(--bg-secondary)',
+            color: searchMode === 'local' ? '#000' : 'var(--text-secondary)',
+            fontWeight: 'bold',
             cursor: 'pointer',
-            fontWeight: 600,
-            transition: 'background 0.2s'
+            transition: 'all 0.2s',
           }}
         >
-          📂 データベース内
+          ローカル検索
         </button>
         <button
           onClick={() => setSearchMode('spotify')}
           style={{
-            padding: '8px 16px',
-            background: searchMode === 'spotify' ? '#1DB954' : 'var(--bg-tertiary)',
-            color: searchMode === 'spotify' ? '#fff' : 'var(--text-primary)',
+            padding: '10px 24px',
+            borderRadius: '24px',
             border: 'none',
-            borderRadius: '20px',
+            background: searchMode === 'spotify' ? '#1DB954' : 'var(--bg-secondary)',
+            color: searchMode === 'spotify' ? '#fff' : 'var(--text-secondary)',
+            fontWeight: 'bold',
             cursor: 'pointer',
-            fontWeight: 600,
-            transition: 'background 0.2s'
+            transition: 'all 0.2s',
           }}
         >
-          🎧 Spotifyから追加
+          Spotifyからインポート
         </button>
       </div>
 
@@ -219,15 +263,27 @@ const Songs = () => {
             onChange={setSearchQuery}
             placeholder="ローカルデータベースから楽曲を検索..."
           />
+          
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+              <input 
+                type="checkbox" 
+                checked={groupByWork} 
+                onChange={(e) => setGroupByWork(e.target.checked)} 
+                style={{ cursor: 'pointer' }}
+              />
+              楽曲(Work)単位で表示
+            </label>
+          </div>
 
           {searchQuery ? (
             <div>
               <h2 style={{ fontSize: '1.8rem', marginBottom: '24px', fontWeight: 700 }}>
                 "{searchQuery}" の検索結果
               </h2>
-              {searchResults.length > 0 ? (
+              {displayedSearchResults.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                  {searchResults.map(song => (
+                  {displayedSearchResults.map(song => (
                     <div key={song.id} style={{ height: '100%' }}>
                       <SongCard song={song} />
                     </div>
@@ -243,16 +299,20 @@ const Songs = () => {
                 <Clock size={24} color="#1DB954" />
                 最近追加された楽曲
               </h2>
-              {songs.length > 0 ? (
+              {displayedRecentSongs.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                  {songs.map(song => (
+                  {displayedRecentSongs.map(song => (
                     <div key={song.id} style={{ height: '100%' }}>
                       <SongCard song={song} />
                     </div>
                   ))}
                 </div>
               ) : (
-                <EmptyState icon={Music2} title="楽曲が見つかりませんでした" description="別のキーワードで検索するか、新しく楽曲を追加してください。" />
+                <EmptyState
+                  title="楽曲がありません"
+                  description="Spotifyタブから楽曲をインポートして、データベースを構築しましょう。"
+                  icon={Music2}
+                />
               )}
             </div>
           )}
