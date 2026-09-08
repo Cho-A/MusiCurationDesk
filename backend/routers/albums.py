@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session, joinedload
+from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 
 from backend.dependencies import get_db
 
@@ -186,7 +187,10 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
         if not request.target_album_id:
             # 新規作成の場合
             db_album_group = models.AlbumGroup(
-                title=request.title, release_date=request.release_date, album_type=request.album_type
+                title=request.title,
+                release_date=request.release_date,
+                album_type=request.album_type,
+                artist_id=request.artist_id,
             )
             db.add(db_album_group)
             db.commit()
@@ -218,6 +222,10 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                     album.physical_release_date = request.release_date
                 if request.album_type:
                     album.album_type = request.album_type
+                if request.artist_id:
+                    if album.album_group:
+                        album.album_group.artist_id = request.artist_id
+                    album.artist_id = request.artist_id
             db.commit()
 
         # ディスク情報の保存
@@ -232,7 +240,16 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             db.add(album_disc)
 
         # トラックリストを登録
+        seen_tracks = set()
         for track_req in request.tracks:
+            key = (track_req.disc_number, track_req.track_number)
+            if key in seen_tracks:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"リクエスト内に重複したトラックが含まれています: Disc {track_req.disc_number}, Track {track_req.track_number}",
+                )
+            seen_tracks.add(key)
+
             song_id = track_req.song_id
 
             # サブスク未解禁曲（song_idがnull）の場合は新規にSongレコードを作成
@@ -241,6 +258,13 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                 db.add(new_song)
                 db.flush()
                 song_id = new_song.id
+
+                # アルバムのメインアーティストを紐付ける (apply_artist_to_tracksがTrueの場合のみ)
+                if request.apply_artist_to_tracks and album.album_group and album.album_group.artist_id:
+                    artist_link = models.SongArtistLink(
+                        song_id=new_song.id, artist_id=album.album_group.artist_id, role_category="Artist"
+                    )
+                    db.add(artist_link)
 
             # AlbumTrackを作成
             album_track = models.AlbumTrack(
@@ -462,6 +486,29 @@ def update_album_disc(album_id: int, disc_id: int, request: schemas.AlbumDiscUpd
         disc.title = request.title
     if request.media_format is not None:
         disc.media_format = request.media_format
+
+        # ユーザー要望: DVDかBlu-rayに変更したとき、収録楽曲の区分も「映像」に自動変更
+        format_lower = request.media_format.lower()
+        if format_lower in ["dvd", "blu-ray", "bd", "blu-ray disc", "video"]:
+            is_video = True
+        elif format_lower in ["cd", "digital", "vinyl", "cassette", "lp", "ep", "sacd"]:
+            is_video = False
+        else:
+            is_video = None
+
+        if is_video is not None:
+            tracks = (
+                db.query(models.AlbumTrack)
+                .filter(models.AlbumTrack.album_id == disc.album_id, models.AlbumTrack.disc_number == disc.disc_number)
+                .all()
+            )
+
+            if tracks:
+                song_ids = list(set([t.song_id for t in tracks]))
+                db.query(models.Song).filter(models.Song.id.in_(song_ids)).update(
+                    {"is_video": is_video}, synchronize_session=False
+                )
+
     if request.edition is not None:
         disc.edition = request.edition
 
@@ -631,10 +678,12 @@ def delete_album_track(track_id: int, db: Session = Depends(get_db)):
 # ----------------------------------------------------
 @router.delete("/{album_id}/discs/{disc_id}")
 def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)):
-    disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.id == disc_id, models.AlbumDisc.album_id == album_id).first()
+    disc = (
+        db.query(models.AlbumDisc).filter(models.AlbumDisc.id == disc_id, models.AlbumDisc.album_id == album_id).first()
+    )
     if not disc:
         raise HTTPException(status_code=404, detail="Disc not found")
-        
+
     db.delete(disc)
     db.commit()
     return {"status": "success"}
@@ -645,66 +694,75 @@ def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)
 @router.post("/{album_id}/discs/{disc_id}/merge-up")
 def merge_album_disc_up(album_id: int, disc_id: int, db: Session = Depends(get_db)):
     # 対象ディスクを取得
-    target_disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.id == disc_id, models.AlbumDisc.album_id == album_id).first()
+    target_disc = (
+        db.query(models.AlbumDisc).filter(models.AlbumDisc.id == disc_id, models.AlbumDisc.album_id == album_id).first()
+    )
     if not target_disc:
         raise HTTPException(status_code=404, detail="Disc not found")
-        
+
     # 前のディスクを取得
-    prev_disc = db.query(models.AlbumDisc).filter(
-        models.AlbumDisc.album_id == album_id,
-        models.AlbumDisc.disc_number < target_disc.disc_number
-    ).order_by(models.AlbumDisc.disc_number.desc()).first()
-    
+    prev_disc = (
+        db.query(models.AlbumDisc)
+        .filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number < target_disc.disc_number)
+        .order_by(models.AlbumDisc.disc_number.desc())
+        .first()
+    )
+
     if not prev_disc:
         raise HTTPException(status_code=400, detail="Cannot merge because there is no previous disc")
-        
+
     # 前のディスクの最大トラック番号を取得
-    max_track = db.query(func.max(models.AlbumTrack.track_number)).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number == prev_disc.disc_number
-    ).scalar() or 0
-    
+    max_track = (
+        db.query(func.max(models.AlbumTrack.track_number))
+        .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number == prev_disc.disc_number)
+        .scalar()
+        or 0
+    )
+
     # 対象ディスクのトラックを更新
-    target_tracks = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number == target_disc.disc_number
-    ).all()
-    
+    target_tracks = (
+        db.query(models.AlbumTrack)
+        .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number == target_disc.disc_number)
+        .all()
+    )
+
     # 【修正】対象を先にすべてメモリ上に取得しておく（Identity Mapによるバグ回避）
-    shift_discs = db.query(models.AlbumDisc).filter(
-        models.AlbumDisc.album_id == album_id,
-        models.AlbumDisc.disc_number > target_disc.disc_number
-    ).all()
-    shift_tracks = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number > target_disc.disc_number
-    ).all()
-    
+    shift_discs = (
+        db.query(models.AlbumDisc)
+        .filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number > target_disc.disc_number)
+        .all()
+    )
+    shift_tracks = (
+        db.query(models.AlbumTrack)
+        .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number > target_disc.disc_number)
+        .all()
+    )
+
     # UNIQUE制約を回避するため一時的に大きな値に退避
     for track in target_tracks:
         track.disc_number += 1000
     db.flush()
-    
+
     for track in target_tracks:
         track.disc_number = prev_disc.disc_number
         track.track_number += max_track
-        
+
     # 以降のトラック・ディスクの連番を前倒しする
     for d in shift_discs:
         d.disc_number += 1000
     for t in shift_tracks:
         t.disc_number += 1000
     db.flush()
-    
+
     for d in shift_discs:
         d.disc_number -= 1001
     for t in shift_tracks:
         t.disc_number -= 1001
     db.flush()
-        
+
     # 対象ディスク自体を削除
     db.delete(target_disc)
-    
+
     db.commit()
     return {"status": "success"}
 
@@ -713,10 +771,7 @@ def merge_album_disc_up(album_id: int, disc_id: int, db: Session = Depends(get_d
 # ----------------------------------------------------
 @router.post("/{album_id}/discs/{disc_number}/split", response_model=schemas.Album)
 def split_album_disc(
-    album_id: int, 
-    disc_number: int, 
-    split_from_track_number: int = Body(..., embed=True), 
-    db: Session = Depends(get_db)
+    album_id: int, disc_number: int, split_from_track_number: int = Body(..., embed=True), db: Session = Depends(get_db)
 ):
     """
     指定したトラック番号以降のトラックを次のディスク(disc_number + 1)に移動します。
@@ -724,60 +779,64 @@ def split_album_disc(
     album = db.query(models.Album).filter(models.Album.id == album_id).first()
     if not album:
         raise HTTPException(status_code=404, detail="Album not found")
-        
+
     # 以降のディスク番号をずらす処理
-    existing_discs = db.query(models.AlbumDisc).filter(
-        models.AlbumDisc.album_id == album_id,
-        models.AlbumDisc.disc_number > disc_number
-    ).order_by(models.AlbumDisc.disc_number.desc()).all()
-    
+    existing_discs = (
+        db.query(models.AlbumDisc)
+        .filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number > disc_number)
+        .order_by(models.AlbumDisc.disc_number.desc())
+        .all()
+    )
+
     for d in existing_discs:
         d.disc_number += 1000
-        
-    existing_tracks_to_shift = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number > disc_number
-    ).all()
-    
+
+    existing_tracks_to_shift = (
+        db.query(models.AlbumTrack)
+        .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number > disc_number)
+        .all()
+    )
+
     for t in existing_tracks_to_shift:
         t.disc_number += 1000
-        
+
     db.flush()
-    
+
     for d in existing_discs:
         d.disc_number -= 999
     for t in existing_tracks_to_shift:
         t.disc_number -= 999
-        
+
     db.flush()
-        
+
     # 新しいディスクを作成
-    new_disc = models.AlbumDisc(
-        album_id=album_id,
-        disc_number=disc_number + 1,
-        title=None,
-        media_format="CD" 
-    )
+    new_disc = models.AlbumDisc(album_id=album_id, disc_number=disc_number + 1, title=None, media_format="CD")
     # 元のディスクのフォーマットを引き継ぐ
-    orig_disc = db.query(models.AlbumDisc).filter(
-        models.AlbumDisc.album_id == album_id,
-        models.AlbumDisc.disc_number == disc_number
-    ).first()
+    orig_disc = (
+        db.query(models.AlbumDisc)
+        .filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number == disc_number)
+        .first()
+    )
     if orig_disc:
         new_disc.media_format = orig_disc.media_format
-        
+
     db.add(new_disc)
-    
+
     # 対象のトラックを移動
-    tracks_to_move = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number == disc_number,
-        models.AlbumTrack.track_number >= split_from_track_number
-    ).order_by(models.AlbumTrack.track_number.asc()).all()
-    
+    tracks_to_move = (
+        db.query(models.AlbumTrack)
+        .filter(
+            models.AlbumTrack.album_id == album_id,
+            models.AlbumTrack.disc_number == disc_number,
+            models.AlbumTrack.track_number >= split_from_track_number,
+        )
+        .order_by(models.AlbumTrack.track_number.asc())
+        .all()
+    )
+
     if not tracks_to_move:
         raise HTTPException(status_code=400, detail="指定されたトラック番号以降のトラックが存在しません。")
-    
+
     for t in tracks_to_move:
         t.disc_number += 1000
     db.flush()
@@ -786,11 +845,10 @@ def split_album_disc(
     for i, t in enumerate(tracks_to_move, start=1):
         t.disc_number = disc_number + 1
         t.track_number = i
-        
+
     db.commit()
     db.refresh(album)
     return album
-
 
 
 # [POST] /albums/{album_id}/discs/{disc_number}/tracks/{track_number}/split
@@ -834,3 +892,41 @@ def split_album_track_to_new_version(album_id: int, disc_number: int, track_numb
     db.refresh(new_song)
 
     return schemas.SongMini.model_validate(new_song)
+
+
+# --- ★アルバム/ディスク単位でtrack_categoryを一括設定するAPI★ ---
+
+
+class BulkCategoryRequest(BaseModel):
+    track_category: str | None = None
+    disc_number: int | None = None  # Noneの場合はアルバム全体
+
+
+@router.post("/{album_id}/bulk-set-category")
+def bulk_set_track_category(
+    album_id: int,
+    req: BulkCategoryRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    指定アルバム（またはそのディスク）に収録されたすべての楽曲に
+    track_category を一括設定します。
+    disc_number が指定された場合はそのディスクのみ対象。
+    """
+    query = (
+        db.query(models.Song)
+        .join(models.AlbumTrack, models.AlbumTrack.song_id == models.Song.id)
+        .filter(models.AlbumTrack.album_id == album_id)
+    )
+    if req.disc_number is not None:
+        query = query.filter(models.AlbumTrack.disc_number == req.disc_number)
+
+    songs = query.all()
+    if not songs:
+        raise HTTPException(status_code=404, detail="対象楽曲が見つかりません")
+
+    for song in songs:
+        song.track_category = req.track_category
+
+    db.commit()
+    return {"updated": len(songs), "track_category": req.track_category}

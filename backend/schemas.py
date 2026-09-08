@@ -343,6 +343,7 @@ class SongCardData(BaseModel):
     is_streaming_available: bool = True
     track_category: str | None = None
     work_id: int | None = None
+    release_date: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -361,6 +362,7 @@ class SongCardData(BaseModel):
 
         cover_url = None
         album_title = None
+        release_date = None
         # To avoid lazy load N+1, it's better if routers pass dicts or ensure eager loading
         if getattr(data, "album_links", None):
             first_track = data.album_links[0] if data.album_links else None
@@ -371,6 +373,13 @@ class SongCardData(BaseModel):
                     else None
                 )
                 album_title = first_track.album.main_title
+                raw_date = None
+                if getattr(first_track.album, "album_group", None):
+                    raw_date = first_track.album.album_group.release_date
+                else:
+                    raw_date = first_track.album.physical_release_date
+                if raw_date is not None:
+                    release_date = raw_date.isoformat() if hasattr(raw_date, "isoformat") else str(raw_date)
 
         return {
             "id": data.id,
@@ -383,6 +392,7 @@ class SongCardData(BaseModel):
             "version_name": getattr(data, "version_name", None),
             "is_streaming_available": getattr(data, "is_streaming_available", True),
             "work_id": getattr(data, "work_id", None),
+            "release_date": release_date,
         }
 
     class Config:
@@ -1151,6 +1161,7 @@ class SongDetailMini(BaseModel):
     is_video: bool = False
     version_name: str | None = None
     is_streaming_available: bool = True
+    track_category: str | None = None
     primary_album_title: Optional[str] = None
     release_date: Optional[str] = None
 
@@ -1209,6 +1220,8 @@ class CDImportRequest(BaseModel):
     append_mode: bool = False
     discs: list[CDImportDisc] = []
     tracks: list[CDImportTrack]
+    artist_id: int | None = None
+    apply_artist_to_tracks: bool = True
 
 
 # 循環参照解決のため
