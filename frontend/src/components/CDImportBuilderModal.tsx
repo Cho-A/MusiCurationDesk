@@ -141,11 +141,103 @@ const AlbumSearchCombobox: React.FC<{
   );
 };
 
+const ArtistSearchCombobox: React.FC<{
+  artistId: number | null;
+  setArtistId: (id: number | null) => void;
+  applyToTracks: boolean;
+  setApplyToTracks: (val: boolean) => void;
+  showApplyCheckbox: boolean;
+}> = ({ setArtistId, applyToTracks, setApplyToTracks, showApplyCheckbox }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const search = async (q: string) => {
+    setQuery(q);
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/artists/?name_search=${encodeURIComponent(q)}&limit=5`);
+      if (res.ok) {
+        setResults(await res.json());
+      }
+    } catch(err) {}
+  };
+
+  const handleSelect = (a: any) => {
+    setArtistId(a.id);
+    setQuery(a.name);
+    setIsOpen(false);
+  };
+
+  const createArtist = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${API_BASE_URL}/artists/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name: query })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        handleSelect(data);
+      }
+    } catch(err) {}
+  };
+
+  return (
+    <div>
+      <div style={{ position: 'relative' }}>
+        <input 
+          type="text" 
+          placeholder="メインアーティストを検索 (空欄で未設定)"
+          value={query}
+          onChange={e => {
+            search(e.target.value);
+            if (e.target.value === '') {
+              setArtistId(null);
+              setIsOpen(false);
+            } else {
+              setIsOpen(true);
+            }
+          }}
+          onFocus={() => { if(query) setIsOpen(true); }}
+          style={{ width: '100%', padding: '12px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', boxSizing: 'border-box' }}
+        />
+        {isOpen && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, maxHeight: '250px', overflowY: 'auto', background: 'var(--bg-tertiary)', zIndex: 10, border: '1px solid var(--border-color)', borderRadius: '0 0 6px 6px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+            {results.map(a => (
+              <div key={a.id} onClick={() => handleSelect(a)} style={{ padding: '12px', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
+                {a.name}
+              </div>
+            ))}
+            {query.length >= 2 && !results.find(a => a.name.toLowerCase() === query.toLowerCase()) && (
+              <div onClick={createArtist} style={{ padding: '12px', cursor: 'pointer', color: 'var(--spotify-color)' }}>
+                + 「{query}」を新しく作成
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {showApplyCheckbox && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <input type="checkbox" checked={applyToTracks} onChange={e => setApplyToTracks(e.target.checked)} />
+          このアーティストを収録楽曲にもメインアーティストとして一括で紐づける (Various Artists等で個別に設定する場合はオフ)
+        </label>
+      )}
+    </div>
+  );
+};
+
 const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false, initialTargetAlbumId = null, baseDiscNumber = 0 }) => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [songs, setSongs] = useState<SongItem[]>([]);
   
   const [targetAlbumId, setTargetAlbumId] = useState<number | 'new'>(initialTargetAlbumId || 'new');
+  const [albumArtistId, setAlbumArtistId] = useState<number | null>(null);
+  const [applyArtistToTracks, setApplyArtistToTracks] = useState(true);
   const [matches, setMatches] = useState<TrackMatchState[]>([]);
   const [discs, setDiscs] = useState<DiscState[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -217,7 +309,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         if (exactMatch) {
           initialMatches.push({
             disc_number: computedDiscNumber,
-            track_number: parseInt(track.number, 10) || track.position,
+            track_number: track.position,
             mb_title: track.title,
             song_id: exactMatch.id,
             matched_title: exactMatch.title,
@@ -226,7 +318,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         } else {
           initialMatches.push({
             disc_number: computedDiscNumber,
-            track_number: parseInt(track.number, 10) || track.position,
+            track_number: track.position,
             mb_title: track.title,
             song_id: null,
             media_format: media.format
@@ -297,6 +389,8 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
       release_date: release.date ? `${release.date}-01-01`.slice(0,10) : null,
       album_type: "physical",
       append_mode: appendMode,
+      artist_id: albumArtistId,
+      apply_artist_to_tracks: applyArtistToTracks,
       discs: discs.map(d => ({
         disc_number: d.disc_number,
         title: d.title || null,
@@ -385,6 +479,18 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                 <div style={{ marginTop: '12px', color: 'var(--error-color)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <AlertCircle size={16} />
                   既存のアルバムを選択した場合、現在のSpotifyのトラックリストはすべて削除され、CD版のトラックリストで上書きされます。
+                </div>
+              )}
+              {targetAlbumId === 'new' && (
+                <div style={{ marginTop: '16px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: 'var(--text-secondary)' }}>メインアーティスト (任意)</h4>
+                  <ArtistSearchCombobox
+                    artistId={albumArtistId}
+                    setArtistId={setAlbumArtistId}
+                    applyToTracks={applyArtistToTracks}
+                    setApplyToTracks={setApplyArtistToTracks}
+                    showApplyCheckbox={albumArtistId !== null}
+                  />
                 </div>
               )}
             </div>

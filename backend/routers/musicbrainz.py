@@ -7,7 +7,7 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
-from .. import dependencies, models, database
+from .. import database, dependencies, models
 from ..services import musicbrainz_fetcher
 from ..services.credit_fetcher import MusicImporter
 
