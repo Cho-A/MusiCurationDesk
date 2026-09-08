@@ -13,6 +13,7 @@ interface MBMedia {
   format: string;
   track_count: number;
   tracks: MBTrack[];
+  title?: string;
 }
 
 export interface MBReleaseDetail {
@@ -144,7 +145,8 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
         position: dNum,
         format: 'CD',
         track_count: tracks.length,
-        tracks: tracks
+        tracks: tracks,
+        title: appendMode && releaseTitle ? releaseTitle : undefined
       });
     });
 

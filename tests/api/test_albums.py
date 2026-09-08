@@ -105,3 +105,52 @@ class TestAlbumsAPI:
         
         db_session.refresh(song)
         assert song.is_video is False, "CDに変更されたためis_videoがFalseになるべき"
+
+    def test_import_cd_append_mode_with_disc_title(self, client, db_session):
+        """スマートテキストインポート等からの追加インポート(append_mode=True)時、ディスクのタイトルが正しく保存されること"""
+        from backend.models import Album, AlbumGroup
+        from datetime import date
+        
+        group = AlbumGroup(title="Target Group", release_date=date(2023, 1, 1), album_type="Original")
+        db_session.add(group)
+        db_session.commit()
+        db_session.refresh(group)
+
+        album = Album(main_title="Target Album", album_group_id=group.id)
+        db_session.add(album)
+        db_session.commit()
+        db_session.refresh(album)
+
+        payload = {
+            "target_album_id": album.id,
+            "title": "Target Album",
+            "append_mode": True,
+            "discs": [
+                {
+                    "disc_number": 2,
+                    "title": "Bonus DVD",
+                    "media_format": "DVD"
+                }
+            ],
+            "tracks": [
+                {
+                    "disc_number": 2,
+                    "track_number": 1,
+                    "title": "Bonus Track 1"
+                }
+            ]
+        }
+
+        response = client.post("/albums/import-cd", json=payload)
+        assert response.status_code == 200
+
+        # ディスクが追加されてタイトルが保存されたか確認
+        from backend.models import AlbumDisc
+        disc2 = db_session.query(AlbumDisc).filter(
+            AlbumDisc.album_id == album.id, 
+            AlbumDisc.disc_number == 2
+        ).first()
+
+        assert disc2 is not None
+        assert disc2.title == "Bonus DVD"
+        assert disc2.media_format == "DVD"
