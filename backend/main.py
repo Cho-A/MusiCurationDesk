@@ -14,6 +14,7 @@ from .routers import (
     albums,
     artists,
     auth,
+    credits,
     dashboard,
     external,
     external_search,
@@ -42,6 +43,7 @@ app.include_router(links.router)
 app.include_router(tieups.router)
 app.include_router(external.router)
 app.include_router(musicbrainz.router)
+app.include_router(credits.router)
 app.include_router(works.router)
 app.include_router(album_groups.router)
 app.include_router(tags.router)

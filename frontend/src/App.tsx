@@ -5,9 +5,6 @@ import Dashboard from './pages/Dashboard';
 import Songs from './pages/Songs';
 import SongDetail from './pages/SongDetail';
 import TieupDetail from './pages/TieupDetail';
-import PerformanceDetail from './pages/PerformanceDetail';
-import TourDetail from './pages/TourDetail';
-import Performances from './pages/Performances';
 import Login from './pages/Login';
 import Legal from './pages/Legal';
 import Register from './pages/Register';
@@ -17,6 +14,7 @@ import Artists from './pages/Artists';
 import ArtistDetail from './pages/ArtistDetail';
 import Albums from './pages/Albums';
 import AlbumGroupDetail from './pages/AlbumGroupDetail';
+import BulkCreditEdit from './pages/BulkCreditEdit';
 import MusicBrainzImport from './pages/MusicBrainzImport';
 import ManualImport from './pages/ManualImport';
 import Terms from './pages/Terms';
@@ -36,15 +34,12 @@ function App() {
           <Route path="songs" element={<Songs />} />
           <Route path="songs/:id" element={<SongDetail />} />
           <Route path="tieups/:id" element={<TieupDetail />} />
-          <Route path="performances/:id" element={<PerformanceDetail />} />
-          <Route path="tours/:id" element={<TourDetail />} />
           <Route path="artists" element={<Artists />} />
           <Route path="artists/:id" element={<ArtistDetail />} />
           <Route path="albums" element={<Albums />} />
           <Route path="album-groups/:id" element={<AlbumGroupDetail />} />
-          <Route path="performances" element={<Performances />} />
-          <Route path="merchandise" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>グッズページ (準備中)</div>} />
           <Route path="analytics" element={<div style={{padding: '32px', fontSize: '1.5rem'}}>分析ページ (準備中)</div>} />
+          <Route path="credits/bulk" element={<BulkCreditEdit />} />
           {/* Admin Protected Routes */}
           <Route path="admin" element={<ProtectedRoute adminOnly={true} />}>
             <Route element={<AdminLayout />}>
