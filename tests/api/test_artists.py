@@ -48,7 +48,6 @@ class TestArtistsAPI:
         detail = detail_response.json()
         assert detail["name"] == "Detail Artist"
         assert "songs_contributed" in detail
-        assert "performances" in detail
 
     def test_link_artist_members(self, client):
         """グループアーティストとメンバーアーティストを紐付けられること"""

@@ -64,8 +64,6 @@ class ArtistDetail(BaseModel):
 
     # 追加
     albums: list["AlbumMini"] = []
-    performances: list["Performance"] = []
-    performances_as_guest: list["Performance"] = []
 
     class Config:
         from_attributes = True
@@ -580,69 +578,10 @@ class SongSearchResult(BaseModel):
 
 
 # --- Venue (会場) ---
-class VenueCreate(BaseModel):
-    name: str
-    prefecture: str | None = None
-    capacity: int | None = None
-    notes: str | None = None
 
 
-class Venue(BaseModel):
-    id: int
-    name: str
-    prefecture: str | None = None
-    capacity: int | None = None
-    notes: str | None = None
-
-    class Config:
-        from_attributes = True
 
 
-# --- PerformanceCreate (公演の基本情報) ---
-class PerformanceCreate(BaseModel):
-    artist_id: int | None = None
-    tour_id: int | None = None
-    performance_type: str
-    event_type: str | None = "Live"
-    name: str
-    date: dt_date
-    venue_id: int | None = None
-    open_time: dt_time | None = None
-    start_time: dt_time | None = None
-    end_time: dt_time | None = None
-    stage_name: str | None = None
-
-
-class PerformanceUpdate(BaseModel):
-    name: str | None = None
-    date: dt_date | None = None
-    event_type: str | None = None
-    venue_id: int | None = None
-    tour_id: int | None = None
-    performance_type: str | None = None
-    open_time: dt_time | None = None
-    start_time: dt_time | None = None
-    end_time: dt_time | None = None
-    stage_name: str | None = None
-
-
-# --- PerformanceRoster (公演参加者) ---
-class PerformanceRosterCreate(BaseModel):
-    performance_id: int
-    artist_id: int
-    role: str
-    context: str | None = None
-
-
-class PerformanceRoster(BaseModel):
-    id: int
-    performance_id: int
-    artist: ArtistMini
-    role: str
-    context: str | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class SongMini(BaseModel):
@@ -701,120 +640,30 @@ class SongUpdate(BaseModel):
     jasrac_title: str | None = None
 
 
-# --- SetlistEntry (セットリストのエントリ) ---
-class SetlistEntryCreate(BaseModel):
-    performance_id: int
-    song_id: int | None = None
-    entry_type: str = "SONG"
-    unresolved_song_name: str | None = None
-    order_index: int
-    notes: str | None = None  # "Encore 1", "Medley" など
+# --- Credits (Bulk Edit) ---
+
+class CreditBulkEditItem(BaseModel):
+    song_id: int
+    title: str
+    lyricists: list[str]
+    composers: list[str]
+    arrangers: list[str]
+
+class CreditBulkUpdateItem(BaseModel):
+    song_id: int
+    lyricists: list[str]
+    composers: list[str]
+    arrangers: list[str]
+
+class CreditBulkUpdateRequest(BaseModel):
+    updates: list[CreditBulkUpdateItem]
 
 
-class SetlistEntryUpdate(BaseModel):
-    song_id: int | None = None
-    entry_type: str = "SONG"
-    unresolved_song_name: str | None = None
-    order_index: int
-    notes: str | None = None
 
 
-class SetlistUpdatePayload(BaseModel):
-    entries: list[SetlistEntryUpdate]
 
 
-class SetlistEntry(BaseModel):
-    id: int
-    performance_id: int
-    song_id: int | None = None
-    entry_type: str
-    unresolved_song_name: str | None = None
-    order_index: int
-    notes: str | None = None
-    song: SongMini | None = None
 
-    class Config:
-        from_attributes = True
-
-
-class Tour(BaseModel):
-    id: int
-    name: str
-
-    class Config:
-        from_attributes = True
-
-
-# --- Tour (ツアー) ---
-class TourCreate(BaseModel):
-    name: str  # ツアーの名称 (例: "TOUR 2024『Catcher In The Spy』")
-
-
-# 3. Performance 詳細（親）スキーマ
-class Performance(BaseModel):
-    id: int
-    artist_id: int | None = None
-    main_artist: ArtistMini | None = None
-    tour: Tour | None = None
-    performance_type: str
-    event_type: str
-    name: str
-    date: date
-    venue: Venue | None = None
-    open_time: time | None = None
-    start_time: time | None = None
-    end_time: time | None = None
-    stage_name: str | None = None
-
-    # ★ ネストされた関連データの追加 ★
-    setlist_entries: list[SetlistEntry] = []  # SetlistEntry のリスト
-    roster_entries: list[PerformanceRoster] = []  # PerformanceRoster のリスト
-
-    class Config:
-        from_attributes = True
-
-
-# --- PerformanceSummary (一覧表示用) ---
-class PerformanceSummary(BaseModel):
-    id: int
-    artist_id: int
-
-    # 読み取りを高速化するため、ネストされたオブジェクトもサマリーに含める
-    main_artist: ArtistMini
-    tour: Tour | None = None
-
-    performance_type: str
-    name: str
-    date: date
-    venue: str | None = None
-
-    open_time: time | None = None
-    start_time: time | None = None
-    end_time: time | None = None
-    stage_name: str | None = None
-
-    class Config:
-        from_attributes = True
-
-
-# --- PerformanceDetail (詳細表示用) ---
-class PerformanceDetail(Performance):
-    setlist_entries: list[SetlistEntry] = []
-    roster_entries: list[PerformanceRoster] = []
-
-    class Config:
-        from_attributes = True
-
-
-# --- TourDetail (ツアー詳細・公演一覧用) ---
-class TourDetail(Tour):
-    performances: list[Performance] = []
-
-    class Config:
-        from_attributes = True
-
-
-# --- Album (アルバム・マスター) ---
 class AlbumCreate(BaseModel):
     album_group_id: int | None = None
     main_title: str
@@ -1020,51 +869,12 @@ class AlbumTrack(AlbumTrackBase):
 
 
 # --- Merchandise (グッズ・マスター) ---
-class MerchandiseCreate(BaseModel):
-    name: str
-    merch_type: str | None = None  # "Live Goods", "Album Bonus"
 
 
-class Merchandise(BaseModel):
-    id: int
-    name: str
-    merch_type: str | None = None
-
-    class Config:
-        from_attributes = True
 
 
-# --- Store (店舗マスター) ---
-class StoreCreate(BaseModel):
-    name: str  # "タワーレコード", "HMV"
 
 
-class Store(BaseModel):
-    id: int
-    name: str
-
-    class Config:
-        from_attributes = True
-
-
-# --- MerchandiseRelationship (グッズ関連) ---
-class MerchandiseRelationshipCreate(BaseModel):
-    merchandise_id_1: int  # 子 (例: Tシャツ(白))
-    merchandise_id_2: int  # 親 (例: Tシャツ)
-    relationship_type: str  # "Variation Of"
-
-
-class MerchandiseRelationship(BaseModel):
-    id: int
-    merchandise_id_1: int
-    merchandise_id_2: int
-    relationship_type: str
-
-    class Config:
-        from_attributes = True
-
-
-# --- User (ユーザー) ---
 class UserCreate(BaseModel):
     username: str
     email: EmailStr  # pydanticによるメール形式のバリデーション
@@ -1229,7 +1039,6 @@ class CDImportRequest(BaseModel):
 
 
 # 循環参照解決のため
-TourDetail.model_rebuild()
 AlbumTrackForAlbum.model_rebuild()
 SongDetail.model_rebuild()
 Song.model_rebuild()

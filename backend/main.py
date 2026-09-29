@@ -17,16 +17,12 @@ from .routers import (
     dashboard,
     external,
     external_search,
-    goods_and_stores,
     links,
     musicbrainz,
-    performances,
     songs,
     tags,
     tieups,
-    tours,
     users,
-    venues,
     works,
 )
 
@@ -43,17 +39,13 @@ database.create_db_and_tables()
 app.include_router(songs.router)
 app.include_router(artists.router)
 app.include_router(links.router)
-app.include_router(performances.router)
 app.include_router(tieups.router)
-app.include_router(tours.router)
 app.include_router(external.router)
 app.include_router(musicbrainz.router)
 app.include_router(works.router)
 app.include_router(album_groups.router)
 app.include_router(tags.router)
-app.include_router(venues.router)
 app.include_router(albums.router)
-app.include_router(goods_and_stores.router)
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(external_search.router)

@@ -38,15 +38,6 @@ artist_tags = Table(
     Column("tag_id", Integer, ForeignKey("tags.id"), primary_key=True),
 )
 
-# ★★★ TourMerchandise (中間テーブル) ★★★
-tour_merchandise = Table(
-    "tour_merchandise",
-    Base.metadata,
-    Column("tour_id", Integer, ForeignKey("tours.id"), primary_key=True),
-    Column("merchandise_id", Integer, ForeignKey("merchandise.id"), primary_key=True),
-)
-
-
 # --- 2. テーブル定義 (スキーマv2.5) ---
 
 
@@ -163,20 +154,6 @@ class Artist(Base):
         back_populates="artist",
     )
 
-    # 4. Performance: 1対多 (メインアクトとしての公演)
-    performances = relationship(
-        "Performance",
-        back_populates="main_artist",
-        cascade="all, delete-orphan",
-    )
-
-    # 5. PerformanceRoster: 多対多 (ゲスト/サポート参加)
-    roster_participations = relationship(
-        "PerformanceRoster",
-        back_populates="artist",
-        cascade="all, delete-orphan",
-    )
-
     # アーティストタグへのリレーション (中間テーブル song_tags を使用)
     tags = relationship(
         "Tag",
@@ -199,10 +176,6 @@ class Artist(Base):
                     }
                 )
         return members_list
-
-    @property
-    def performances_as_guest(self):
-        return [r.performance for r in self.roster_participations]
 
     @property
     def songs_contributed(self):
@@ -350,7 +323,6 @@ class Song(Base):
     work = relationship("MusicalWork", back_populates="songs")
     artist_links = relationship("SongArtistLink", back_populates="song")
     tieup_links = relationship("SongTieupLink", back_populates="song")
-    setlist_entries = relationship("SetlistEntry", back_populates="song")
     album_links = relationship("AlbumTrack", back_populates="song")
     works = relationship(
         "SongWorksLink", back_populates="song", cascade="all, delete-orphan", order_by="SongWorksLink.order_index"
@@ -406,106 +378,9 @@ class Tieup(Base):
     song_links = relationship("SongTieupLink", back_populates="tieup")
 
 
-class Tour(Base):
-    __tablename__ = "tours"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    performances = relationship("Performance", back_populates="tour")
-
-    merchandise = relationship(
-        "Merchandise",
-        secondary=tour_merchandise,
-        back_populates="tours",
-    )
 
 
-class PerformanceRoster(Base):
-    """公演参加者名簿
-    (サポートメンバー、ゲスト、対バン相手などを管理)
-    """
 
-    __tablename__ = "performance_roster"
-
-    id = Column(Integer, primary_key=True, index=True)
-    performance_id = Column(Integer, ForeignKey("performances.id"))
-    artist_id = Column(Integer, ForeignKey("artists.id"))
-    role = Column(String(100), nullable=False)  # 例: "Guest Vocal", "Opposing Act"
-    context = Column(String(255), nullable=True)  # 例: "〇〇曲のみ参加"
-
-    # UNIQUE(performance_id, artist_id)
-    __table_args__ = (UniqueConstraint("performance_id", "artist_id", name="_performance_artist_uc"),)
-
-    performance = relationship("Performance", back_populates="roster_entries")
-    artist = relationship("Artist")  # PerformanceRoster は Artist に紐づく
-
-
-class Venue(Base):
-    __tablename__ = "venues"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    prefecture = Column(String(50), nullable=True)  # 都道府県
-    capacity = Column(Integer, nullable=True)  # キャパシティ
-    notes = Column(Text, nullable=True)
-
-    performances = relationship("Performance", back_populates="venue")
-
-
-class Performance(Base):
-    __tablename__ = "performances"
-    id = Column(Integer, primary_key=True, index=True)
-    artist_id = Column(
-        Integer, ForeignKey("artists.id"), nullable=True
-    )  # 主催/メインアーティストがいない企画ステージに対応
-    tour_id = Column(Integer, ForeignKey("tours.id"), nullable=True)
-    performance_type = Column(String(100))  # "Tour", "One-Man", "Festival"
-    event_type = Column(String(50), default="Live")  # "Live", "Radio", "Signing", etc.
-    name = Column(String(255))
-    date = Column(Date)
-    venue_id = Column(Integer, ForeignKey("venues.id"), nullable=True)
-
-    open_time = Column(Time, nullable=True)  # 開場時間
-    start_time = Column(Time, nullable=True)  # 開演時間
-    end_time = Column(Time, nullable=True)  # 終演時間 (セッション終了)
-    stage_name = Column(String, nullable=True)  # フェスなどのステージ名
-
-    venue = relationship("Venue", back_populates="performances")
-
-    artist = relationship("Artist", back_populates="performances")
-    # performance.artist_id に紐づくアーティスト情報を取得するためのリレーションシップ
-    main_artist = relationship(
-        "Artist",
-        primaryjoin="Performance.artist_id == Artist.id",
-        uselist=False,
-        back_populates="performances",
-        overlaps="artist",
-    )
-    tour = relationship("Tour", back_populates="performances")
-    setlist_entries = relationship("SetlistEntry", back_populates="performance")
-    roster_entries = relationship(
-        "PerformanceRoster",
-        back_populates="performance",
-        cascade="all, delete-orphan",
-    )
-    setlist_entries = relationship(
-        "SetlistEntry",
-        back_populates="performance",
-        cascade="all, delete-orphan",
-        order_by="SetlistEntry.order_index",  # ★ ここでソート順を定義
-    )
-
-
-class SetlistEntry(Base):
-    __tablename__ = "setlist_entries"
-    id = Column(Integer, primary_key=True, index=True)
-    performance_id = Column(Integer, ForeignKey("performances.id"))
-    song_id = Column(Integer, ForeignKey("songs.id"), nullable=True)
-    entry_type = Column(String(50), default="SONG", nullable=False)  # "SONG", "SOLO", "JAM", "MC"
-    unresolved_song_name = Column(String(255), nullable=True)  # IDがない場合のテキスト
-    order_index = Column(Integer)
-    notes = Column(String(100), nullable=True)  # "Encore 1"
-
-    performance = relationship("Performance", back_populates="setlist_entries")
-    song = relationship("Song", back_populates="setlist_entries")
 
 
 class AlbumGroup(Base):
@@ -542,11 +417,6 @@ class Album(Base):
 
     album_tracks = relationship("AlbumTrack", back_populates="album", cascade="all, delete-orphan")
     discs = relationship("AlbumDisc", back_populates="album", cascade="all, delete-orphan")
-    store_bonuses = relationship(
-        "AlbumStoreBonus",
-        back_populates="album",
-        cascade="all, delete-orphan",
-    )
 
     # (アルバム同士の関連)
     relationships_as_parent = relationship(
@@ -676,115 +546,8 @@ class Tag(Base):
     )
 
 
-class Merchandise(Base):
-    """グッズ・マスター"""
-
-    __tablename__ = "merchandise"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, unique=True)
-    merch_type = Column(String(100), nullable=True)  # "Live Goods", "Album Bonus"
-
-    # このグッズが関連するツアー
-    tours = relationship(
-        "Tour",
-        secondary=tour_merchandise,
-        back_populates="merchandise",
-    )
-    # このグッズが関連する店舗特典
-    album_bonuses = relationship(
-        "AlbumStoreBonus",
-        back_populates="merchandise",
-        cascade="all, delete-orphan",
-    )
-
-    relationships_as_parent = relationship(
-        "MerchandiseRelationship",
-        primaryjoin="Merchandise.id == MerchandiseRelationship.merchandise_id_2",
-        back_populates="merch_parent",
-        cascade="all, delete-orphan",
-    )
-    relationships_as_child = relationship(
-        "MerchandiseRelationship",
-        primaryjoin="Merchandise.id == MerchandiseRelationship.merchandise_id_1",
-        back_populates="merch_child",
-        cascade="all, delete-orphan",
-    )
 
 
-class MerchandiseRelationship(Base):
-    """グッズ同士の関連 (親子関係・バリエーション)"""
-
-    __tablename__ = "merchandise_relationships"
-
-    id = Column(Integer, primary_key=True, index=True)
-    merchandise_id_1 = Column(
-        Integer,
-        ForeignKey("merchandise.id"),
-    )  # 子 (例: Tシャツ(白))
-    merchandise_id_2 = Column(Integer, ForeignKey("merchandise.id"))  # 親 (例: Tシャツ)
-    relationship_type = Column(String(100), nullable=False)  # "Variation Of"
-
-    __table_args__ = (
-        UniqueConstraint(
-            "merchandise_id_1",
-            "merchandise_id_2",
-            "relationship_type",
-            name="_merch_relationship_uc",
-        ),
-    )
-
-    # リレーションシップの定義
-    merch_child = relationship(
-        "Merchandise",
-        foreign_keys=[merchandise_id_1],
-        back_populates="relationships_as_parent",
-    )
-    merch_parent = relationship(
-        "Merchandise",
-        foreign_keys=[merchandise_id_2],
-        back_populates="relationships_as_child",
-    )
-
-
-class Store(Base):
-    """店舗マスター"""
-
-    __tablename__ = "stores"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, unique=True)
-
-    # この店舗が関連する特典
-    album_bonuses = relationship(
-        "AlbumStoreBonus",
-        back_populates="store",
-        cascade="all, delete-orphan",
-    )
-
-
-class AlbumStoreBonus(Base):
-    """店舗別特典紐付け (中間テーブル)"""
-
-    __tablename__ = "album_store_bonuses"
-
-    id = Column(Integer, primary_key=True, index=True)
-    album_id = Column(Integer, ForeignKey("albums.id"))
-    store_id = Column(Integer, ForeignKey("stores.id"))
-    merchandise_id = Column(Integer, ForeignKey("merchandise.id"))
-
-    __table_args__ = (
-        UniqueConstraint(
-            "album_id",
-            "store_id",
-            "merchandise_id",
-            name="_album_store_merch_uc",
-        ),
-    )
-
-    album = relationship("Album", back_populates="store_bonuses")
-    store = relationship("Store", back_populates="album_bonuses")
-    merchandise = relationship("Merchandise", back_populates="album_bonuses")
 
 
 class User(Base):
@@ -810,11 +573,6 @@ class User(Base):
         back_populates="owner",
         cascade="all, delete-orphan",
     )
-    attendance_history = relationship(
-        "UserAttendance",
-        back_populates="owner",
-        cascade="all, delete-orphan",
-    )
 
     refresh_tokens = relationship(
         "RefreshToken",
@@ -836,21 +594,6 @@ class UserPossession(Base):
     notes = Column(Text, nullable=True)
 
     owner = relationship("User", back_populates="possessions")
-
-
-class UserAttendance(Base):
-    """ユーザーの公演参加履歴 (v4.2)"""
-
-    __tablename__ = "user_attendance"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))  # ★ 誰の参加履歴か
-    performance_id = Column(Integer, ForeignKey("performances.id"))
-    status = Column(String(100), nullable=True)  # "Attended", "Ticketed"
-    notes = Column(Text, nullable=True)
-
-    owner = relationship("User", back_populates="attendance_history")
-    performance = relationship("Performance")  # (簡易的な一方向のリレーション)
 
 
 class RefreshToken(Base):

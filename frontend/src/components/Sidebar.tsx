@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Music, Users, CalendarDays, ShoppingBag, BarChart3, Settings, Disc3, User, LogOut, LogIn, UserPlus, Shield, X } from 'lucide-react';
+import { LayoutDashboard, Music, Users, BarChart3, Settings, Disc3, User, LogOut, LogIn, UserPlus, Shield, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ isOpen = true, closeSidebar }: { isOpen?: boolean, closeSidebar?: () => void }) => {
@@ -16,8 +16,6 @@ const Sidebar = ({ isOpen = true, closeSidebar }: { isOpen?: boolean, closeSideb
     { name: '楽曲', icon: <Music size={20} />, path: '/songs' },
     { name: 'アルバム', icon: <Disc3 size={20} />, path: '/albums' },
     { name: 'アーティスト', icon: <Users size={20} />, path: '/artists' },
-    { name: 'ライブ・公演', icon: <CalendarDays size={20} />, path: '/performances' },
-    { name: 'グッズ', icon: <ShoppingBag size={20} />, path: '/merchandise' },
     { name: '分析', icon: <BarChart3 size={20} />, path: '/analytics' },
     { name: '設定', icon: <Settings size={20} />, path: '/settings' },
   ];

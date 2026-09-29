@@ -26,13 +26,10 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     total_songs = db.query(models.Song).count()
     total_artists = db.query(models.Artist).count()
     total_albums = db.query(models.Album).count()
-    total_performances = db.query(models.Performance).count()
-
     return {
         "total_songs": total_songs,
         "total_artists": total_artists,
         "total_albums": total_albums,
-        "total_performances": total_performances,
     }
 
 
@@ -106,37 +103,8 @@ def get_personal_dashboard_stats(
         .count()
     )
 
-    # 2. 参加ライブ数
-    total_performances = (
-        db.query(models.UserAttendance).filter(models.UserAttendance.user_id == current_user.id).count()
-    )
-
-    # 3. ライブで聞いた総楽曲数（総体験数）
-    # UserAttendance に紐づく Performance の SetlistEntry をカウント
-    total_songs_experienced = (
-        db.query(models.SetlistEntry)
-        .join(models.Performance, models.SetlistEntry.performance_id == models.Performance.id)
-        .join(models.UserAttendance, models.Performance.id == models.UserAttendance.performance_id)
-        .filter(models.UserAttendance.user_id == current_user.id)
-        .count()
-    )
-
-    # 4. ライブで聞いたユニーク楽曲数
-    # song_id があるものをdistinctカウント
-    unique_songs_experienced = (
-        db.query(func.count(func.distinct(models.SetlistEntry.song_id)))
-        .join(models.Performance, models.SetlistEntry.performance_id == models.Performance.id)
-        .join(models.UserAttendance, models.Performance.id == models.UserAttendance.performance_id)
-        .filter(models.UserAttendance.user_id == current_user.id, models.SetlistEntry.song_id.isnot(None))
-        .scalar()
-        or 0
-    )
-
     return {
         "total_albums": total_albums,
-        "total_performances": total_performances,
-        "total_songs_experienced": total_songs_experienced,
-        "unique_songs_experienced": unique_songs_experienced,
     }
 
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Music, Disc, Mic2, Calendar, Play, Sparkles, Headphones } from 'lucide-react';
+import { Music, Disc, Mic2, Play, Sparkles, Headphones } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/PageHeader';
 import AlbumCard from '../components/AlbumCard';
@@ -15,7 +15,6 @@ interface DashboardStats {
   total_songs?: number;
   total_artists?: number;
   total_albums?: number;
-  total_performances?: number;
   total_songs_experienced?: number;
   unique_songs_experienced?: number;
 }
@@ -97,7 +96,6 @@ const Dashboard = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
           {isAuthenticated ? [
             { label: '所有アルバム', value: stats?.total_albums, icon: <Disc size={24} color="#1DB954" /> },
-            { label: 'ライブ公演', value: stats?.total_performances, icon: <Calendar size={24} color="#1DB954" /> },
             { label: '経験した楽曲', value: stats?.total_songs_experienced, icon: <Headphones size={24} color="#1DB954" /> },
             { label: 'ユニークな楽曲', value: stats?.unique_songs_experienced, icon: <Music size={24} color="#1DB954" /> },
           ].map((stat, idx) => (
@@ -120,7 +118,6 @@ const Dashboard = () => {
             { label: '合計楽曲数', value: stats?.total_songs, icon: <Music size={24} color="#1DB954" /> },
             { label: 'アルバム数', value: stats?.total_albums, icon: <Disc size={24} color="#1DB954" /> },
             { label: 'アーティスト数', value: stats?.total_artists, icon: <Mic2 size={24} color="#1DB954" /> },
-            { label: 'ライブ公演数', value: stats?.total_performances, icon: <Calendar size={24} color="#1DB954" /> },
           ].map((stat, idx) => (
             <div key={idx} style={{
               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',

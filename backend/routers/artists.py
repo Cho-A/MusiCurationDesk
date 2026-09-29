@@ -86,16 +86,8 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(get_db)):
             # 楽曲リンク (SongArtistLink) 情報とその先の楽曲タイトルをまとめて取得
             selectinload(models.Artist.song_links).joinedload(models.SongArtistLink.song),
             selectinload(models.Artist.albums),
-            selectinload(models.Artist.performances).joinedload(models.Performance.venue),
-            selectinload(models.Artist.performances).joinedload(models.Performance.tour),
             selectinload(models.Artist.tags),
             selectinload(models.Artist.relationships_as_a).joinedload(models.ArtistRelationship.artist_b),
-            selectinload(models.Artist.roster_participations)
-            .joinedload(models.PerformanceRoster.performance)
-            .joinedload(models.Performance.venue),
-            selectinload(models.Artist.roster_participations)
-            .joinedload(models.PerformanceRoster.performance)
-            .joinedload(models.Performance.tour),
         )
         .filter(models.Artist.id == artist_id)
         .first()
