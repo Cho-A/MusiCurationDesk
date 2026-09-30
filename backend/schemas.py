@@ -81,6 +81,11 @@ class ArtistDetail(BaseModel):
         populate_by_name = True
 
 
+class PaginatedSongs(BaseModel):
+    total: int
+    items: list[SongContribution]
+
+
 # --- ArtistMini (参照用) ---
 class ArtistMini(BaseModel):
     id: int

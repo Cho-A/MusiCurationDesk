@@ -110,7 +110,7 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(get_db)):
         .options(
             # Alias (別名義) 情報を取得
             selectinload(models.Artist.aliases),
-            # 楽曲リンク (SongArtistLink) 
+            # 楽曲リンク (SongArtistLink)
             selectinload(models.Artist.song_links),
             # 楽曲マスターリンク (WorkArtistLink)
             selectinload(models.Artist.work_links),
@@ -134,10 +134,10 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(get_db)):
 #
 # [GET] /artists/{artist_id}/songs
 # ----------------------------------------------------
-@router.get("/{artist_id}/songs", response_model=List[schemas.SongContribution], tags=["Artists"])
+@router.get("/{artist_id}/songs", response_model=schemas.PaginatedSongs, tags=["Artists"])
 def get_artist_contributions(
     artist_id: int,
-    role: str = Query(..., description="検索したい役割 (例: Composer)"),
+    role: str = Query("all", description="検索したい役割 (例: Composer, または全ての場合は all)"),
     skip: int = Query(0, description="スキップする件数"),
     limit: int = Query(20, description="取得する最大件数"),
     db: Session = Depends(get_db),
@@ -145,7 +145,7 @@ def get_artist_contributions(
     """
     特定のアーティストが関わった楽曲を、特定の役割 (role) でページネーションして取得します。
     """
-    from sqlalchemy import or_, and_
+    from sqlalchemy import and_, or_
     from sqlalchemy.orm import selectinload
 
     db_artist = db.query(models.Artist).filter(models.Artist.id == artist_id).first()
@@ -157,7 +157,15 @@ def get_artist_contributions(
         .outerjoin(models.SongArtistLink)
         .outerjoin(models.Song.work)
         .outerjoin(models.WorkArtistLink, models.Song.work_id == models.WorkArtistLink.work_id)
-        .filter(
+        .options(
+            selectinload(models.Song.album_links).joinedload(models.AlbumTrack.album),
+            selectinload(models.Song.artist_links),
+            selectinload(models.Song.work).selectinload(models.MusicalWork.artist_links),
+        )
+    )
+
+    if role and role != "all":
+        query = query.filter(
             or_(
                 and_(
                     models.SongArtistLink.artist_id == artist_id,
@@ -169,11 +177,16 @@ def get_artist_contributions(
                 ),
             )
         )
-        .distinct()
-        .options(selectinload(models.Song.album_links).joinedload(models.AlbumTrack.album))
-        .order_by(models.Song.id.desc())
-    )
+    else:
+        query = query.filter(
+            or_(
+                models.SongArtistLink.artist_id == artist_id,
+                models.WorkArtistLink.artist_id == artist_id,
+            )
+        )
 
+    query = query.distinct().order_by(models.Song.id.desc())
+    total_count = query.count()
     songs = query.offset(skip).limit(limit).all()
 
     output_list = []
@@ -182,17 +195,27 @@ def get_artist_contributions(
         if song.album_links and song.album_links[0].album:
             cover_image_url = song.album_links[0].album.cover_image_url
 
+        # この楽曲に対してアーティストが持っている全役割を計算
+        roles_set = set()
+        for link in song.artist_links:
+            if link.artist_id == artist_id:
+                roles_set.add(getattr(link, "role_category", None) or getattr(link, "role", "Unknown"))
+        if song.work:
+            for link in song.work.artist_links:
+                if link.artist_id == artist_id:
+                    roles_set.add(getattr(link, "role_category", None) or "Unknown")
+
         output_list.append(
             schemas.SongContribution(
                 song_id=song.id,
                 title=song.title,
-                roles=[role],
+                roles=list(roles_set),
                 cover_image_url=cover_image_url,
                 is_video=song.is_video,
             )
         )
 
-    return output_list
+    return {"total": total_count, "items": output_list}
 
 
 # --- ★アーティスト編集APIエンドポイント★ ---

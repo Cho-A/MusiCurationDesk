@@ -67,80 +67,82 @@ interface ArtistDetail {
   members: ArtistRelationshipInfo[];
 }
 
-// --- 役割別セクション（折り畳み可能） ---
-const RoleSection = ({
-  role, label, count, artistId
+// --- 楽曲リスト（ページネーション付き） ---
+const PaginatedSongsList = ({
+  artistId, roleCounts
 }: {
-  role: string;
-  label: string;
-  count: number;
   artistId: number;
+  roleCounts: { role: string; count: number; label: string }[];
 }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [role, setRole] = useState('all');
+  const [page, setPage] = useState(1);
   const [songs, setSongs] = useState<SongContribution[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(count > 0);
   const PAGE_SIZE = 20;
 
   useEffect(() => {
-    if (expanded && songs.length === 0 && count > 0) {
-      loadMore();
-    }
-  }, [expanded]);
-
-  const loadMore = async () => {
-    if (loading || !hasMore) return;
-    setLoading(true);
-    try {
-      const skip = songs.length;
-      const res = await fetch(`${API_BASE_URL}/artists/${artistId}/songs?role=${encodeURIComponent(role)}&skip=${skip}&limit=${PAGE_SIZE}`);
-      if (res.ok) {
-        const data = await res.json();
-        setSongs(prev => [...prev, ...data]);
-        if (songs.length + data.length >= count || data.length < PAGE_SIZE) {
-          setHasMore(false);
+    const fetchSongs = async () => {
+      setLoading(true);
+      try {
+        const skip = (page - 1) * PAGE_SIZE;
+        const res = await fetch(`${API_BASE_URL}/artists/${artistId}/songs?role=${encodeURIComponent(role)}&skip=${skip}&limit=${PAGE_SIZE}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSongs(data.items);
+          setTotal(data.total);
         }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    fetchSongs();
+  }, [artistId, role, page]);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div style={{
-      background: 'var(--bg-secondary)',
-      borderRadius: '12px',
-      border: '1px solid var(--border-color)',
-      overflow: 'hidden',
-      marginBottom: '12px',
-    }}>
-      {/* セクションヘッダー */}
-      <button
-        onClick={() => setExpanded(e => !e)}
-        style={{
-          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer',
-          color: 'var(--text-primary)', textAlign: 'left',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ width: '3px', height: '18px', background: 'var(--accent-primary)', borderRadius: '2px', flexShrink: 0 }} />
-          <span style={{ fontWeight: 700, fontSize: '1rem' }}>{label}</span>
-          <span style={{
-            background: 'var(--accent-primary)', color: '#fff',
-            padding: '2px 10px', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 700
-          }}>
-            {count}
-          </span>
-        </div>
-        {expanded ? <ChevronUp size={18} color="var(--text-secondary)" /> : <ChevronDown size={18} color="var(--text-secondary)" />}
-      </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* フィルター */}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <button
+          onClick={() => { setRole('all'); setPage(1); }}
+          style={{
+            padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--border-color)',
+            background: role === 'all' ? 'var(--primary-color)' : 'var(--bg-secondary)',
+            color: role === 'all' ? '#fff' : 'var(--text-primary)',
+            cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 600, fontSize: '0.9rem'
+          }}
+        >
+          すべて
+        </button>
+        {roleCounts.map(rc => (
+          <button
+            key={rc.role}
+            onClick={() => { setRole(rc.role); setPage(1); }}
+            style={{
+              padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--border-color)',
+              background: role === rc.role ? 'var(--primary-color)' : 'var(--bg-secondary)',
+              color: role === rc.role ? '#fff' : 'var(--text-primary)',
+              cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 600, fontSize: '0.9rem'
+            }}
+          >
+            {rc.label} ({rc.count})
+          </button>
+        ))}
+      </div>
 
-      {/* セクション本体 */}
-      {expanded && (
-        <div style={{ padding: '0 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {/* リスト本体 */}
+      {loading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          読み込み中...
+        </div>
+      ) : songs.length === 0 ? (
+        <EmptyState icon={Music} title="楽曲情報がありません" />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {songs.map(song => (
             <Link
               key={song.song_id}
@@ -150,49 +152,65 @@ const RoleSection = ({
               <div
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '10px 12px', borderRadius: '8px',
-                  transition: 'background 0.15s',
+                  padding: '12px 16px', borderRadius: '12px',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  transition: 'background 0.15s, transform 0.15s',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
               >
                 {song.cover_image_url ? (
-                  <img src={song.cover_image_url} alt={song.title} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                  <img src={song.cover_image_url} alt={song.title} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Music size={18} color="var(--text-tertiary)" />
+                  <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Music size={20} color="var(--text-tertiary)" />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
                     {song.title}
                   </div>
-                  {song.roles.length > 1 && (
-                    <div style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', marginTop: '2px' }}>
-                      {song.roles.join(' / ')}
+                  {song.roles.length > 0 && (
+                    <div style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem', marginTop: '4px' }}>
+                      役割: {song.roles.join(' / ')}
                     </div>
                   )}
                 </div>
               </div>
             </Link>
           ))}
+        </div>
+      )}
 
-          {/* 「もっと見る」ボタン */}
-          {hasMore && (
-            <button
-              onClick={e => { e.stopPropagation(); loadMore(); }}
-              disabled={loading}
-              style={{
-                marginTop: '8px', width: '100%', padding: '8px',
-                background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
-                borderRadius: '8px', color: 'var(--text-secondary)', cursor: 'pointer',
-                fontSize: '0.85rem', fontWeight: 500,
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? '読み込み中...' : `さらに読み込む (残り ${count - songs.length} 件)`}
-            </button>
-          )}
+      {/* ページネーション */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '24px' }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1 || loading}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)',
+              background: 'var(--bg-secondary)', color: page === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+              cursor: page === 1 ? 'not-allowed' : 'pointer', fontWeight: 600,
+            }}
+          >
+            前へ
+          </button>
+          <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            {page} / {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages || loading}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)',
+              background: 'var(--bg-secondary)', color: page === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+              cursor: page === totalPages ? 'not-allowed' : 'pointer', fontWeight: 600,
+            }}
+          >
+            次へ
+          </button>
         </div>
       )}
     </div>
@@ -649,14 +667,18 @@ const ArtistDetail = () => {
               </Link>
             </div>
 
-            {sortedRoles.length === 0 && <EmptyState icon={Music} title="楽曲情報がありません" />}
-
-            {sortedRoles.map(rc => {
-              const label = ROLE_LABEL[rc.role] || rc.role;
-              return (
-                <RoleSection key={rc.role} role={rc.role} label={label} count={rc.count} artistId={artist.id} />
-              );
-            })}
+            {sortedRoles.length === 0 ? (
+              <EmptyState icon={Music} title="楽曲情報がありません" />
+            ) : (
+              <PaginatedSongsList 
+                artistId={artist.id} 
+                roleCounts={sortedRoles.map(rc => ({
+                  role: rc.role,
+                  count: rc.count,
+                  label: ROLE_LABEL[rc.role] || rc.role
+                }))} 
+              />
+            )}
           </div>
         );
       })()}
