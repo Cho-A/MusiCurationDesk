@@ -63,24 +63,50 @@ interface ArtistDetail {
   albums: AlbumMini[];
   performances: Performance[];
   performances_as_guest: Performance[];
-  songs_contributed: SongContribution[];
+  role_counts: { role: string; count: number }[];
   members: ArtistRelationshipInfo[];
 }
 
 // --- 役割別セクション（折り畳み可能） ---
 const RoleSection = ({
-  label, songs
+  role, label, count, artistId
 }: {
   role: string;
   label: string;
-  songs: SongContribution[];
-  artistName: string;
+  count: number;
+  artistId: number;
 }) => {
-  const [expanded, setExpanded] = useState(true);
-  const PREVIEW_COUNT = 5;
-  const [showAll, setShowAll] = useState(songs.length <= PREVIEW_COUNT);
+  const [expanded, setExpanded] = useState(false);
+  const [songs, setSongs] = useState<SongContribution[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(count > 0);
+  const PAGE_SIZE = 20;
 
-  const displaySongs = showAll ? songs : songs.slice(0, PREVIEW_COUNT);
+  useEffect(() => {
+    if (expanded && songs.length === 0 && count > 0) {
+      loadMore();
+    }
+  }, [expanded]);
+
+  const loadMore = async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const skip = songs.length;
+      const res = await fetch(`${API_BASE_URL}/artists/${artistId}/songs?role=${encodeURIComponent(role)}&skip=${skip}&limit=${PAGE_SIZE}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSongs(prev => [...prev, ...data]);
+        if (songs.length + data.length >= count || data.length < PAGE_SIZE) {
+          setHasMore(false);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{
@@ -106,7 +132,7 @@ const RoleSection = ({
             background: 'var(--accent-primary)', color: '#fff',
             padding: '2px 10px', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 700
           }}>
-            {songs.length}
+            {count}
           </span>
         </div>
         {expanded ? <ChevronUp size={18} color="var(--text-secondary)" /> : <ChevronDown size={18} color="var(--text-secondary)" />}
@@ -115,7 +141,7 @@ const RoleSection = ({
       {/* セクション本体 */}
       {expanded && (
         <div style={{ padding: '0 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {displaySongs.map(song => (
+          {songs.map(song => (
             <Link
               key={song.song_id}
               to={`/songs/${song.song_id}`}
@@ -152,17 +178,19 @@ const RoleSection = ({
           ))}
 
           {/* 「もっと見る」ボタン */}
-          {!showAll && songs.length > PREVIEW_COUNT && (
+          {hasMore && (
             <button
-              onClick={e => { e.stopPropagation(); setShowAll(true); }}
+              onClick={e => { e.stopPropagation(); loadMore(); }}
+              disabled={loading}
               style={{
                 marginTop: '8px', width: '100%', padding: '8px',
                 background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
                 borderRadius: '8px', color: 'var(--text-secondary)', cursor: 'pointer',
                 fontSize: '0.85rem', fontWeight: 500,
+                opacity: loading ? 0.7 : 1,
               }}
             >
-              残り {songs.length - PREVIEW_COUNT} 件を表示
+              {loading ? '読み込み中...' : `さらに読み込む (残り ${count - songs.length} 件)`}
             </button>
           )}
         </div>
@@ -312,14 +340,7 @@ const ArtistDetail = () => {
     ...(artist.performances_as_guest || []).map(p => ({ ...p, isGuest: true }))
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Group songs by role
-  const songsByRole: Record<string, SongContribution[]> = {};
-  (artist.songs_contributed || []).forEach(song => {
-    song.roles.forEach(role => {
-      if (!songsByRole[role]) songsByRole[role] = [];
-      songsByRole[role].push(song);
-    });
-  });
+  const totalCredits = (artist.role_counts || []).reduce((sum, rc) => sum + rc.count, 0);
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 16px', paddingBottom: '60px' }}>
@@ -446,7 +467,7 @@ const ArtistDetail = () => {
             fontWeight: activeTab === 'songs' ? 700 : 500, cursor: 'pointer', fontSize: '1rem', transition: 'all 0.2s'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Music size={18} /> 楽曲 ({(artist.songs_contributed || []).length})</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Music size={18} /> 楽曲 ({totalCredits})</div>
         </button>
       </div>
 
@@ -593,36 +614,27 @@ const ArtistDetail = () => {
           'Producer': 'プロデュース',
         };
 
-        // 役割ごとにユニーク曲をまとめる
-        const roleMap: Record<string, SongContribution[]> = {};
-        (artist.songs_contributed || []).forEach(song => {
-          song.roles.forEach(role => {
-            if (!roleMap[role]) roleMap[role] = [];
-            // 同じ曲IDが重複しないようにする
-            if (!roleMap[role].find(s => s.song_id === song.song_id)) {
-              roleMap[role].push(song);
-            }
-          });
-        });
+        // 役割ごとの集計データを使用
+        const roleCounts = artist.role_counts || [];
 
         // 役割を優先順位順にソート
-        const sortedRoles = Object.keys(roleMap).sort((a, b) => {
-          const ai = ROLE_ORDER.indexOf(a);
-          const bi = ROLE_ORDER.indexOf(b);
-          if (ai === -1 && bi === -1) return a.localeCompare(b);
+        const sortedRoles = [...roleCounts].sort((a, b) => {
+          const ai = ROLE_ORDER.indexOf(a.role);
+          const bi = ROLE_ORDER.indexOf(b.role);
+          if (ai === -1 && bi === -1) return a.role.localeCompare(b.role);
           if (ai === -1) return 1;
           if (bi === -1) return -1;
           return ai - bi;
         });
 
-        const totalUnique = new Set((artist.songs_contributed || []).map(s => s.song_id)).size;
+        const totalCredits = roleCounts.reduce((sum, rc) => sum + rc.count, 0);
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {/* ヘッダー */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                {totalUnique} 曲に参加（役割別に整理）
+                計 {totalCredits} 件のクレジット（役割別に整理）
               </div>
               <Link
                 to={`/credits/bulk?artist_id=${id}`}
@@ -639,11 +651,10 @@ const ArtistDetail = () => {
 
             {sortedRoles.length === 0 && <EmptyState icon={Music} title="楽曲情報がありません" />}
 
-            {sortedRoles.map(role => {
-              const songs = roleMap[role];
-              const label = ROLE_LABEL[role] || role;
+            {sortedRoles.map(rc => {
+              const label = ROLE_LABEL[rc.role] || rc.role;
               return (
-                <RoleSection key={role} role={role} label={label} songs={songs} artistName={artist.name} />
+                <RoleSection key={rc.role} role={rc.role} label={label} count={rc.count} artistId={artist.id} />
               );
             })}
           </div>

@@ -179,43 +179,21 @@ class Artist(Base):
         return members_list
 
     @property
-    def songs_contributed(self):
-        """このアーティストが関わった全楽曲貢献情報を、楽曲単位でグルーピングして返します。"""
-        contributions_map = {}
-
-        def add_contribution(song, role):
-            song_id = song.id
-            if song_id not in contributions_map:
-                cover_image_url = None
-                if song.album_links:
-                    for album_link in song.album_links:
-                        if album_link.album and album_link.album.cover_image_url:
-                            cover_image_url = album_link.album.cover_image_url
-                            break
-
-                contributions_map[song_id] = {
-                    "song_id": song_id,
-                    "title": song.title,
-                    "roles": set(),
-                    "cover_image_url": cover_image_url,
-                    "is_video": song.is_video,
-                }
-            contributions_map[song_id]["roles"].add(role)
-
+    def role_counts(self):
+        """このアーティストの役割（作詞・作曲・編曲等）ごとの参加曲数（Work単位）を集計して返します。"""
+        counts = {}
         for link in self.song_links:
-            if link.song:
-                add_contribution(link.song, getattr(link, "role_category", None) or getattr(link, "role", "Unknown"))
-
+            role = getattr(link, "role_category", None) or getattr(link, "role", "Unknown")
+            counts[role] = counts.get(role, 0) + 1
+            
         for work_link in self.work_links:
-            if work_link.work and work_link.work.songs:
-                for song in work_link.work.songs:
-                    add_contribution(song, getattr(work_link, "role_category", None) or "Unknown")
-
-        # Set -> List 変換
-        for c in contributions_map.values():
-            c["roles"] = list(c["roles"])
-
-        return list(contributions_map.values())
+            role = getattr(work_link, "role_category", None) or "Unknown"
+            counts[role] = counts.get(role, 0) + 1
+            
+        # 降順でソート（件数が多い役割を上に）
+        result = [{"role": k, "count": v} for k, v in counts.items()]
+        result.sort(key=lambda x: x["count"], reverse=True)
+        return result
 
 
 class ArtistAlias(Base):

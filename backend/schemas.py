@@ -38,6 +38,14 @@ class AliasInfo(BaseModel):
         from_attributes = True
 
 
+class RoleCount(BaseModel):
+    role: str
+    count: int
+
+    class Config:
+        from_attributes = True
+
+
 # --- Song Contribution (楽曲貢献情報) ---
 class SongContribution(BaseModel):
     song_id: int
@@ -61,7 +69,7 @@ class ArtistDetail(BaseModel):
 
     # ★ 関連情報をリストとして含める ★
     aliases: list[AliasInfo] = []
-    songs_contributed: list[SongContribution] = []
+    role_counts: list[RoleCount] = []
     members: list["ArtistRelationshipInfo"] = []
     tags: list["TagInfo"] = []
 

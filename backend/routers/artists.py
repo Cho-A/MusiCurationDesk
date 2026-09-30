@@ -110,17 +110,10 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(get_db)):
         .options(
             # Alias (別名義) 情報を取得
             selectinload(models.Artist.aliases),
-            # 楽曲リンク (SongArtistLink) 情報とその先の楽曲タイトルをまとめて取得
-            selectinload(models.Artist.song_links)
-            .joinedload(models.SongArtistLink.song)
-            .selectinload(models.Song.album_links)
-            .joinedload(models.AlbumTrack.album),
-            # 楽曲貢献情報 (WorkArtistLink) 情報とその先の楽曲タイトルをまとめて取得
-            selectinload(models.Artist.work_links)
-            .joinedload(models.WorkArtistLink.work)
-            .selectinload(models.MusicalWork.songs)
-            .selectinload(models.Song.album_links)
-            .joinedload(models.AlbumTrack.album),
+            # 楽曲リンク (SongArtistLink) 
+            selectinload(models.Artist.song_links),
+            # 楽曲マスターリンク (WorkArtistLink)
+            selectinload(models.Artist.work_links),
             selectinload(models.Artist.albums),
             selectinload(models.Artist.tags),
             selectinload(models.Artist.relationships_as_a).joinedload(models.ArtistRelationship.artist_b),
@@ -141,54 +134,61 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(get_db)):
 #
 # [GET] /artists/{artist_id}/songs
 # ----------------------------------------------------
-@router.get("/{artist_id}/songs", response_model=List[schemas.SongSearchResult], tags=["Artists"])
+@router.get("/{artist_id}/songs", response_model=List[schemas.SongContribution], tags=["Artists"])
 def get_artist_contributions(
     artist_id: int,
-    # カンマ区切りの文字列でroleを受け取る (例: Composer,Lyricist)
-    roles: str | None = Query(None, description="検索したい役割 (カンマ区切り、例: Composer,Vocalist)"),
-    sort_by: str = Query("release_date", description="ソート基準 (release_date, title)"),
+    role: str = Query(..., description="検索したい役割 (例: Composer)"),
+    skip: int = Query(0, description="スキップする件数"),
+    limit: int = Query(20, description="取得する最大件数"),
     db: Session = Depends(get_db),
 ):
     """
-    特定のアーティストが関わった楽曲を、役割 (role) で絞り込んでリストとして取得します。
+    特定のアーティストが関わった楽曲を、特定の役割 (role) でページネーションして取得します。
     """
+    from sqlalchemy import or_, and_
+    from sqlalchemy.orm import selectinload
 
-    # 1. アーティストの存在チェック
     db_artist = db.query(models.Artist).filter(models.Artist.id == artist_id).first()
     if db_artist is None:
         raise HTTPException(status_code=404, detail="アーティストが見つかりません。")
 
-    # 2. クエリの組み立て開始 (Songテーブルを主軸にする)
     query = (
-        db.query(models.Song, models.SongArtistLink.role)
-        .join(models.SongArtistLink)
-        .filter(models.SongArtistLink.artist_id == artist_id)
+        db.query(models.Song)
+        .outerjoin(models.SongArtistLink)
+        .outerjoin(models.Song.work)
+        .outerjoin(models.WorkArtistLink, models.Song.work_id == models.WorkArtistLink.work_id)
+        .filter(
+            or_(
+                and_(
+                    models.SongArtistLink.artist_id == artist_id,
+                    models.SongArtistLink.role_category == role,
+                ),
+                and_(
+                    models.WorkArtistLink.artist_id == artist_id,
+                    models.WorkArtistLink.role_category == role,
+                ),
+            )
+        )
+        .distinct()
+        .options(selectinload(models.Song.album_links).joinedload(models.AlbumTrack.album))
+        .order_by(models.Song.id.desc())
     )
 
-    # 3. ロール (役割) のフィルタリング
-    if roles:
-        # 入力されたカンマ区切り文字列をリストに変換 (例: "Composer,Vocalist" -> ["Composer", "Vocalist"])
-        role_list = [r.strip() for r in roles.split(",")]
-        query = query.filter(models.SongArtistLink.role.in_(role_list))
+    songs = query.offset(skip).limit(limit).all()
 
-    # 4. ソート (発売日順は要件⑤を満たすため重要)
-    if sort_by == "release_date":
-        # 発売日が新しいもの順 (降順) にソート
-        query = query.order_by(models.Song.release_date.desc())
-    elif sort_by == "title":
-        query = query.order_by(models.Song.title)
-
-    # 5. データの取得
-    results = query.all()
-
-    # 6. Pydanticスキーマに合わせた最終的なデータ整形
     output_list = []
-    for song, role in results:
+    for song in songs:
+        cover_image_url = None
+        if song.album_links and song.album_links[0].album:
+            cover_image_url = song.album_links[0].album.cover_image_url
+
         output_list.append(
-            schemas.SongSearchResult(
-                id=song.id,
+            schemas.SongContribution(
+                song_id=song.id,
                 title=song.title,
-                role=role,  # ★ SongArtistLinkから取得したroleを付与
+                roles=[role],
+                cover_image_url=cover_image_url,
+                is_video=song.is_video,
             )
         )
 
