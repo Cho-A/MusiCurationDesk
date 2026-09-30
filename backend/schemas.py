@@ -13,6 +13,7 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 # APIが「受け取る」データの型 (登録時)
 class ArtistCreate(BaseModel):
     name: str
+    name_kana: str | None = None
     spotify_artist_id: str | None = None
     notes: str | None = None
 
@@ -21,6 +22,7 @@ class ArtistCreate(BaseModel):
 class Artist(BaseModel):
     id: int
     name: str
+    name_kana: str | None = None
     spotify_artist_id: str | None = None
     notes: str | None = None
 
@@ -52,6 +54,7 @@ class SongContribution(BaseModel):
 class ArtistDetail(BaseModel):
     id: int
     name: str
+    name_kana: str | None = None
     spotify_artist_id: str | None
     image_url: str | None
     notes: str | None
@@ -580,10 +583,6 @@ class SongSearchResult(BaseModel):
 # --- Venue (会場) ---
 
 
-
-
-
-
 class SongMini(BaseModel):
     id: int
     title: str
@@ -642,6 +641,7 @@ class SongUpdate(BaseModel):
 
 # --- Credits (Bulk Edit) ---
 
+
 class CreditBulkEditItem(BaseModel):
     song_id: int
     title: str
@@ -649,19 +649,16 @@ class CreditBulkEditItem(BaseModel):
     composers: list[str]
     arrangers: list[str]
 
+
 class CreditBulkUpdateItem(BaseModel):
     song_id: int
     lyricists: list[str]
     composers: list[str]
     arrangers: list[str]
 
+
 class CreditBulkUpdateRequest(BaseModel):
     updates: list[CreditBulkUpdateItem]
-
-
-
-
-
 
 
 class AlbumCreate(BaseModel):
@@ -869,10 +866,6 @@ class AlbumTrack(AlbumTrackBase):
 
 
 # --- Merchandise (グッズ・マスター) ---
-
-
-
-
 
 
 class UserCreate(BaseModel):

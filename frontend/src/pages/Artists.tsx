@@ -95,24 +95,15 @@ const Artists = () => {
       if (debouncedQuery.trim()) {
         params.append('name_search', debouncedQuery.trim());
       } else if (kanaFilter) {
-        params.append('name_search', kanaFilter);
+        const group = KANA_MAP[kanaFilter] || kanaFilter;
+        params.append('kana_group', group);
       }
 
       const res = await fetch(`${API_BASE_URL}/artists/?${params}`);
       if (res.ok) {
         const data: Artist[] = await res.json();
-        // 50音フィルターがある場合、フロントで追加絞り込み
-        let filtered = data;
-        if (kanaFilter && !debouncedQuery.trim()) {
-          // kanaGroupの各文字で始まるものを含む
-          const group = KANA_MAP[kanaFilter] || kanaFilter;
-          filtered = data.filter(a => {
-            const firstChar = a.name.charAt(0);
-            return group.includes(firstChar);
-          });
-        }
-        setSearchResults(filtered);
-        setTotalPages(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
+        setSearchResults(data);
+        setTotalPages(Math.max(1, Math.ceil(data.length / PAGE_SIZE)));
       }
     } catch (err) {
       console.error(err);

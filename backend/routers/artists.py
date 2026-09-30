@@ -23,12 +23,29 @@ def get_all_artists(
     skip: int = 0,
     limit: int = 100,
     name_search: str | None = Query(None, description="アーティスト名での部分一致検索"),
+    kana_group: str | None = Query(None, description="50音フィルタ用（例: 'やゆよ' または 'A'）"),
     db: Session = Depends(get_db),
 ):
-    """全アーティストのリストを取得する（name_searchで絞り込み可）"""
+    """全アーティストのリストを取得する（name_searchやkana_groupで絞り込み可）"""
     query = db.query(models.Artist)
+
     if name_search:
-        query = query.filter(models.Artist.name.ilike(f"%{name_search}%"))
+        from sqlalchemy import or_
+
+        query = query.filter(
+            or_(models.Artist.name.ilike(f"%{name_search}%"), models.Artist.name_kana.ilike(f"%{name_search}%"))
+        )
+
+    if kana_group:
+        from sqlalchemy import or_
+
+        conditions = []
+        chars = "abcdefghijklmnopqrstuvwxyz" if kana_group == "A" else kana_group
+        for ch in chars:
+            conditions.append(models.Artist.name_kana.ilike(f"{ch}%"))
+            conditions.append(models.Artist.name.ilike(f"{ch}%"))
+        query = query.filter(or_(*conditions))
+
     artists = query.order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
     return artists
 
@@ -51,7 +68,9 @@ def create_artist(artist: schemas.ArtistCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"アーティスト名 '{artist.name}' は既に使用されています。")
 
     # 1. 受け取ったデータ (artist) を、DBモデル (models.Artist) に変換
-    new_artist = models.Artist(name=artist.name, spotify_artist_id=artist.spotify_artist_id, notes=artist.notes)
+    new_artist = models.Artist(
+        name=artist.name, name_kana=artist.name_kana, spotify_artist_id=artist.spotify_artist_id, notes=artist.notes
+    )
 
     # 2. データベースに追加 (INSERT)
     db.add(new_artist)

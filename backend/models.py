@@ -103,6 +103,7 @@ class Artist(Base):
     __tablename__ = "artists"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, unique=True)
+    name_kana = Column(String(255), nullable=True, index=True)  # 読み仮名（50音インデックス用）
     spotify_artist_id = Column(String(100), nullable=True)
     image_url = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
@@ -378,11 +379,6 @@ class Tieup(Base):
     song_links = relationship("SongTieupLink", back_populates="tieup")
 
 
-
-
-
-
-
 class AlbumGroup(Base):
     __tablename__ = "album_groups"
     id = Column(Integer, primary_key=True, index=True)
@@ -544,10 +540,6 @@ class Tag(Base):
         secondary=song_tags,
         back_populates="tags",
     )
-
-
-
-
 
 
 class User(Base):

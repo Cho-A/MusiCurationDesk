@@ -54,6 +54,7 @@ interface TagInfo {
 interface ArtistDetail {
   id: number;
   name: string;
+  name_kana: string | null;
   spotify_artist_id: string | null;
   image_url: string | null;
   notes: string | null;
@@ -183,6 +184,7 @@ const ArtistDetail = () => {
 
 
   const [isEditing, setIsEditing] = useState(false);
+  const [editNameKana, setEditNameKana] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
   const [editSpotifyId, setEditSpotifyId] = useState("");
   
@@ -206,6 +208,7 @@ const ArtistDetail = () => {
       .then(res => res.json())
       .then(data => {
         setArtist(data);
+        setEditNameKana(data.name_kana || "");
         setEditImageUrl(data.image_url || "");
         setEditSpotifyId(data.spotify_artist_id || "");
       })
@@ -226,7 +229,7 @@ const ArtistDetail = () => {
       await fetch(`${API_BASE_URL}/artists/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: editImageUrl, spotify_artist_id: editSpotifyId })
+        body: JSON.stringify({ name: artist?.name, name_kana: editNameKana, image_url: editImageUrl, spotify_artist_id: editSpotifyId })
       });
       setIsEditing(false);
       fetchArtist();
@@ -658,6 +661,16 @@ const ArtistDetail = () => {
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>読み仮名 (50音検索用)</label>
+                <input 
+                  type="text" 
+                  value={editNameKana}
+                  onChange={(e) => setEditNameKana(e.target.value)}
+                  placeholder="例: ゆにぞんすくえあがーでん"
+                  style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '12px', borderRadius: '8px', boxSizing: 'border-box' }}
+                />
+              </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>画像URL (アー写・ロゴ等)</label>
                 <input 
