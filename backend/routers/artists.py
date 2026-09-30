@@ -19,9 +19,17 @@ router = APIRouter(
 # [GET] /artists/
 # ----------------------------------------------------
 @router.get("/", response_model=List[schemas.ArtistDetail], tags=["Artists"])
-def get_all_artists(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """全アーティストのリストを取得する"""
-    artists = db.query(models.Artist).order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
+def get_all_artists(
+    skip: int = 0,
+    limit: int = 100,
+    name_search: str | None = Query(None, description="アーティスト名での部分一致検索"),
+    db: Session = Depends(get_db),
+):
+    """全アーティストのリストを取得する（name_searchで絞り込み可）"""
+    query = db.query(models.Artist)
+    if name_search:
+        query = query.filter(models.Artist.name.ilike(f"%{name_search}%"))
+    artists = query.order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
     return artists
 
 
