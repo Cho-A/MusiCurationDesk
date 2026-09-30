@@ -181,33 +181,40 @@ class Artist(Base):
     @property
     def songs_contributed(self):
         """このアーティストが関わった全楽曲貢献情報を、楽曲単位でグルーピングして返します。"""
-        # 貢献データを {song_id: {title: ..., roles: [...]}, ...} の形式で集計
         contributions_map = {}
 
-        for link in self.song_links:
-            song_id = link.song_id
-
+        def add_contribution(song, role):
+            song_id = song.id
             if song_id not in contributions_map:
-                # Find cover image URL if available
                 cover_image_url = None
-                if link.song.album_links:
-                    for album_link in link.song.album_links:
+                if song.album_links:
+                    for album_link in song.album_links:
                         if album_link.album and album_link.album.cover_image_url:
                             cover_image_url = album_link.album.cover_image_url
                             break
 
                 contributions_map[song_id] = {
                     "song_id": song_id,
-                    "title": link.song.title,
-                    "roles": [],
+                    "title": song.title,
+                    "roles": set(),
                     "cover_image_url": cover_image_url,
-                    "is_video": link.song.is_video,
+                    "is_video": song.is_video,
                 }
+            contributions_map[song_id]["roles"].add(role)
 
-            # 役割をリストに追加
-            contributions_map[song_id]["roles"].append(link.role)
+        for link in self.song_links:
+            if link.song:
+                add_contribution(link.song, getattr(link, "role_category", None) or getattr(link, "role", "Unknown"))
 
-        # マップの 'values' (値) をリストとして返します。これが Pydantic スキーマに適合します。
+        for work_link in self.work_links:
+            if work_link.work and work_link.work.songs:
+                for song in work_link.work.songs:
+                    add_contribution(song, getattr(work_link, "role_category", None) or "Unknown")
+
+        # Set -> List 変換
+        for c in contributions_map.values():
+            c["roles"] = list(c["roles"])
+
         return list(contributions_map.values())
 
 

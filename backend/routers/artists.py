@@ -111,7 +111,16 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(get_db)):
             # Alias (別名義) 情報を取得
             selectinload(models.Artist.aliases),
             # 楽曲リンク (SongArtistLink) 情報とその先の楽曲タイトルをまとめて取得
-            selectinload(models.Artist.song_links).joinedload(models.SongArtistLink.song),
+            selectinload(models.Artist.song_links)
+            .joinedload(models.SongArtistLink.song)
+            .selectinload(models.Song.album_links)
+            .joinedload(models.AlbumTrack.album),
+            # 楽曲貢献情報 (WorkArtistLink) 情報とその先の楽曲タイトルをまとめて取得
+            selectinload(models.Artist.work_links)
+            .joinedload(models.WorkArtistLink.work)
+            .selectinload(models.MusicalWork.songs)
+            .selectinload(models.Song.album_links)
+            .joinedload(models.AlbumTrack.album),
             selectinload(models.Artist.albums),
             selectinload(models.Artist.tags),
             selectinload(models.Artist.relationships_as_a).joinedload(models.ArtistRelationship.artist_b),
