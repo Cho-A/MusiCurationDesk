@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.dependencies import get_db
 
 from .. import dependencies, models
+from ..database import SessionLocal
 from ..services.credit_fetcher import MusicImporter
 from ..services.spotify_client import SpotifyClient
 
@@ -35,7 +36,7 @@ def get_import_progress(job_id: str):
 
 def background_import_artist(job_id: str, spotify_artist_id: str):
     # 背景タスク専用の新しいDBセッションを開く
-    db = models.SessionLocal()
+    db = SessionLocal()
     try:
         update_job_progress(job_id, "running", 5, "Initializing artist import...")
         importer = MusicImporter()
@@ -58,7 +59,7 @@ def background_import_artist(job_id: str, spotify_artist_id: str):
 
 
 def background_import_playlist(job_id: str, spotify_playlist_id: str):
-    db = models.SessionLocal()
+    db = SessionLocal()
     try:
         update_job_progress(job_id, "running", 5, "Initializing playlist import...")
         importer = MusicImporter()
@@ -80,7 +81,7 @@ def background_import_playlist(job_id: str, spotify_playlist_id: str):
 
 
 def background_import_album(job_id: str, spotify_album_id: str):
-    db = models.SessionLocal()
+    db = SessionLocal()
     try:
         update_job_progress(job_id, "running", 5, "Initializing album import...")
         importer = MusicImporter()
