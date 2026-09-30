@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPin, Music, Disc3 } from 'lucide-react';
+import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPin, Music, Disc3, ChevronDown, ChevronUp } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
-import SongCard from '../components/SongCard';
-import type { SongCardData } from '../types/models';
 import { API_BASE_URL } from '../api/config';
 
 interface AlbumMini {
@@ -67,6 +65,110 @@ interface ArtistDetail {
   songs_contributed: SongContribution[];
   members: ArtistRelationshipInfo[];
 }
+
+// --- 役割別セクション（折り畳み可能） ---
+const RoleSection = ({
+  label, songs
+}: {
+  role: string;
+  label: string;
+  songs: SongContribution[];
+  artistName: string;
+}) => {
+  const [expanded, setExpanded] = useState(true);
+  const PREVIEW_COUNT = 5;
+  const [showAll, setShowAll] = useState(songs.length <= PREVIEW_COUNT);
+
+  const displaySongs = showAll ? songs : songs.slice(0, PREVIEW_COUNT);
+
+  return (
+    <div style={{
+      background: 'var(--bg-secondary)',
+      borderRadius: '12px',
+      border: '1px solid var(--border-color)',
+      overflow: 'hidden',
+      marginBottom: '12px',
+    }}>
+      {/* セクションヘッダー */}
+      <button
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--text-primary)', textAlign: 'left',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ width: '3px', height: '18px', background: 'var(--accent-primary)', borderRadius: '2px', flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, fontSize: '1rem' }}>{label}</span>
+          <span style={{
+            background: 'var(--accent-primary)', color: '#fff',
+            padding: '2px 10px', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 700
+          }}>
+            {songs.length}
+          </span>
+        </div>
+        {expanded ? <ChevronUp size={18} color="var(--text-secondary)" /> : <ChevronDown size={18} color="var(--text-secondary)" />}
+      </button>
+
+      {/* セクション本体 */}
+      {expanded && (
+        <div style={{ padding: '0 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {displaySongs.map(song => (
+            <Link
+              key={song.song_id}
+              to={`/songs/${song.song_id}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 12px', borderRadius: '8px',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                {song.cover_image_url ? (
+                  <img src={song.cover_image_url} alt={song.title} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Music size={18} color="var(--text-tertiary)" />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {song.title}
+                  </div>
+                  {song.roles.length > 1 && (
+                    <div style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', marginTop: '2px' }}>
+                      {song.roles.join(' / ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
+
+          {/* 「もっと見る」ボタン */}
+          {!showAll && songs.length > PREVIEW_COUNT && (
+            <button
+              onClick={e => { e.stopPropagation(); setShowAll(true); }}
+              style={{
+                marginTop: '8px', width: '100%', padding: '8px',
+                background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                borderRadius: '8px', color: 'var(--text-secondary)', cursor: 'pointer',
+                fontSize: '0.85rem', fontWeight: 500,
+              }}
+            >
+              残り {songs.length - PREVIEW_COUNT} 件を表示
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ArtistDetail = () => {
   const { id } = useParams();
@@ -471,36 +573,79 @@ const ArtistDetail = () => {
         </div>
       )}
 
-      {activeTab === 'songs' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          {Object.entries(songsByRole).map(([role, songs]) => (
-            <div key={role}>
-              <h3 style={{ fontSize: '1.2rem', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '4px', height: '16px', background: 'var(--primary-color)', borderRadius: '2px' }}></span>
-                {role} <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', fontWeight: 'normal' }}>({songs.length})</span>
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {songs.map((contribution, idx) => (
-                  <div key={idx} style={{ height: '100%' }}>
-                    <SongCard 
-                      song={{
-                        id: contribution.song_id,
-                        title: contribution.title,
-                        role: contribution.roles.join(', '),
-                        cover_image_url: contribution.cover_image_url,
-                        is_video: contribution.is_video || false,
-                        is_streaming_available: true,
-                        artist_name: artist.name
-                      } as SongCardData}
-                    />
-                  </div>
-                ))}
+      {activeTab === 'songs' && (() => {
+        // 役割の表示優先順位と日本語ラベル
+        const ROLE_ORDER = ['Lyricist', 'Composer', 'Arranger', 'Performer', 'Artist', 'Vocalist', 'Guitarist', 'Bassist', 'Drummer', 'Keyboardist', 'Producer'];
+        const ROLE_LABEL: Record<string, string> = {
+          'Lyricist': '作詞',
+          'Composer': '作曲',
+          'Arranger': '編曲',
+          'Performer': '演奏・パフォーマンス',
+          'Artist': 'メインアーティスト',
+          'Vocalist': 'ボーカル',
+          'Guitarist': 'ギター',
+          'Bassist': 'ベース',
+          'Drummer': 'ドラム',
+          'Keyboardist': 'キーボード',
+          'Producer': 'プロデュース',
+        };
+
+        // 役割ごとにユニーク曲をまとめる
+        const roleMap: Record<string, SongContribution[]> = {};
+        (artist.songs_contributed || []).forEach(song => {
+          song.roles.forEach(role => {
+            if (!roleMap[role]) roleMap[role] = [];
+            // 同じ曲IDが重複しないようにする
+            if (!roleMap[role].find(s => s.song_id === song.song_id)) {
+              roleMap[role].push(song);
+            }
+          });
+        });
+
+        // 役割を優先順位順にソート
+        const sortedRoles = Object.keys(roleMap).sort((a, b) => {
+          const ai = ROLE_ORDER.indexOf(a);
+          const bi = ROLE_ORDER.indexOf(b);
+          if (ai === -1 && bi === -1) return a.localeCompare(b);
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        });
+
+        const totalUnique = new Set((artist.songs_contributed || []).map(s => s.song_id)).size;
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {/* ヘッダー */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                {totalUnique} 曲に参加（役割別に整理）
               </div>
+              <Link
+                to={`/credits/bulk?artist_id=${id}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.85rem',
+                  transition: 'all 0.2s', background: 'var(--bg-secondary)'
+                }}
+              >
+                <Edit3 size={13} /> クレジット一括編集
+              </Link>
             </div>
-          ))}
-          {Object.keys(songsByRole).length === 0 && <EmptyState icon={Music} title="楽曲情報がありません" />}
-        </div>
-      )}
+
+            {sortedRoles.length === 0 && <EmptyState icon={Music} title="楽曲情報がありません" />}
+
+            {sortedRoles.map(role => {
+              const songs = roleMap[role];
+              const label = ROLE_LABEL[role] || role;
+              return (
+                <RoleSection key={role} role={role} label={label} songs={songs} artistName={artist.name} />
+              );
+            })}
+          </div>
+        );
+      })()}
 
 
       {/* 編集モーダル */}
