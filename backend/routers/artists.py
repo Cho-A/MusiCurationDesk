@@ -44,6 +44,13 @@ def get_all_artists(
         for ch in chars:
             conditions.append(models.Artist.name_kana.ilike(f"{ch}%"))
             conditions.append(models.Artist.name.ilike(f"{ch}%"))
+
+            # ひらがなの場合はカタカナも条件に加える
+            if 0x3041 <= ord(ch) <= 0x3096:
+                kata_ch = chr(ord(ch) + 0x60)
+                conditions.append(models.Artist.name_kana.ilike(f"{kata_ch}%"))
+                conditions.append(models.Artist.name.ilike(f"{kata_ch}%"))
+
         query = query.filter(or_(*conditions))
 
     artists = query.order_by(models.Artist.id.desc()).offset(skip).limit(limit).all()
