@@ -67,7 +67,7 @@ const ApplyToAllPanel = ({ artistId, onApplied, targetSongIds }: { artistId: str
     }
   };
 
-  const hasAnyValue = lyricists.trim() || composers.trim() || arrangers.trim();
+  const hasAnyValue = lyricists.trim() || composers.trim() || arrangers.trim() || customRoles.some(r => r.role_category.trim() && r.artists.trim());
 
   return (
     <div style={{
