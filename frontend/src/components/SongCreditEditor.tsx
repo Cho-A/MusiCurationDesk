@@ -18,18 +18,37 @@ interface SongCreditEditorProps {
 }
 
 const DEFAULT_CATEGORIES = [
-  'Vocal', 'Guitar', 'Bass', 'Drums & Percussion',
-  'Keyboard & Synth', 'Strings', 'Brass & Woodwinds',
-  'Producer', 'Arranger', 'Composer', 'Lyricist', 'Other Instrument'
+  // --- 楽曲制作・アレンジ ---
+  'Vocal', 'Chorus', 'Lyricist', 'Composer', 'Arranger',
+  'Strings Arrangement', 'Horn Arrangement', 'Brass Arrangement', 'SE Arrangement', 'Rhythm Arrangement',
+  'Producer', 'Co-Producer', 'Sound Producer', 'Director',
+  
+  // --- バンド楽器 ---
+  'Guitar', 'Electric Guitar', 'Acoustic Guitar',
+  'Bass', 'Electric Bass', 'Wood Bass',
+  'Drums', 'Percussion', 'Drums & Percussion',
+  'Keyboard', 'Piano', 'Synthesizer', 'Organ',
+  
+  // --- ストリングス ---
+  'Strings', 'Violin', 'Viola', 'Cello', 'Contrabass',
+  
+  // --- ブラス・ウッドウィンド ---
+  'Trumpet', 'Trombone', 'Saxophone', 'Alto Sax', 'Tenor Sax', 'Baritone Sax',
+  'Horn', 'Flute', 'Clarinet', 'Brass & Woodwinds',
+  
+  // --- その他 ---
+  'Programming', 'Manipulator', 'Turntable', 'Other Instrument'
 ];
 
 const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, onAddCredit, onRemoveCredit, categories = DEFAULT_CATEGORIES, title = "クレジット編集" }) => {
   const [newArtistName, setNewArtistName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [newDetail, setNewDetail] = useState('');
 
   const handleAdd = () => {
     if (!newArtistName.trim()) return;
+    if (!selectedCategory.trim()) return;
     onAddCredit(newArtistName, selectedCategory, newDetail);
     setNewArtistName('');
     setNewDetail('');
@@ -103,17 +122,69 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
           }}
         />
         
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          style={{
-            flex: 1, minWidth: '120px', padding: '10px 14px', borderRadius: '6px',
-            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)', outline: 'none', cursor: 'pointer'
-          }}
-        >
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        {/* 役割選択・入力の切り替えUI */}
+        <div style={{ flex: 1, minWidth: '140px', display: 'flex', gap: '4px' }}>
+          {!isCustomCategory ? (
+            <select
+              value={categories.includes(selectedCategory) ? selectedCategory : (selectedCategory ? 'custom' : categories[0])}
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  setIsCustomCategory(true);
+                  setSelectedCategory('');
+                } else {
+                  setSelectedCategory(e.target.value);
+                }
+              }}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: '6px',
+                background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', outline: 'none', cursor: 'pointer'
+              }}
+            >
+              <optgroup label="楽曲制作・アレンジ">
+                {categories.slice(0, 10).map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="バンド楽器">
+                {categories.slice(10, 23).map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="ストリングス / ブラス / その他">
+                {categories.slice(23).map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="自由入力">
+                <option value="custom">✍️ その他の役割 (手入力)...</option>
+              </optgroup>
+            </select>
+          ) : (
+            <div style={{ display: 'flex', width: '100%', position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="役割を手入力"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                autoFocus
+                style={{
+                  width: '100%', padding: '10px 32px 10px 14px', borderRadius: '6px',
+                  background: 'var(--bg-secondary)', border: '1px solid var(--spotify-color)',
+                  color: 'var(--text-primary)', outline: 'none'
+                }}
+              />
+              <button
+                onClick={() => {
+                  setIsCustomCategory(false);
+                  setSelectedCategory(categories[0]);
+                }}
+                title="リストから選ぶ"
+                style={{
+                  position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+        </div>
 
         <input
           type="text"
