@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, User } from 'lucide-react';
+import { Plus, X, User, Edit2 } from 'lucide-react';
 
 interface Credit {
   artist_id: number;
@@ -45,6 +45,7 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [newDetail, setNewDetail] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleAdd = () => {
     if (!newArtistName.trim()) return;
@@ -62,15 +63,42 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
       border: '1px solid var(--border-color)',
       marginTop: '24px'
     }}>
-      <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <User size={20} />
-        {title}
-      </h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <User size={20} />
+          {title}
+        </h3>
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+        >
+          {isEditing ? '完了' : <><Edit2 size={14} /> 編集</>}
+        </button>
+      </div>
 
       {/* 既存クレジットのリスト */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
-        {existingCredits.map((credit, idx) => (
-          <div key={idx} style={{
+      {!isEditing ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {existingCredits.map((credit, idx) => (
+            <span key={idx} style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', background: 'var(--bg-tertiary)', borderRadius: '16px',
+              border: '1px solid var(--border-color)', fontSize: '0.85rem'
+            }}>
+              <span style={{ color: 'var(--spotify-color)', fontWeight: 600 }}>{credit.role_category}</span>
+              <span style={{ color: 'var(--text-primary)' }}>{credit.artist_name}</span>
+              {credit.role_detail && <span style={{ color: 'var(--text-tertiary)' }}>({credit.role_detail})</span>}
+            </span>
+          ))}
+          {existingCredits.length === 0 && (
+            <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>クレジット情報なし</span>
+          )}
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+            {existingCredits.map((credit, idx) => (
+              <div key={idx} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px',
             border: '1px solid var(--border-color)'
@@ -210,6 +238,8 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
           追加
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 };

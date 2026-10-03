@@ -530,14 +530,26 @@ const SongDetail = () => {
     }
   };
 
-  // クレジットのソートロジック（displaySongのデータを使用）
-  const roleOrder = ['Artist', 'Composer', 'Lyricist', 'Producer', 'Arranger'];
+  // クレジットのソートロジック
+  const roleOrder = ['Artist', 'Vocal', 'Chorus', 'Composer', 'Lyricist', 'Arranger', 'Producer'];
   const sortedCredits = [...(displaySong.artist_links || [])].sort((a, b) => {
-    const indexA = roleOrder.indexOf(a.role_category);
-    const indexB = roleOrder.indexOf(b.role_category);
-    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-    if (indexA !== -1) return -1;
-    if (indexB !== -1) return 1;
+    let indexA = roleOrder.indexOf(a.role_category);
+    let indexB = roleOrder.indexOf(b.role_category);
+    if (indexA === -1) indexA = 999;
+    if (indexB === -1) indexB = 999;
+
+    // メインアーティスト（Artistロールを持つ名前）を最優先する
+    const mainArtists = (displaySong.artist_links || []).filter((l: any) => l.role_category === 'Artist').map((l: any) => l.artist_name);
+    const isMainA = mainArtists.includes(a.artist_name);
+    const isMainB = mainArtists.includes(b.artist_name);
+
+    if (isMainA && !isMainB) return -1;
+    if (!isMainA && isMainB) return 1;
+
+    // ロールの優先順位
+    if (indexA !== indexB) return indexA - indexB;
+
+    // ロール名でソート
     if (a.role_category < b.role_category) return -1;
     if (a.role_category > b.role_category) return 1;
     return 0;
