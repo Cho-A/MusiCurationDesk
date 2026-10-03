@@ -67,26 +67,68 @@ interface ArtistDetail {
   members: ArtistRelationshipInfo[];
 }
 
-// --- 楽曲リスト（ページネーション付き） ---
+// --- 楽曲リスト（ページネーション + 高度な絞り込み） ---
 const PaginatedSongsList = ({
   artistId, roleCounts
 }: {
   artistId: number;
   roleCounts: { role: string; count: number; label: string }[];
 }) => {
-  const [role, setRole] = useState('all');
+  // --- 基本フィルター ---
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [logic, setLogic] = useState<'OR' | 'AND'>('OR');
   const [page, setPage] = useState(1);
   const [songs, setSongs] = useState<SongContribution[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // --- コラボレーターフィルター ---
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [collabInput, setCollabInput] = useState('');       // 検索ワード
+  const [collabSuggestions, setCollabSuggestions] = useState<{ id: number; name: string }[]>([]);
+  const [collabArtist, setCollabArtist] = useState<{ id: number; name: string } | null>(null);
+  const [collabRole, setCollabRole] = useState('');
+
   const PAGE_SIZE = 20;
 
+  // コラボレーター候補をリアルタイム検索
+  useEffect(() => {
+    if (!collabInput || collabInput.length < 2) { setCollabSuggestions([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/artists?search=${encodeURIComponent(collabInput)}&limit=8`);
+        if (res.ok) {
+          const data = await res.json();
+          setCollabSuggestions(data.items || data);
+        }
+      } catch { /* ignore */ }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [collabInput]);
+
+  // 楽曲フェッチ
   useEffect(() => {
     const fetchSongs = async () => {
       setLoading(true);
       try {
         const skip = (page - 1) * PAGE_SIZE;
-        const res = await fetch(`${API_BASE_URL}/artists/${artistId}/songs?role=${encodeURIComponent(role)}&skip=${skip}&limit=${PAGE_SIZE}`);
+        const params = new URLSearchParams({ skip: String(skip), limit: String(PAGE_SIZE) });
+
+        if (selectedRoles.length === 0) {
+          params.append('role', 'all');
+        } else if (selectedRoles.length === 1) {
+          params.append('role', selectedRoles[0]);
+        } else {
+          selectedRoles.forEach(r => params.append('roles', r));
+          params.append('logic', logic);
+        }
+
+        if (collabArtist) {
+          params.append('collaborator_id', String(collabArtist.id));
+          if (collabRole) params.append('collaborator_role', collabRole);
+        }
+
+        const res = await fetch(`${API_BASE_URL}/artists/${artistId}/songs?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setSongs(data.items);
@@ -99,39 +141,172 @@ const PaginatedSongsList = ({
       }
     };
     fetchSongs();
-  }, [artistId, role, page]);
+  }, [artistId, selectedRoles, logic, page, collabArtist, collabRole]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  const toggleRole = (r: string) => {
+    setPage(1);
+    setSelectedRoles(prev =>
+      prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]
+    );
+  };
+
+  const btnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--border-color)',
+    background: active ? 'var(--primary-color)' : 'var(--bg-secondary)',
+    color: active ? '#fff' : 'var(--text-primary)',
+    cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 600, fontSize: '0.88rem',
+    transition: 'all 0.15s',
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* フィルター */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
-        <button
-          onClick={() => { setRole('all'); setPage(1); }}
-          style={{
-            padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--border-color)',
-            background: role === 'all' ? 'var(--primary-color)' : 'var(--bg-secondary)',
-            color: role === 'all' ? '#fff' : 'var(--text-primary)',
-            cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 600, fontSize: '0.9rem'
-          }}
-        >
+
+      {/* --- 役割フィルター --- */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={() => { setSelectedRoles([]); setPage(1); }} style={btnStyle(selectedRoles.length === 0)}>
           すべて
         </button>
         {roleCounts.map(rc => (
-          <button
-            key={rc.role}
-            onClick={() => { setRole(rc.role); setPage(1); }}
-            style={{
-              padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--border-color)',
-              background: role === rc.role ? 'var(--primary-color)' : 'var(--bg-secondary)',
-              color: role === rc.role ? '#fff' : 'var(--text-primary)',
-              cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 600, fontSize: '0.9rem'
-            }}
-          >
+          <button key={rc.role} onClick={() => toggleRole(rc.role)} style={btnStyle(selectedRoles.includes(rc.role))}>
             {rc.label} ({rc.count})
           </button>
         ))}
+
+        {/* AND/OR 切り替え（複数選択時のみ表示）*/}
+        {selectedRoles.length >= 2 && (
+          <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+            {(['OR', 'AND'] as const).map(l => (
+              <button key={l} onClick={() => { setLogic(l); setPage(1); }}
+                style={{
+                  ...btnStyle(logic === l),
+                  background: logic === l ? (l === 'AND' ? '#7c3aed' : 'var(--primary-color)') : 'var(--bg-tertiary)',
+                  fontSize: '0.78rem', padding: '4px 12px',
+                }}
+              >
+                {l}
+              </button>
+            ))}
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', alignSelf: 'center', marginLeft: '4px' }}>
+              {logic === 'AND' ? '選択した全役割を担当' : '選択した役割のいずれか'}
+            </span>
+          </div>
+        )}
+
+        {/* 高度な検索トグル */}
+        <button
+          onClick={() => setShowAdvanced(s => !s)}
+          style={{
+            ...btnStyle(!!collabArtist),
+            marginLeft: 'auto', background: collabArtist ? 'rgba(99,102,241,0.2)' : 'var(--bg-secondary)',
+            border: collabArtist ? '1px solid rgba(99,102,241,0.5)' : '1px solid var(--border-color)',
+          }}
+        >
+          <Search size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+          コラボ絞り込み {collabArtist ? `(${collabArtist.name})` : ''}
+        </button>
+      </div>
+
+      {/* --- コラボレーターフィルターパネル --- */}
+      {showAdvanced && (
+        <div style={{
+          padding: '16px 20px', borderRadius: '12px',
+          background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)',
+          display: 'flex', flexDirection: 'column', gap: '12px',
+        }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            コラボレーターで絞り込む
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            {/* アーティスト検索 */}
+            <div style={{ position: 'relative', minWidth: '220px' }}>
+              <input
+                type="text"
+                placeholder="アーティスト名で検索..."
+                value={collabArtist ? collabArtist.name : collabInput}
+                onChange={e => { setCollabInput(e.target.value); setCollabArtist(null); }}
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: '8px',
+                  background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)', fontSize: '0.9rem',
+                }}
+              />
+              {collabSuggestions.length > 0 && !collabArtist && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                  background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
+                  borderRadius: '8px', overflow: 'hidden', marginTop: '4px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                }}>
+                  {collabSuggestions.map(a => (
+                    <button
+                      key={a.id}
+                      onClick={() => { setCollabArtist(a); setCollabInput(a.name); setCollabSuggestions([]); setPage(1); }}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '10px 14px',
+                        background: 'none', border: 'none', color: 'var(--text-primary)',
+                        cursor: 'pointer', fontSize: '0.9rem',
+                        borderBottom: '1px solid var(--border-color)',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      {a.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 役割選択 */}
+            <select
+              value={collabRole}
+              onChange={e => { setCollabRole(e.target.value); setPage(1); }}
+              style={{
+                padding: '8px 12px', borderRadius: '8px',
+                background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', fontSize: '0.9rem',
+              }}
+            >
+              <option value="">役割を問わず</option>
+              <option value="Composer">作曲</option>
+              <option value="Lyricist">作詞</option>
+              <option value="Arranger">編曲</option>
+              <option value="Artist">メインアーティスト</option>
+              <option value="Guitarist">ギター</option>
+              <option value="Bassist">ベース</option>
+              <option value="Drummer">ドラム</option>
+              <option value="Keyboardist">キーボード</option>
+              <option value="Vocalist">ボーカル</option>
+              <option value="Producer">プロデュース</option>
+            </select>
+
+            {/* クリアボタン */}
+            {collabArtist && (
+              <button
+                onClick={() => { setCollabArtist(null); setCollabInput(''); setCollabRole(''); setPage(1); }}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                  background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
+                  cursor: 'pointer', fontSize: '0.88rem',
+                }}
+              >
+                <X size={14} style={{ verticalAlign: 'middle' }} /> クリア
+              </button>
+            )}
+          </div>
+          {collabArtist && (
+            <div style={{ fontSize: '0.82rem', color: 'rgba(99,102,241,0.9)', fontWeight: 600 }}>
+              「{collabArtist.name}」{collabRole ? `（${collabRole}）` : ''}が関わった楽曲に絞り込んでいます
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 件数表示 */}
+      <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
+        {loading ? '検索中...' : `${total} 件ヒット`}
       </div>
 
       {/* リスト本体 */}
@@ -140,7 +315,7 @@ const PaginatedSongsList = ({
           読み込み中...
         </div>
       ) : songs.length === 0 ? (
-        <EmptyState icon={Music} title="楽曲情報がありません" />
+        <EmptyState icon={Music} title="条件に一致する楽曲がありません" />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {songs.map(song => (
@@ -155,7 +330,7 @@ const PaginatedSongsList = ({
                   padding: '12px 16px', borderRadius: '12px',
                   background: 'var(--bg-secondary)',
                   border: '1px solid var(--border-color)',
-                  transition: 'background 0.15s, transform 0.15s',
+                  transition: 'transform 0.15s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'none'}
