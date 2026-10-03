@@ -263,10 +263,9 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             if request.apply_artist_to_tracks and album.album_group and album.album_group.artist_id:
                 # 既存の "Artist" リンクがあれば削除
                 db.query(models.SongArtistLink).filter(
-                    models.SongArtistLink.song_id == song_id,
-                    models.SongArtistLink.role_category == "Artist"
+                    models.SongArtistLink.song_id == song_id, models.SongArtistLink.role_category == "Artist"
                 ).delete(synchronize_session=False)
-                
+
                 artist_link = models.SongArtistLink(
                     song_id=song_id, artist_id=album.album_group.artist_id, role_category="Artist"
                 )
@@ -679,24 +678,26 @@ def reorder_album_discs(album_id: int, request: schemas.AlbumDiscReorderRequest,
 
     old_order = request.original_disc_numbers
     new_order_map = {old_disc: idx + 1 for idx, old_disc in enumerate(old_order)}
-    
+
     # 影響を受けるディスクとトラックを取得
-    discs_to_update = db.query(models.AlbumDisc).filter(
-        models.AlbumDisc.album_id == album_id,
-        models.AlbumDisc.disc_number.in_(old_order)
-    ).all()
-    
-    tracks_to_update = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number.in_(old_order)
-    ).all()
+    discs_to_update = (
+        db.query(models.AlbumDisc)
+        .filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number.in_(old_order))
+        .all()
+    )
+
+    tracks_to_update = (
+        db.query(models.AlbumTrack)
+        .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number.in_(old_order))
+        .all()
+    )
 
     # Step 1: Unique制約違反を避けるため、一旦負の値に退避する
     for disc in discs_to_update:
         disc.disc_number = -disc.disc_number
     for track in tracks_to_update:
         track.disc_number = -track.disc_number
-        
+
     db.commit()
 
     # Step 2: 負の値から新しい正のディスク番号に更新する
@@ -704,12 +705,12 @@ def reorder_album_discs(album_id: int, request: schemas.AlbumDiscReorderRequest,
         old_disc = -disc.disc_number
         if old_disc in new_order_map:
             disc.disc_number = new_order_map[old_disc]
-            
+
     for track in tracks_to_update:
         old_disc = -track.disc_number
         if old_disc in new_order_map:
             track.disc_number = new_order_map[old_disc]
-            
+
     db.commit()
     db.refresh(album)
     return album

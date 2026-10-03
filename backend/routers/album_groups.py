@@ -94,8 +94,7 @@ def update_album_group(group_id: int, group_update: schemas.AlbumGroupUpdate, db
             if song_ids:
                 # 既存の "Artist" ロールのリンクを削除
                 db.query(models.SongArtistLink).filter(
-                    models.SongArtistLink.song_id.in_(song_ids),
-                    models.SongArtistLink.role_category == "Artist"
+                    models.SongArtistLink.song_id.in_(song_ids), models.SongArtistLink.role_category == "Artist"
                 ).delete(synchronize_session=False)
                 # 新しいアーティストリンクを作成
                 new_links = [

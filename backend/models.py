@@ -185,11 +185,11 @@ class Artist(Base):
         for link in self.song_links:
             role = getattr(link, "role_category", None) or getattr(link, "role", "Unknown")
             counts[role] = counts.get(role, 0) + 1
-            
+
         for work_link in self.work_links:
             role = getattr(work_link, "role_category", None) or "Unknown"
             counts[role] = counts.get(role, 0) + 1
-            
+
         # 降順でソート（件数が多い役割を上に）
         result = [{"role": k, "count": v} for k, v in counts.items()]
         result.sort(key=lambda x: x["count"], reverse=True)
