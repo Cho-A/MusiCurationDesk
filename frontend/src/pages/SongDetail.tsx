@@ -1163,19 +1163,42 @@ const SongDetail = () => {
           </div>
           
           {!isEditingCredits ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {sortedCredits.length > 0 ? sortedCredits.map((credit, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-                  <span style={{ fontWeight: 600 }}>{credit.artist_name}</span>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                    {credit.role_category}{credit.role_detail ? ` (${credit.role_detail})` : ''}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {(() => {
+                const grouped = sortedCredits.reduce((acc, credit) => {
+                  const existing = acc.find(c => c.artist_name === credit.artist_name);
+                  if (existing) {
+                    if (!existing.roles.includes(credit.role_category)) {
+                      existing.roles.push(credit.role_category);
+                    }
+                  } else {
+                    acc.push({
+                      artist_name: credit.artist_name,
+                      roles: [credit.role_category]
+                    });
+                  }
+                  return acc;
+                }, [] as { artist_name: string; roles: string[] }[]);
+
+                if (grouped.length === 0) {
+                  return (
+                    <div style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>
+                      クレジット情報が登録されていません。
+                    </div>
+                  );
+                }
+
+                return grouped.map((group, idx) => (
+                  <span key={idx} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 16px', background: 'var(--bg-secondary)', borderRadius: '20px',
+                    border: '1px solid var(--border-color)', fontSize: '0.95rem'
+                  }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{group.artist_name}</span>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{group.roles.join(', ')}</span>
                   </span>
-                </div>
-              )) : (
-                <div style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>
-                  クレジット情報が登録されていません。
-                </div>
-              )}
+                ));
+              })()}
             </div>
           ) : (
             <SongCreditEditor 
