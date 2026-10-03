@@ -11,7 +11,7 @@ interface Credit {
 interface SongCreditEditorProps {
   songId: number;
   existingCredits: Credit[];
-  onAddCredit: (artistName: string, category: string, detail?: string) => void;
+  onAddCredits?: (credits: { artistName: string, category: string, detail?: string }[]) => Promise<void> | void;
   onRemoveCredit: (artistId: number, category: string, detail?: string) => void;
   categories?: string[];
   title?: string;
@@ -40,12 +40,14 @@ const DEFAULT_CATEGORIES = [
   'Programming', 'Manipulator', 'Turntable', 'Other Instrument'
 ];
 
-const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, onAddCredit, onRemoveCredit, categories = DEFAULT_CATEGORIES, title = "クレジット編集" }) => {
+const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, onAddCredits, onRemoveCredit, categories = DEFAULT_CATEGORIES, title = "クレジット編集" }) => {
   const [newArtistName, setNewArtistName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [newDetail, setNewDetail] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [pendingAdds, setPendingAdds] = useState<{ artistName: string, category: string, detail?: string }[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   
   // 既存クレジットをアーティスト名ごとにグループ化（非編集時のコンパクト表示用）
@@ -67,9 +69,19 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
   const handleAdd = () => {
     if (!newArtistName.trim()) return;
     if (!selectedCategory.trim()) return;
-    onAddCredit(newArtistName, selectedCategory, newDetail);
+    setPendingAdds([...pendingAdds, { artistName: newArtistName.trim(), category: selectedCategory, detail: newDetail }]);
     setNewArtistName('');
     setNewDetail('');
+  };
+
+  const handleSaveAndClose = async () => {
+    if (pendingAdds.length > 0 && onAddCredits) {
+      setIsSaving(true);
+      await onAddCredits(pendingAdds);
+      setPendingAdds([]);
+      setIsSaving(false);
+    }
+    setIsEditing(false);
   };
 
   return (
@@ -86,10 +98,11 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
           {title}
         </h3>
         <button
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={() => isEditing ? handleSaveAndClose() : setIsEditing(true)}
+          disabled={isSaving}
           style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', padding: '6px 12px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
         >
-          {isEditing ? '完了' : <><Edit2 size={14} /> 編集</>}
+          {isEditing ? (isSaving ? '保存中...' : '保存して完了') : <><Edit2 size={14} /> 編集</>}
         </button>
       </div>
 
@@ -141,10 +154,45 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
             </button>
           </div>
         ))}
-        {existingCredits.length === 0 && (
+        {existingCredits.length === 0 && pendingAdds.length === 0 && (
           <div style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', padding: '12px 0' }}>
             クレジット情報がまだありません。
           </div>
+        )}
+
+        {pendingAdds.length > 0 && (
+          <>
+            <div style={{ borderTop: '1px dashed var(--border-color)', margin: '8px 0' }}></div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>保存待ち（追加予定）:</div>
+            {pendingAdds.map((credit, idx) => (
+              <div key={`pending-${idx}`} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px', background: 'rgba(29, 185, 84, 0.05)', borderRadius: '8px',
+                border: '1px dashed var(--spotify-color)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <span style={{ fontWeight: 600, minWidth: '150px' }}>{credit.artistName}</span>
+                  <span style={{
+                    background: 'rgba(29, 185, 84, 0.2)', color: 'var(--spotify-color)',
+                    padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem'
+                  }}>
+                    {credit.category}
+                  </span>
+                  {credit.detail && (
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      ({credit.detail})
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setPendingAdds(pendingAdds.filter((_, i) => i !== idx))}
+                  style={{ color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ))}
+          </>
         )}
       </div>
 

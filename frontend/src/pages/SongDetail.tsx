@@ -1204,7 +1204,7 @@ const SongDetail = () => {
             <SongCreditEditor 
               songId={displaySong.id} 
               existingCredits={sortedCredits} 
-              onAddCredit={handleAddCredit}
+              onAddCredits={handleAddCredits}
               onRemoveCredit={handleRemoveCredit}
             />
           )}
