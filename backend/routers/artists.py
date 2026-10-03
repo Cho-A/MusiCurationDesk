@@ -137,57 +137,113 @@ def get_artist_by_id(artist_id: int, db: Session = Depends(get_db)):
 @router.get("/{artist_id}/songs", response_model=schemas.PaginatedSongs, tags=["Artists"])
 def get_artist_contributions(
     artist_id: int,
-    role: str = Query("all", description="検索したい役割 (例: Composer, または全ての場合は all)"),
+    role: str = Query("all", description="単一の役割で絞り込む (例: Composer, または all)"),
+    roles: list[str] = Query([], description="複数の役割で絞り込む (例: roles=Composer&roles=Arranger)"),
+    logic: str = Query("OR", description="複数役割の結合ロジック: AND または OR"),
+    collaborator_id: int = Query(None, description="コラボレーターのアーティストID"),
+    collaborator_role: str = Query(None, description="コラボレーターの役割 (例: Guitarist)"),
     skip: int = Query(0, description="スキップする件数"),
     limit: int = Query(20, description="取得する最大件数"),
     db: Session = Depends(get_db),
 ):
     """
-    特定のアーティストが関わった楽曲を、特定の役割 (role) でページネーションして取得します。
+    特定のアーティストが関わった楽曲を、役割・AND/OR・コラボレーターでページネーションして取得します。
     """
     from sqlalchemy import and_, or_
-    from sqlalchemy.orm import selectinload
+    from sqlalchemy.orm import aliased, selectinload
 
     db_artist = db.query(models.Artist).filter(models.Artist.id == artist_id).first()
     if db_artist is None:
         raise HTTPException(status_code=404, detail="アーティストが見つかりません。")
 
-    query = (
+    # roles クエリパラメータが指定されていれば優先、なければ role を使う
+    effective_roles = roles if roles else ([role] if role and role != "all" else [])
+
+    def build_role_condition(r: str):
+        return or_(
+            and_(
+                models.SongArtistLink.artist_id == artist_id,
+                models.SongArtistLink.role_category == r,
+            ),
+            and_(
+                models.WorkArtistLink.artist_id == artist_id,
+                models.WorkArtistLink.role_category == r,
+            ),
+        )
+
+    base_query = (
         db.query(models.Song)
         .outerjoin(models.SongArtistLink)
         .outerjoin(models.Song.work)
         .outerjoin(models.WorkArtistLink, models.Song.work_id == models.WorkArtistLink.work_id)
-        .options(
-            selectinload(models.Song.album_links).joinedload(models.AlbumTrack.album),
-            selectinload(models.Song.artist_links),
-            selectinload(models.Song.work).selectinload(models.MusicalWork.artist_links),
-        )
     )
 
-    if role and role != "all":
-        query = query.filter(
-            or_(
-                and_(
-                    models.SongArtistLink.artist_id == artist_id,
-                    models.SongArtistLink.role_category == role,
-                ),
-                and_(
-                    models.WorkArtistLink.artist_id == artist_id,
-                    models.WorkArtistLink.role_category == role,
-                ),
-            )
-        )
+    if effective_roles:
+        if logic.upper() == "AND" and len(effective_roles) > 1:
+            for r in effective_roles:
+                sal_alias = aliased(models.SongArtistLink)
+                wal_alias = aliased(models.WorkArtistLink)
+                mw_alias = aliased(models.MusicalWork)
+                role_subq = (
+                    db.query(models.Song.id)
+                    .outerjoin(sal_alias, models.Song.id == sal_alias.song_id)
+                    .outerjoin(mw_alias, models.Song.work_id == mw_alias.id)
+                    .outerjoin(wal_alias, mw_alias.id == wal_alias.work_id)
+                    .filter(
+                        or_(
+                            and_(sal_alias.artist_id == artist_id, sal_alias.role_category == r),
+                            and_(wal_alias.artist_id == artist_id, wal_alias.role_category == r),
+                        )
+                    )
+                    .subquery()
+                )
+                base_query = base_query.filter(models.Song.id.in_(role_subq))
+        else:
+            base_query = base_query.filter(or_(*[build_role_condition(r) for r in effective_roles]))
     else:
-        query = query.filter(
+        base_query = base_query.filter(
             or_(
                 models.SongArtistLink.artist_id == artist_id,
                 models.WorkArtistLink.artist_id == artist_id,
             )
         )
 
-    query = query.distinct().order_by(models.Song.id.desc())
-    total_count = query.count()
-    songs = query.offset(skip).limit(limit).all()
+    if collaborator_id is not None:
+        col_sal = aliased(models.SongArtistLink)
+        col_mw = aliased(models.MusicalWork)
+        col_wal = aliased(models.WorkArtistLink)
+        col_query_base = (
+            db.query(models.Song.id)
+            .outerjoin(col_sal, models.Song.id == col_sal.song_id)
+            .outerjoin(col_mw, models.Song.work_id == col_mw.id)
+            .outerjoin(col_wal, col_mw.id == col_wal.work_id)
+        )
+        if collaborator_role:
+            col_query_base = col_query_base.filter(
+                or_(
+                    and_(col_sal.artist_id == collaborator_id, col_sal.role_category == collaborator_role),
+                    and_(col_wal.artist_id == collaborator_id, col_wal.role_category == collaborator_role),
+                )
+            )
+        else:
+            col_query_base = col_query_base.filter(
+                or_(col_sal.artist_id == collaborator_id, col_wal.artist_id == collaborator_id)
+            )
+        col_subq = col_query_base.subquery()
+        base_query = base_query.filter(models.Song.id.in_(col_subq))
+
+    base_query = (
+        base_query.options(
+            selectinload(models.Song.album_links).joinedload(models.AlbumTrack.album),
+            selectinload(models.Song.artist_links),
+            selectinload(models.Song.work).selectinload(models.MusicalWork.artist_links),
+        )
+        .distinct()
+        .order_by(models.Song.id.desc())
+    )
+
+    total_count = base_query.count()
+    songs = base_query.offset(skip).limit(limit).all()
 
     output_list = []
     for song in songs:
@@ -195,7 +251,6 @@ def get_artist_contributions(
         if song.album_links and song.album_links[0].album:
             cover_image_url = song.album_links[0].album.cover_image_url
 
-        # この楽曲に対してアーティストが持っている全役割を計算
         roles_set = set()
         for link in song.artist_links:
             if link.artist_id == artist_id:
