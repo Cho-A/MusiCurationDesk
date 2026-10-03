@@ -674,13 +674,21 @@ class CreditBulkUpdateRequest(BaseModel):
     updates: list[CreditBulkUpdateItem]
 
 
+class CustomRoleApply(BaseModel):
+    role_category: str
+    artists: list[str]
+    overwrite: bool = True
+
+
 class ArtistCreditApplyRequest(BaseModel):
     """特定アーティストの全楽曲に一括でクレジットを適用する"""
 
     artist_id: int
+    target_song_ids: list[int] | None = None  # 指定がある場合はこれらの楽曲のみを対象とする
     lyricists: list[str] = []
     composers: list[str] = []
     arrangers: list[str] = []
+    custom_roles: list[CustomRoleApply] = []
     # True のフィールドだけ上書きする (False なら既存を保持)
     overwrite_lyricists: bool = True
     overwrite_composers: bool = True

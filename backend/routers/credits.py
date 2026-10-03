@@ -195,8 +195,11 @@ def apply_credits_to_artist(req: schemas.ArtistCreditApplyRequest, db: Session =
     )
     unique_song_ids = [r[0] for r in unique_song_id_rows]
 
+    if req.target_song_ids is not None:
+        unique_song_ids = [sid for sid in unique_song_ids if sid in req.target_song_ids]
+
     if not unique_song_ids:
-        raise HTTPException(status_code=404, detail="対象の楽曲が見つかりません。")
+        return {"message": "対象の楽曲がありません。"}
 
     songs = db.query(models.Song).filter(models.Song.id.in_(unique_song_ids)).all()
 
@@ -233,6 +236,23 @@ def apply_credits_to_artist(req: schemas.ArtistCreditApplyRequest, db: Session =
                 composer_ids_to_add.append(artist_obj.id)
         db.flush()
 
+    custom_role_data = []
+    for crole in req.custom_roles:
+        c_artist_ids = []
+        c_seen = set()
+        for name in crole.artists:
+            name = name.strip()
+            if name and name not in c_seen:
+                c_seen.add(name)
+                artist_obj = get_or_create_artist(db, name)
+                c_artist_ids.append(artist_obj.id)
+        custom_role_data.append({
+            "category": crole.role_category,
+            "artist_ids": c_artist_ids,
+            "overwrite": crole.overwrite
+        })
+    db.flush()
+
     updated_songs = 0
     processed_work_ids: set[int] = set()
 
@@ -249,6 +269,22 @@ def apply_credits_to_artist(req: schemas.ArtistCreditApplyRequest, db: Session =
                     db.add(
                         models.SongArtistLink(
                             song_id=song.id, artist_id=artist_id, role_category="Arranger", role_detail=None
+                        )
+                    )
+                db.flush()
+
+            # ── カスタムロール (SongArtistLink) ──────────────────────────────
+            for crole in custom_role_data:
+                if crole["overwrite"]:
+                    db.query(models.SongArtistLink).filter(
+                        models.SongArtistLink.song_id == song.id,
+                        models.SongArtistLink.role_category == crole["category"],
+                    ).delete(synchronize_session="fetch")
+                    db.flush()
+                for artist_id in crole["artist_ids"]:
+                    db.add(
+                        models.SongArtistLink(
+                            song_id=song.id, artist_id=artist_id, role_category=crole["category"], role_detail=None
                         )
                     )
                 db.flush()

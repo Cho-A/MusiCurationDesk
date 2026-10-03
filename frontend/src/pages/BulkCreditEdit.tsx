@@ -14,7 +14,7 @@ interface CreditBulkEditItem {
 }
 
 // --- 一括適用パネル ---
-const ApplyToAllPanel = ({ artistId, onApplied }: { artistId: string; onApplied: () => void }) => {
+const ApplyToAllPanel = ({ artistId, onApplied, targetSongIds }: { artistId: string; onApplied: () => void; targetSongIds: number[] }) => {
   const [expanded, setExpanded] = useState(false);
   const [applying, setApplying] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -24,6 +24,7 @@ const ApplyToAllPanel = ({ artistId, onApplied }: { artistId: string; onApplied:
   const [overwriteLyricists, setOverwriteLyricists] = useState(true);
   const [overwriteComposers, setOverwriteComposers] = useState(true);
   const [overwriteArrangers, setOverwriteArrangers] = useState(true);
+  const [customRoles, setCustomRoles] = useState<{role_category: string, artists: string, overwrite: boolean}[]>([]);
 
   const handleApply = async () => {
     setConfirmOpen(false);
@@ -44,6 +45,12 @@ const ApplyToAllPanel = ({ artistId, onApplied }: { artistId: string; onApplied:
           overwrite_lyricists: overwriteLyricists,
           overwrite_composers: overwriteComposers,
           overwrite_arrangers: overwriteArrangers,
+          target_song_ids: targetSongIds,
+          custom_roles: customRoles.filter(r => r.role_category.trim() && r.artists.trim()).map(r => ({
+            role_category: r.role_category.trim(),
+            artists: r.artists.split(',').map(s => s.trim()).filter(Boolean),
+            overwrite: r.overwrite
+          })),
         }),
       });
       if (!res.ok) {
@@ -139,6 +146,39 @@ const ApplyToAllPanel = ({ artistId, onApplied }: { artistId: string; onApplied:
               適用する
             </label>
           </div>
+          
+          <div style={{ marginTop: '8px' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>その他の役割 (Strings Arrangement, Vocal 等)</div>
+            {customRoles.map((role, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <input
+                  type="text" value={role.role_category} onChange={e => {
+                    const newRoles = [...customRoles]; newRoles[idx].role_category = e.target.value; setCustomRoles(newRoles);
+                  }}
+                  placeholder="役割名"
+                  style={{ width: '120px', padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                />
+                <input
+                  type="text" value={role.artists} onChange={e => {
+                    const newRoles = [...customRoles]; newRoles[idx].artists = e.target.value; setCustomRoles(newRoles);
+                  }}
+                  placeholder="アーティスト名（カンマ区切り）"
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem', opacity: role.overwrite ? 1 : 0.4 }}
+                  disabled={!role.overwrite}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <input type="checkbox" checked={role.overwrite} onChange={e => {
+                    const newRoles = [...customRoles]; newRoles[idx].overwrite = e.target.checked; setCustomRoles(newRoles);
+                  }} />
+                  適用する
+                </label>
+                <button onClick={() => setCustomRoles(customRoles.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '4px' }}><X size={16} /></button>
+              </div>
+            ))}
+            <button onClick={() => setCustomRoles([...customRoles, { role_category: '', artists: '', overwrite: true }])} style={{ background: 'var(--bg-tertiary)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', width: '100%' }}>
+              + その他の役割を追加
+            </button>
+          </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
@@ -175,6 +215,9 @@ const ApplyToAllPanel = ({ artistId, onApplied }: { artistId: string; onApplied:
                   {overwriteLyricists && <div>作詞：<strong>{lyricists || '（空欄）'}</strong></div>}
                   {overwriteComposers && <div>作曲：<strong>{composers || '（空欄）'}</strong></div>}
                   {overwriteArrangers && <div>編曲：<strong>{arrangers || '（空欄）'}</strong></div>}
+                  {customRoles.filter(r => r.role_category && r.overwrite).map((r, i) => (
+                    <div key={i}>{r.role_category}：<strong>{r.artists || '（空欄）'}</strong></div>
+                  ))}
                 </div>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                   <button onClick={() => setConfirmOpen(false)} className="btn btn-secondary">
@@ -204,6 +247,7 @@ const BulkCreditEdit: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<CreditBulkEditItem[]>([]);
+  const [selectedSongIds, setSelectedSongIds] = useState<Set<number>>(new Set());
 
   const fetchCredits = async () => {
     setLoading(true);
@@ -216,6 +260,7 @@ const BulkCreditEdit: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch credits');
       const data = await response.json();
       setItems(data);
+      setSelectedSongIds(new Set(data.map((item: CreditBulkEditItem) => item.song_id)));
     } catch (error) {
       console.error(error);
       toast.error('クレジット情報の取得に失敗しました');
@@ -316,7 +361,7 @@ const BulkCreditEdit: React.FC = () => {
 
       {/* 一括適用パネル（アーティスト指定時のみ表示）*/}
       {artistId && (
-        <ApplyToAllPanel artistId={artistId} onApplied={fetchCredits} />
+        <ApplyToAllPanel artistId={artistId} onApplied={fetchCredits} targetSongIds={Array.from(selectedSongIds)} />
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
@@ -330,6 +375,20 @@ const BulkCreditEdit: React.FC = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
+              <th style={{ ...tableHeaderStyle, width: '40px', padding: '12px 8px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={items.length > 0 && selectedSongIds.size === items.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedSongIds(new Set(items.map(i => i.song_id)));
+                    } else {
+                      setSelectedSongIds(new Set());
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
+              </th>
               <th style={{ ...tableHeaderStyle, width: '25%' }}>楽曲名</th>
               <th style={{ ...tableHeaderStyle, width: '25%' }}>作詞 (Lyricist)</th>
               <th style={{ ...tableHeaderStyle, width: '25%' }}>作曲 (Composer)</th>
@@ -338,9 +397,22 @@ const BulkCreditEdit: React.FC = () => {
           </thead>
           <tbody>
             {items.map((item, idx) => (
-              <tr key={item.song_id}>
+              <tr key={item.song_id} style={{ background: selectedSongIds.has(item.song_id) ? 'rgba(29, 185, 84, 0.05)' : 'transparent' }}>
+                <td style={{ ...tableCellStyle, padding: '8px' }}>
+                  <input 
+                    type="checkbox"
+                    checked={selectedSongIds.has(item.song_id)}
+                    onChange={(e) => {
+                      const newSet = new Set(selectedSongIds);
+                      if (e.target.checked) newSet.add(item.song_id);
+                      else newSet.delete(item.song_id);
+                      setSelectedSongIds(newSet);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </td>
                 <td style={tableCellStyle}>
-                  <div style={{ fontWeight: 500 }}>{item.title}</div>
+                  <div style={{ fontWeight: 500, color: selectedSongIds.has(item.song_id) ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{item.title}</div>
                 </td>
                 <td style={tableCellStyle}>
                   <input
