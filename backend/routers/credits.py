@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func
 from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from backend import models, schemas
 from backend.dependencies import get_db
@@ -24,7 +25,7 @@ def get_or_create_artist(db: Session, name: str) -> models.Artist:
 def get_bulk_edit_credits(
     album_id: int = Query(None, description="アルバムIDで絞り込む場合"),
     artist_id: int = Query(None, description="メインアーティストIDで絞り込む場合"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     指定されたアルバム、またはアーティストに紐づく楽曲の現在のクレジット（作詞・作曲・編曲）一覧を返す。
@@ -39,13 +40,14 @@ def get_bulk_edit_credits(
         # トラック順にソートしたい場合は追加
         query = query.order_by(models.AlbumTrack.disc_number, models.AlbumTrack.track_number)
     elif artist_id:
-        query = query.join(models.SongArtistLink).filter(
-            models.SongArtistLink.artist_id == artist_id,
-            models.SongArtistLink.role_category == "Artist"
-        ).order_by(models.Song.id)
+        query = (
+            query.join(models.SongArtistLink)
+            .filter(models.SongArtistLink.artist_id == artist_id, models.SongArtistLink.role_category == "Artist")
+            .order_by(models.Song.id)
+        )
 
     songs = query.all()
-    
+
     results = []
     for song in songs:
         lyricists = []
@@ -59,19 +61,17 @@ def get_bulk_edit_credits(
                     lyricists.append(link.artist.name)
                 elif link.role_category == "Composer" and link.artist:
                     composers.append(link.artist.name)
-        
+
         # 編曲は SongArtistLink から取得
         for link in song.artist_links:
             if link.role_category == "Arranger" and link.artist:
                 arrangers.append(link.artist.name)
 
-        results.append(schemas.CreditBulkEditItem(
-            song_id=song.id,
-            title=song.title,
-            lyricists=lyricists,
-            composers=composers,
-            arrangers=arrangers
-        ))
+        results.append(
+            schemas.CreditBulkEditItem(
+                song_id=song.id, title=song.title, lyricists=lyricists, composers=composers, arrangers=arrangers
+            )
+        )
 
     return results
 
@@ -81,76 +81,233 @@ def update_bulk_credits(req: schemas.CreditBulkUpdateRequest, db: Session = Depe
     """
     複数曲のクレジット（作詞・作曲・編曲）を一括で上書き更新する。
     """
+    # 同じ WorkArtistLink を複数曲が共有している場合に重複が生じないよう、
+    # 処理済みの work_id を追跡する。
+    processed_work_ids: set[int] = set()
+
     try:
         for update_item in req.updates:
             song = db.query(models.Song).filter(models.Song.id == update_item.song_id).first()
             if not song:
                 continue
 
-            # --- 編曲(Arranger)の更新 ---
-            # まず既存のArrangerを削除
+            # --- 編曲(Arranger)の更新（SongArtistLink）---
             db.query(models.SongArtistLink).filter(
-                models.SongArtistLink.song_id == song.id,
-                models.SongArtistLink.role_category == "Arranger"
-            ).delete()
-            
-            # 新しいArrangerを追加
+                models.SongArtistLink.song_id == song.id, models.SongArtistLink.role_category == "Arranger"
+            ).delete(synchronize_session="fetch")
+            db.flush()  # DELETE を即時DBへ反映してから INSERT する
+
+            seen_arrangers: set[int] = set()
             for name in update_item.arrangers:
                 name = name.strip()
                 if not name:
                     continue
                 artist = get_or_create_artist(db, name)
-                db.add(models.SongArtistLink(
-                    song_id=song.id,
-                    artist_id=artist.id,
-                    role_category="Arranger",
-                    role_detail=None
-                ))
+                if artist.id in seen_arrangers:
+                    continue
+                seen_arrangers.add(artist.id)
+                db.add(
+                    models.SongArtistLink(
+                        song_id=song.id, artist_id=artist.id, role_category="Arranger", role_detail=None
+                    )
+                )
+            db.flush()
 
-            # --- 作詞(Lyricist)・作曲(Composer)の更新 ---
+            # --- 作詞(Lyricist)・作曲(Composer)の更新（WorkArtistLink）---
             work = song.work
             if not work:
-                # Workがない場合は作成
-                work = models.MusicalWork(title=song.title)
-                db.add(work)
-                db.flush()
-                db.add(models.SongWorksLink(song_id=song.id, work_id=work.id, order_index=0))
-                db.flush()
+                song_work_link = db.query(models.SongWorksLink).filter(models.SongWorksLink.song_id == song.id).first()
+                if song_work_link:
+                    work = song_work_link.work
+                    song.work_id = work.id
+                else:
+                    work = models.MusicalWork(title=song.title)
+                    db.add(work)
+                    db.flush()
+                    song.work_id = work.id
+                    db.add(models.SongWorksLink(song_id=song.id, work_id=work.id, order_index=0))
+                    db.flush()
 
-            # 既存の作詞・作曲を削除
+            # 同じWorkを複数の楽曲が共有しているケースを考慮し、
+            # 既に処理済みの work_id はスキップする
+            if work.id in processed_work_ids:
+                continue
+            processed_work_ids.add(work.id)
+
             db.query(models.WorkArtistLink).filter(
                 models.WorkArtistLink.work_id == work.id,
-                models.WorkArtistLink.role_category.in_(["Lyricist", "Composer"])
-            ).delete()
+                models.WorkArtistLink.role_category.in_(["Lyricist", "Composer"]),
+            ).delete(synchronize_session="fetch")
+            db.flush()  # DELETE を即時DBへ反映してから INSERT する
 
-            # 新しいLyricistを追加
+            seen_lyricists: set[int] = set()
             for name in update_item.lyricists:
                 name = name.strip()
                 if not name:
                     continue
                 artist = get_or_create_artist(db, name)
-                db.add(models.WorkArtistLink(
-                    work_id=work.id,
-                    artist_id=artist.id,
-                    role_category="Lyricist",
-                    role_detail=None
-                ))
+                if artist.id in seen_lyricists:
+                    continue
+                seen_lyricists.add(artist.id)
+                db.add(
+                    models.WorkArtistLink(
+                        work_id=work.id, artist_id=artist.id, role_category="Lyricist", role_detail=None
+                    )
+                )
 
-            # 新しいComposerを追加
+            seen_composers: set[int] = set()
             for name in update_item.composers:
                 name = name.strip()
                 if not name:
                     continue
                 artist = get_or_create_artist(db, name)
-                db.add(models.WorkArtistLink(
-                    work_id=work.id,
-                    artist_id=artist.id,
-                    role_category="Composer",
-                    role_detail=None
-                ))
+                if artist.id in seen_composers:
+                    continue
+                seen_composers.add(artist.id)
+                db.add(
+                    models.WorkArtistLink(
+                        work_id=work.id, artist_id=artist.id, role_category="Composer", role_detail=None
+                    )
+                )
+            db.flush()
 
         db.commit()
         return {"message": "Credits successfully updated in bulk."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/apply-to-artist")
+def apply_credits_to_artist(req: schemas.ArtistCreditApplyRequest, db: Session = Depends(get_db)):
+    """
+    特定アーティストのメインアーティスト楽曲すべてに、指定したクレジットを一括で適用する。
+    overwrite_* フラグが True のフィールドのみ上書きされる。
+    """
+    # ── 重複なし楽曲 ID リストの取得 ──────────────────────────────────────────
+    # .distinct() は JOIN 先の列も含めて評価されるため ORM レベルでは不十分。
+    # サブクエリで先に song_id の集合を作り、そこから Song を取得する。
+    unique_song_id_rows = (
+        db.query(models.SongArtistLink.song_id)
+        .filter(models.SongArtistLink.artist_id == req.artist_id)
+        .distinct()
+        .all()
+    )
+    unique_song_ids = [r[0] for r in unique_song_id_rows]
+
+    if not unique_song_ids:
+        raise HTTPException(status_code=404, detail="対象の楽曲が見つかりません。")
+
+    songs = db.query(models.Song).filter(models.Song.id.in_(unique_song_ids)).all()
+
+    arranger_ids_to_add: list[int] = []
+    if req.overwrite_arrangers:
+        seen: set[str] = set()
+        for name in req.arrangers:
+            name = name.strip()
+            if name and name not in seen:
+                seen.add(name)
+                artist_obj = get_or_create_artist(db, name)
+                arranger_ids_to_add.append(artist_obj.id)
+        db.flush()
+
+    lyricist_ids_to_add: list[int] = []
+    if req.overwrite_lyricists:
+        seen = set()
+        for name in req.lyricists:
+            name = name.strip()
+            if name and name not in seen:
+                seen.add(name)
+                artist_obj = get_or_create_artist(db, name)
+                lyricist_ids_to_add.append(artist_obj.id)
+        db.flush()
+
+    composer_ids_to_add: list[int] = []
+    if req.overwrite_composers:
+        seen = set()
+        for name in req.composers:
+            name = name.strip()
+            if name and name not in seen:
+                seen.add(name)
+                artist_obj = get_or_create_artist(db, name)
+                composer_ids_to_add.append(artist_obj.id)
+        db.flush()
+
+    updated_songs = 0
+    processed_work_ids: set[int] = set()
+
+    try:
+        for song in songs:
+            # ── 編曲 (SongArtistLink) ─────────────────────────────────────────
+            if req.overwrite_arrangers:
+                db.query(models.SongArtistLink).filter(
+                    models.SongArtistLink.song_id == song.id,
+                    models.SongArtistLink.role_category == "Arranger",
+                ).delete(synchronize_session="fetch")
+                db.flush()  # DELETE を即時反映
+                for artist_id in arranger_ids_to_add:
+                    db.add(
+                        models.SongArtistLink(
+                            song_id=song.id, artist_id=artist_id, role_category="Arranger", role_detail=None
+                        )
+                    )
+                db.flush()
+
+            # ── 作詞・作曲 (WorkArtistLink) ───────────────────────────────────
+            if req.overwrite_lyricists or req.overwrite_composers:
+                work = song.work
+                if not work:
+                    song_work_link = (
+                        db.query(models.SongWorksLink).filter(models.SongWorksLink.song_id == song.id).first()
+                    )
+                    if song_work_link:
+                        work = song_work_link.work
+                        song.work_id = work.id
+                    else:
+                        work = models.MusicalWork(title=song.title)
+                        db.add(work)
+                        db.flush()
+                        song.work_id = work.id
+                        db.add(models.SongWorksLink(song_id=song.id, work_id=work.id, order_index=0))
+                        db.flush()
+
+                # 同一 work を共有する楽曲が複数ある場合、2度目以降はスキップ
+                if work.id in processed_work_ids:
+                    updated_songs += 1
+                    continue
+                processed_work_ids.add(work.id)
+
+                roles_to_clear = []
+                if req.overwrite_lyricists:
+                    roles_to_clear.append("Lyricist")
+                if req.overwrite_composers:
+                    roles_to_clear.append("Composer")
+
+                if roles_to_clear:
+                    db.query(models.WorkArtistLink).filter(
+                        models.WorkArtistLink.work_id == work.id,
+                        models.WorkArtistLink.role_category.in_(roles_to_clear),
+                    ).delete(synchronize_session="fetch")
+                    db.flush()  # DELETE を即時反映
+
+                for artist_id in lyricist_ids_to_add:
+                    db.add(
+                        models.WorkArtistLink(
+                            work_id=work.id, artist_id=artist_id, role_category="Lyricist", role_detail=None
+                        )
+                    )
+                for artist_id in composer_ids_to_add:
+                    db.add(
+                        models.WorkArtistLink(
+                            work_id=work.id, artist_id=artist_id, role_category="Composer", role_detail=None
+                        )
+                    )
+                db.flush()
+
+            updated_songs += 1
+
+        db.commit()
+        return {"message": f"{updated_songs} 曲のクレジットを一括適用しました。", "updated_count": updated_songs}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

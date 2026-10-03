@@ -674,6 +674,19 @@ class CreditBulkUpdateRequest(BaseModel):
     updates: list[CreditBulkUpdateItem]
 
 
+class ArtistCreditApplyRequest(BaseModel):
+    """特定アーティストの全楽曲に一括でクレジットを適用する"""
+
+    artist_id: int
+    lyricists: list[str] = []
+    composers: list[str] = []
+    arrangers: list[str] = []
+    # True のフィールドだけ上書きする (False なら既存を保持)
+    overwrite_lyricists: bool = True
+    overwrite_composers: bool = True
+    overwrite_arrangers: bool = True
+
+
 class AlbumCreate(BaseModel):
     album_group_id: int | None = None
     main_title: str
