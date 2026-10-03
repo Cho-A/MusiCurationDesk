@@ -53,7 +53,10 @@ const AdminSpotify = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (!res.ok) throw new Error('Album import request failed');
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Album import request failed (Status: ${res.status}): ${errText}`);
+      }
       const data = await res.json();
       if (data.job_id) {
         pollJobProgress(data.job_id);
@@ -74,13 +77,18 @@ const AdminSpotify = () => {
 
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`${API_BASE_URL}/search/external/import/artist/${artistId}`, {
+      // If the user pasted a full URL, extract the ID to prevent 404
+      const cleanArtistId = artistId.split('/').pop()?.split('?')[0] || artistId;
+      const res = await fetch(`${API_BASE_URL}/search/external/import/artist/${cleanArtistId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (!res.ok) throw new Error('Artist import request failed');
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Artist import request failed (Status: ${res.status}): ${errText}`);
+      }
       const data = await res.json();
       if (data.job_id) {
         pollJobProgress(data.job_id);
@@ -107,7 +115,10 @@ const AdminSpotify = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (!res.ok) throw new Error('Playlist import request failed');
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Playlist import request failed (Status: ${res.status}): ${errText}`);
+      }
       const data = await res.json();
       if (data.job_id) {
         pollJobProgress(data.job_id);
