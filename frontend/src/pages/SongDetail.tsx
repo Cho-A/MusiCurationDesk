@@ -232,7 +232,57 @@ const SongDetail = () => {
   };
 
   const handleAddCredit = async (artistName: string, category: string, detail?: string) => {
-    alert(`クレジットを追加します: ${artistName} / ${category} / ${detail}`);
+    if (!selectedVersionId) return;
+    try {
+      let artistId: number | null = null;
+      const searchRes = await fetch(`${API_BASE_URL}/artists/search?q=${encodeURIComponent(artistName)}`);
+      
+      if (searchRes.ok) {
+        const artists = await searchRes.json();
+        const exactMatch = artists.find((a: any) => a.name.toLowerCase() === artistName.toLowerCase());
+        if (exactMatch) {
+          artistId = exactMatch.id;
+        }
+      } else if (searchRes.status !== 404) {
+        alert(`アーティスト検索中にエラーが発生しました: ${searchRes.status}`);
+        return;
+      }
+
+      if (!artistId) {
+        const createRes = await fetch(`${API_BASE_URL}/artists/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: artistName })
+        });
+        if (createRes.ok) {
+          const newArtist = await createRes.json();
+          artistId = newArtist.id;
+        } else {
+          alert(`アーティストの新規作成に失敗しました: ${createRes.status}`);
+          return;
+        }
+      }
+      if (!artistId) return alert('アーティストの特定/作成に失敗しました');
+
+      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}/artists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          song_id: selectedVersionId,
+          artist_id: artistId,
+          role_category: category,
+          role_detail: detail || null
+        })
+      });
+      if (res.ok) {
+        if (id) fetchBaseSong(id); // Reload data
+      } else {
+        alert('追加に失敗しました');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('通信エラーが発生しました');
+    }
   };
 
   const handleRemoveCredit = async (artistId: number, category: string, detail?: string) => {
