@@ -47,6 +47,23 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
   const [newDetail, setNewDetail] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
+  
+  // 既存クレジットをアーティスト名ごとにグループ化（非編集時のコンパクト表示用）
+  const groupedCredits = existingCredits.reduce((acc, credit) => {
+    const existing = acc.find(c => c.artist_name === credit.artist_name);
+    if (existing) {
+      if (!existing.roles.includes(credit.role_category)) {
+        existing.roles.push(credit.role_category);
+      }
+    } else {
+      acc.push({
+        artist_name: credit.artist_name,
+        roles: [credit.role_category]
+      });
+    }
+    return acc;
+  }, [] as { artist_name: string; roles: string[] }[]);
+
   const handleAdd = () => {
     if (!newArtistName.trim()) return;
     if (!selectedCategory.trim()) return;
@@ -79,18 +96,17 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
       {/* 既存クレジットのリスト */}
       {!isEditing ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          {existingCredits.map((credit, idx) => (
+          {groupedCredits.map((group, idx) => (
             <span key={idx} style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               padding: '6px 12px', background: 'var(--bg-tertiary)', borderRadius: '16px',
               border: '1px solid var(--border-color)', fontSize: '0.85rem'
             }}>
-              <span style={{ color: 'var(--spotify-color)', fontWeight: 600 }}>{credit.role_category}</span>
-              <span style={{ color: 'var(--text-primary)' }}>{credit.artist_name}</span>
-              {credit.role_detail && <span style={{ color: 'var(--text-tertiary)' }}>({credit.role_detail})</span>}
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{group.artist_name}</span>
+              <span style={{ color: 'var(--spotify-color)' }}>{group.roles.join(', ')}</span>
             </span>
           ))}
-          {existingCredits.length === 0 && (
+          {groupedCredits.length === 0 && (
             <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>クレジット情報なし</span>
           )}
         </div>

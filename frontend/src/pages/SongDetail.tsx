@@ -531,7 +531,7 @@ const SongDetail = () => {
   };
 
   // クレジットのソートロジック
-  const roleOrder = ['Artist', 'Vocal', 'Chorus', 'Composer', 'Lyricist', 'Arranger', 'Producer'];
+  const roleOrder = ['Artist', 'Vocal', 'Chorus', 'Guitar', 'Bass', 'Drums', 'Keyboard', 'Strings Arrangement', 'Horn Arrangement', 'Composer', 'Lyricist', 'Arranger', 'Producer'];
   const sortedCredits = [...(displaySong.artist_links || [])].sort((a, b) => {
     let indexA = roleOrder.indexOf(a.role_category);
     let indexB = roleOrder.indexOf(b.role_category);
