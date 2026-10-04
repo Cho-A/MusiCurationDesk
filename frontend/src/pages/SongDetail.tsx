@@ -137,8 +137,9 @@ const SongDetail = () => {
   const [mainArtistSearchQuery, setMainArtistSearchQuery] = useState("");
   const [mainArtistSearchResults, setMainArtistSearchResults] = useState<{id: number, name: string}[]>([]);
 
-  const fetchBaseSong = async (songIdToFetch: string) => {
-    setLoading(true);
+  // silent: true の場合は「読み込み中...」表示に切り替えず裏で再取得する（編集中のUIを壊さないため）
+  const fetchBaseSong = async (songIdToFetch: string, options: { silent?: boolean } = {}) => {
+    if (!options.silent) setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/songs/${songIdToFetch}`);
       if (res.ok) {
@@ -150,7 +151,7 @@ const SongDetail = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!options.silent) setLoading(false);
     }
   };
 
@@ -231,58 +232,63 @@ const SongDetail = () => {
     }
   };
 
-  const handleAddCredit = async (artistName: string, category: string, detail?: string) => {
-    if (!selectedVersionId) return;
-    try {
-      let artistId: number | null = null;
-      const searchRes = await fetch(`${API_BASE_URL}/artists/search?q=${encodeURIComponent(artistName)}`);
-      
-      if (searchRes.ok) {
-        const artists = await searchRes.json();
-        const exactMatch = artists.find((a: any) => a.name.toLowerCase() === artistName.toLowerCase());
-        if (exactMatch) {
-          artistId = exactMatch.id;
-        }
-      } else if (searchRes.status !== 404) {
-        alert(`アーティスト検索中にエラーが発生しました: ${searchRes.status}`);
-        return;
-      }
+  // アーティスト名からIDを特定する（完全一致がなければ新規作成）。失敗時はエラーを投げる
+  const resolveArtistId = async (artistName: string): Promise<number> => {
+    const searchRes = await fetch(`${API_BASE_URL}/artists/search?q=${encodeURIComponent(artistName)}`);
+    if (searchRes.ok) {
+      const artists = await searchRes.json();
+      const exactMatch = artists.find((a: any) => a.name.toLowerCase() === artistName.toLowerCase());
+      if (exactMatch) return exactMatch.id;
+    } else if (searchRes.status !== 404) {
+      throw new Error(`アーティスト検索中にエラーが発生しました (${searchRes.status})`);
+    }
 
-      if (!artistId) {
-        const createRes = await fetch(`${API_BASE_URL}/artists/`, {
+    const createRes = await fetch(`${API_BASE_URL}/artists/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: artistName })
+    });
+    if (!createRes.ok) {
+      throw new Error(`アーティストの新規作成に失敗しました (${createRes.status})`);
+    }
+    const newArtist = await createRes.json();
+    if (!newArtist?.id) throw new Error('アーティストの特定/作成に失敗しました');
+    return newArtist.id;
+  };
+
+  type PendingCredit = { artistName: string; category: string; detail?: string };
+
+  // 保存待ちクレジットを順に登録し、最後に1回だけ再読み込みする（失敗分はまとめて通知）
+  const addCreditsInBulk = async (credits: PendingCredit[], endpoint: string, ownerKey: 'song_id' | 'work_id', ownerId: number) => {
+    const failures: string[] = [];
+    for (const credit of credits) {
+      try {
+        const artistId = await resolveArtistId(credit.artistName);
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: artistName })
+          body: JSON.stringify({
+            [ownerKey]: ownerId,
+            artist_id: artistId,
+            role_category: credit.category,
+            role_detail: credit.detail || null
+          })
         });
-        if (createRes.ok) {
-          const newArtist = await createRes.json();
-          artistId = newArtist.id;
-        } else {
-          alert(`アーティストの新規作成に失敗しました: ${createRes.status}`);
-          return;
-        }
+        if (!res.ok) throw new Error(`登録に失敗しました (${res.status})`);
+      } catch (err) {
+        console.error(err);
+        failures.push(`${credit.artistName} (${credit.category}): ${err instanceof Error ? err.message : '通信エラー'}`);
       }
-      if (!artistId) return alert('アーティストの特定/作成に失敗しました');
-
-      const res = await fetch(`${API_BASE_URL}/songs/${selectedVersionId}/artists`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          song_id: selectedVersionId,
-          artist_id: artistId,
-          role_category: category,
-          role_detail: detail || null
-        })
-      });
-      if (res.ok) {
-        if (id) fetchBaseSong(id); // Reload data
-      } else {
-        alert('追加に失敗しました');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('通信エラーが発生しました');
     }
+    if (id) await fetchBaseSong(id, { silent: true });
+    if (failures.length > 0) {
+      alert(`以下のクレジットの追加に失敗しました:\n${failures.join('\n')}`);
+    }
+  };
+
+  const handleAddCredits = async (credits: PendingCredit[]) => {
+    if (!selectedVersionId) return;
+    await addCreditsInBulk(credits, `${API_BASE_URL}/songs/${selectedVersionId}/artists`, 'song_id', selectedVersionId);
   };
 
   const handleRemoveCredit = async (artistId: number, category: string, detail?: string) => {
@@ -292,7 +298,7 @@ const SongDetail = () => {
       
       const res = await fetch(url, { method: 'DELETE' });
       if (res.ok) {
-        if (selectedVersionId) fetchBaseSong(selectedVersionId.toString());
+        if (selectedVersionId) fetchBaseSong(selectedVersionId.toString(), { silent: true });
       } else {
         alert("クレジットの削除に失敗しました");
       }
@@ -301,57 +307,9 @@ const SongDetail = () => {
     }
   };
 
-  const handleAddWorkCredit = async (artistName: string, category: string, detail?: string) => {
+  const handleAddWorkCredits = async (credits: PendingCredit[]) => {
     if (!baseSong?.work_id) return;
-    try {
-      let artistId: number | null = null;
-      const searchRes = await fetch(`${API_BASE_URL}/artists/search?q=${encodeURIComponent(artistName)}`);
-      
-      if (searchRes.ok) {
-        const artists = await searchRes.json();
-        const exactMatch = artists.find((a: any) => a.name.toLowerCase() === artistName.toLowerCase());
-        if (exactMatch) {
-          artistId = exactMatch.id;
-        }
-      } else if (searchRes.status !== 404) {
-        alert(`アーティスト検索中にエラーが発生しました: ${searchRes.status}`);
-        return;
-      }
-
-      if (!artistId) {
-        const createRes = await fetch(`${API_BASE_URL}/artists/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: artistName })
-        });
-        if (createRes.ok) {
-          const newArtist = await createRes.json();
-          artistId = newArtist.id;
-        } else {
-          alert(`アーティストの新規作成に失敗しました: ${createRes.status}`);
-          return;
-        }
-      }
-      if (!artistId) return alert('アーティストの特定/作成に失敗しました');
-
-      const res = await fetch(`${API_BASE_URL}/works/${baseSong.work_id}/artists`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          work_id: baseSong.work_id,
-          artist_id: artistId,
-          role_category: category,
-          role_detail: detail || null
-        })
-      });
-      if (res.ok) {
-        if (id) fetchBaseSong(id);
-      } else {
-        alert('追加に失敗しました');
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    await addCreditsInBulk(credits, `${API_BASE_URL}/works/${baseSong.work_id}/artists`, 'work_id', baseSong.work_id);
   };
 
   const handleRemoveWorkCredit = async (artistId: number, category: string, detail?: string) => {
@@ -361,7 +319,7 @@ const SongDetail = () => {
       if (detail) url += `&role_detail=${encodeURIComponent(detail)}`;
       const res = await fetch(url, { method: 'DELETE' });
       if (res.ok) {
-        if (id) fetchBaseSong(id);
+        if (id) fetchBaseSong(id, { silent: true });
       } else {
         alert("削除に失敗しました");
       }
@@ -806,10 +764,12 @@ const SongDetail = () => {
               role_category: a.role_category,
               role_detail: a.role_detail
             }))} 
-            onAddCredit={handleAddWorkCredit}
+            onAddCredits={handleAddWorkCredits}
             onRemoveCredit={handleRemoveWorkCredit}
             categories={['Lyricist', 'Composer', 'Arranger', 'Producer']}
             title="共通クレジット編集 (全バージョン共通)"
+            defaultEditing
+            onDone={() => setIsEditingWorkCredits(false)}
           />
         )}
       </div>
@@ -1206,6 +1166,8 @@ const SongDetail = () => {
               existingCredits={sortedCredits} 
               onAddCredits={handleAddCredits}
               onRemoveCredit={handleRemoveCredit}
+              defaultEditing
+              onDone={() => setIsEditingCredits(false)}
             />
           )}
         </div>

@@ -15,6 +15,10 @@ interface SongCreditEditorProps {
   onRemoveCredit: (artistId: number, category: string, detail?: string) => void;
   categories?: string[];
   title?: string;
+  /** true の場合、最初から編集フォームを開いた状態で表示する */
+  defaultEditing?: boolean;
+  /** 「保存して完了」で保存が終わった後に呼ばれる（親側で編集表示を閉じる用） */
+  onDone?: () => void;
 }
 
 const DEFAULT_CATEGORIES = [
@@ -40,12 +44,12 @@ const DEFAULT_CATEGORIES = [
   'Programming', 'Manipulator', 'Turntable', 'Other Instrument'
 ];
 
-const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, onAddCredits, onRemoveCredit, categories = DEFAULT_CATEGORIES, title = "クレジット編集" }) => {
+const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, onAddCredits, onRemoveCredit, categories = DEFAULT_CATEGORIES, title = "クレジット編集", defaultEditing = false, onDone }) => {
   const [newArtistName, setNewArtistName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [newDetail, setNewDetail] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(defaultEditing);
   const [pendingAdds, setPendingAdds] = useState<{ artistName: string, category: string, detail?: string }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -77,15 +81,19 @@ const SongCreditEditor: React.FC<SongCreditEditorProps> = ({ existingCredits, on
   const handleSaveAndClose = async () => {
     if (pendingAdds.length > 0 && onAddCredits) {
       setIsSaving(true);
-      await onAddCredits(pendingAdds);
-      setPendingAdds([]);
-      setIsSaving(false);
+      try {
+        await onAddCredits(pendingAdds);
+        setPendingAdds([]);
+      } finally {
+        setIsSaving(false);
+      }
     }
     setIsEditing(false);
+    onDone?.();
   };
 
   return (
-    <div style={{
+    <div data-testid="song-credit-editor" style={{
       background: 'var(--bg-secondary)',
       borderRadius: '12px',
       padding: '24px',

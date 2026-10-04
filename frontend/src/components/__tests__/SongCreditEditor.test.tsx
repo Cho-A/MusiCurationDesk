@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import SongCreditEditor from '../SongCreditEditor';
 import { describe, it, expect, vi } from 'vitest';
@@ -21,7 +21,7 @@ describe('SongCreditEditor component', () => {
     expect(screen.getByText('クレジット情報なし')).toBeInTheDocument();
 
     // Click Edit button
-    const editButton = screen.getByText(/編集/);
+    const editButton = screen.getByRole('button', { name: /編集/ });
     fireEvent.click(editButton);
 
     // Verify it enters edit mode
@@ -31,7 +31,7 @@ describe('SongCreditEditor component', () => {
     const artistInput = screen.getByPlaceholderText('アーティスト名');
     fireEvent.change(artistInput, { target: { value: 'Test Artist' } });
     
-    const addButton = screen.getByText(/追加/);
+    const addButton = screen.getByRole('button', { name: /追加/ });
     fireEvent.click(addButton);
 
     // The added credit should be in pending list
@@ -48,5 +48,29 @@ describe('SongCreditEditor component', () => {
     // API should be called with the pending credit
     expect(handleAddCredits).toHaveBeenCalledTimes(1);
     expect(handleAddCredits).toHaveBeenCalledWith([{ artistName: 'Test Artist', category: 'Vocal', detail: '' }]);
+  });
+
+  it('defaultEditing で最初から編集フォームを表示し、保存後に onDone を呼ぶ', async () => {
+    const handleAddCredits = vi.fn().mockResolvedValue(undefined);
+    const handleDone = vi.fn();
+
+    render(
+      <SongCreditEditor
+        songId={1}
+        existingCredits={[]}
+        onAddCredits={handleAddCredits}
+        onRemoveCredit={vi.fn()}
+        defaultEditing
+        onDone={handleDone}
+      />
+    );
+
+    expect(screen.getByPlaceholderText('アーティスト名')).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('アーティスト名'), { target: { value: 'A' } });
+    fireEvent.click(screen.getByRole('button', { name: /追加/ }));
+    fireEvent.click(screen.getByRole('button', { name: '保存して完了' }));
+
+    await waitFor(() => expect(handleDone).toHaveBeenCalledTimes(1));
+    expect(handleAddCredits).toHaveBeenCalledTimes(1);
   });
 });
