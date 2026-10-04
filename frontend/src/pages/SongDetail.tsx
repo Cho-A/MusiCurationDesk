@@ -74,6 +74,7 @@ interface OtherVersion {
   album_links?: AlbumTrackInfo[];
   primary_album_title?: string;
   release_date?: string;
+  artist_links?: ArtistLink[];
 }
 
 interface SongDetailData {
@@ -1126,7 +1127,7 @@ const SongDetail = () => {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {(() => {
                 const grouped = sortedCredits.reduce((acc, credit) => {
-                  const existing = acc.find(c => c.artist_name === credit.artist_name);
+                  const existing = acc.find((c: { artist_name: string; roles: string[] }) => c.artist_name === credit.artist_name);
                   if (existing) {
                     if (!existing.roles.includes(credit.role_category)) {
                       existing.roles.push(credit.role_category);
@@ -1148,7 +1149,7 @@ const SongDetail = () => {
                   );
                 }
 
-                return grouped.map((group, idx) => (
+                return grouped.map((group: { artist_name: string; roles: string[] }, idx: number) => (
                   <span key={idx} style={{
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                     padding: '8px 16px', background: 'var(--bg-secondary)', borderRadius: '20px',
