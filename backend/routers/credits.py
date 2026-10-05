@@ -181,18 +181,30 @@ def update_bulk_credits(req: schemas.CreditBulkUpdateRequest, db: Session = Depe
 @router.post("/apply-to-artist")
 def apply_credits_to_artist(req: schemas.ArtistCreditApplyRequest, db: Session = Depends(get_db)):
     """
-    特定アーティストのメインアーティスト楽曲すべてに、指定したクレジットを一括で適用する。
+    特定アーティストのメインアーティスト楽曲、または特定アルバムの収録曲すべてに、
+    指定したクレジットを一括で適用する。
     overwrite_* フラグが True のフィールドのみ上書きされる。
     """
+    if req.artist_id is None and req.album_id is None:
+        raise HTTPException(status_code=400, detail="artist_id か album_id のいずれかを指定してください。")
+
     # ── 重複なし楽曲 ID リストの取得 ──────────────────────────────────────────
     # .distinct() は JOIN 先の列も含めて評価されるため ORM レベルでは不十分。
     # サブクエリで先に song_id の集合を作り、そこから Song を取得する。
-    unique_song_id_rows = (
-        db.query(models.SongArtistLink.song_id)
-        .filter(models.SongArtistLink.artist_id == req.artist_id)
-        .distinct()
-        .all()
-    )
+    if req.album_id is not None:
+        unique_song_id_rows = (
+            db.query(models.AlbumTrack.song_id)
+            .filter(models.AlbumTrack.album_id == req.album_id, models.AlbumTrack.song_id.isnot(None))
+            .distinct()
+            .all()
+        )
+    else:
+        unique_song_id_rows = (
+            db.query(models.SongArtistLink.song_id)
+            .filter(models.SongArtistLink.artist_id == req.artist_id)
+            .distinct()
+            .all()
+        )
     unique_song_ids = [r[0] for r in unique_song_id_rows]
 
     if req.target_song_ids is not None:
@@ -246,11 +258,9 @@ def apply_credits_to_artist(req: schemas.ArtistCreditApplyRequest, db: Session =
                 c_seen.add(name)
                 artist_obj = get_or_create_artist(db, name)
                 c_artist_ids.append(artist_obj.id)
-        custom_role_data.append({
-            "category": crole.role_category,
-            "artist_ids": c_artist_ids,
-            "overwrite": crole.overwrite
-        })
+        custom_role_data.append(
+            {"category": crole.role_category, "artist_ids": c_artist_ids, "overwrite": crole.overwrite}
+        )
     db.flush()
 
     updated_songs = 0

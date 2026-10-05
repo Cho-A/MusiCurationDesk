@@ -14,7 +14,10 @@ interface CreditBulkEditItem {
 }
 
 // --- 一括適用パネル ---
-const ApplyToAllPanel = ({ artistId, onApplied, targetSongIds }: { artistId: string; onApplied: () => void; targetSongIds: number[] }) => {
+// artistId / albumId のどちらか一方を受け取り、その配下の楽曲に一括適用する
+const ApplyToAllPanel = ({ artistId, albumId, onApplied, targetSongIds }: { artistId?: string | null; albumId?: string | null; onApplied: () => void; targetSongIds: number[] }) => {
+  const isAlbum = !!albumId;
+  const scopeLabel = isAlbum ? 'このアルバムの収録曲' : 'このアーティストがメインアーティストとして関わる楽曲';
   const [expanded, setExpanded] = useState(false);
   const [applying, setApplying] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -38,7 +41,7 @@ const ApplyToAllPanel = ({ artistId, onApplied, targetSongIds }: { artistId: str
           'Authorization': token ? `Bearer ${token}` : '',
         },
         body: JSON.stringify({
-          artist_id: parseInt(artistId),
+          ...(isAlbum ? { album_id: parseInt(albumId!) } : { artist_id: parseInt(artistId!) }),
           lyricists: lyricists.split(',').map(s => s.trim()).filter(Boolean),
           composers: composers.split(',').map(s => s.trim()).filter(Boolean),
           arrangers: arrangers.split(',').map(s => s.trim()).filter(Boolean),
@@ -96,7 +99,7 @@ const ApplyToAllPanel = ({ artistId, onApplied, targetSongIds }: { artistId: str
       {expanded && (
         <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            このアーティストがメインアーティストとして関わる<strong>全楽曲</strong>に、以下のクレジットを一括上書きします。<br />
+            {scopeLabel}のうち、<strong>下の表でチェックされている楽曲</strong>に、以下のクレジットを一括上書きします。<br />
             後から個別に修正することも可能です。適用しないフィールドは右端のチェックを外してください。
           </p>
 
@@ -183,7 +186,7 @@ const ApplyToAllPanel = ({ artistId, onApplied, targetSongIds }: { artistId: str
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
               onClick={() => setConfirmOpen(true)}
-              disabled={applying || !hasAnyValue}
+              disabled={applying || !hasAnyValue || targetSongIds.length === 0}
               className="btn btn-primary"
               style={{ background: 'rgba(255, 210, 0, 0.85)', color: '#000', borderColor: 'transparent' }}
             >
@@ -208,7 +211,7 @@ const ApplyToAllPanel = ({ artistId, onApplied, targetSongIds }: { artistId: str
                   <h3 style={{ margin: 0, fontWeight: 700 }}>一括適用の確認</h3>
                 </div>
                 <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '0.92rem' }}>
-                  このアーティストの<strong>全楽曲</strong>に以下のクレジットを上書きします。<br />
+                  {scopeLabel}のうち、チェックされた<strong>{targetSongIds.length} 曲</strong>に以下のクレジットを上書きします。<br />
                   この操作は元に戻せません。続行しますか？
                 </p>
                 <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '14px', fontSize: '0.88rem', lineHeight: 2 }}>
@@ -359,9 +362,9 @@ const BulkCreditEdit: React.FC = () => {
         subtitle="複数人入力する場合はカンマ（,）で区切ってください。"
       />
 
-      {/* 一括適用パネル（アーティスト指定時のみ表示）*/}
-      {artistId && (
-        <ApplyToAllPanel artistId={artistId} onApplied={fetchCredits} targetSongIds={Array.from(selectedSongIds)} />
+      {/* 一括適用パネル（アーティスト指定時・アルバム指定時に表示）*/}
+      {(artistId || albumId) && (
+        <ApplyToAllPanel artistId={artistId} albumId={albumId} onApplied={fetchCredits} targetSongIds={Array.from(selectedSongIds)} />
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>

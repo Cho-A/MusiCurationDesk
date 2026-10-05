@@ -681,9 +681,11 @@ class CustomRoleApply(BaseModel):
 
 
 class ArtistCreditApplyRequest(BaseModel):
-    """特定アーティストの全楽曲に一括でクレジットを適用する"""
+    """特定アーティスト（またはアルバム）の全楽曲に一括でクレジットを適用する"""
 
-    artist_id: int
+    # artist_id か album_id のどちらか一方を指定する
+    artist_id: int | None = None
+    album_id: int | None = None
     target_song_ids: list[int] | None = None  # 指定がある場合はこれらの楽曲のみを対象とする
     lyricists: list[str] = []
     composers: list[str] = []
