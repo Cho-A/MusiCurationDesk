@@ -6,6 +6,7 @@
 - **Japanese Commit Messages**: Write `git commit` messages in Japanese unless there is a specific technical reason not to.
 - **Temporary Scripts Handling**: After creating and running a temporary one-off script (e.g., for schema migration or data generation), do not delete it automatically. Instead, explicitly ask the user in your response: "I have created and used this temporary script. I plan to delete it now. Is it okay to delete it, or do you want to keep it?"
 - **Test-Driven Development (TDD)**: Always write tests before implementing new features, APIs, or components. For existing features, ensure tests are added before or alongside any modifications. Treat tests as executable specifications.
+- **Reporting Preventive Measures (再発防止策)**: When implementing a measure to prevent the recurrence of a bug or issue (再発防止策), you must explicitly describe in your response what kind of tests were written and what preventive measures were taken.
 
 ## Coding Standards (Backend)
 - **FastAPI Router Unification**: Always instantiate `APIRouter` with `prefix` and `tags` (e.g., `router = APIRouter(prefix="/albums", tags=["Albums"])`). Do not manually repeat paths like `/albums/` in `@router` decorators.
