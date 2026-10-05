@@ -387,3 +387,41 @@ class TestAlbumsAPI:
 
         # song2はDisc 2で使われているので残っていること
         assert db_session.query(Song).filter_by(id=song2.id).first() is not None
+
+    def test_update_album_track_partial(self, client, db_session):
+        import uuid
+        from backend import models
+        artist = models.Artist(name=f"Test Artist {uuid.uuid4()}")
+        db_session.add(artist)
+        db_session.commit()
+        
+        song = models.Song(title="Test Song")
+        db_session.add(song)
+        db_session.commit()
+        
+        album = models.Album(main_title="Test Album")
+        db_session.add(album)
+        db_session.commit()
+        
+        track = models.AlbumTrack(album_id=album.id, disc_number=1, track_number=1, song_id=song.id, notes="Initial Note")
+        db_session.add(track)
+        db_session.commit()
+        
+        # Test updating to empty string
+        response = client.put(f"/albums/{album.id}/tracks/{track.id}", json={"notes": ""})
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["notes"] == ""
+        
+        # Test updating to None
+        response = client.put(f"/albums/{album.id}/tracks/{track.id}", json={"notes": None})
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["notes"] is None
+        
+        # Test not sending notes at all (should remain None)
+        response = client.put(f"/albums/{album.id}/tracks/{track.id}", json={"display_title": "New Display"})
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["notes"] is None
+        assert data["display_title"] == "New Display"
