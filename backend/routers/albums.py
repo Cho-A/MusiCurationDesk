@@ -365,22 +365,23 @@ def update_album_track(album_id: int, track_id: int, request: schemas.AlbumTrack
     if not track:
         raise HTTPException(status_code=404, detail="トラックが見つかりません。")
 
-    if request.display_title is not None:
-        track.display_title = request.display_title
-    if request.notes is not None:
-        track.notes = request.notes
-    if request.media_format is not None:
-        track.media_format = request.media_format
-    if request.disc_number is not None:
-        track.disc_number = request.disc_number
-    if request.track_number is not None:
-        track.track_number = request.track_number
-    if request.song_id is not None:
+    update_data = request.model_dump(exclude_unset=True)
+    if "display_title" in update_data:
+        track.display_title = update_data["display_title"]
+    if "notes" in update_data:
+        track.notes = update_data["notes"]
+    if "media_format" in update_data:
+        track.media_format = update_data["media_format"]
+    if "disc_number" in update_data:
+        track.disc_number = update_data["disc_number"]
+    if "track_number" in update_data:
+        track.track_number = update_data["track_number"]
+    if "song_id" in update_data and update_data["song_id"] is not None:
         # 楽曲IDが変更された場合、対象のSongが存在するか確認
-        song = db.query(models.Song).filter(models.Song.id == request.song_id).first()
+        song = db.query(models.Song).filter(models.Song.id == update_data["song_id"]).first()
         if not song:
             raise HTTPException(status_code=404, detail="指定された楽曲が存在しません。")
-        track.song_id = request.song_id
+        track.song_id = update_data["song_id"]
 
     db.commit()
     db.refresh(track)
