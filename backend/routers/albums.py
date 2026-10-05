@@ -658,8 +658,6 @@ def bulk_merge_disc(
                 disc_number=new_disc_num,
                 track_number=s_track.track_number,
                 song_id=s_track.song_id,
-                is_unreleased=s_track.is_unreleased,
-                has_secret_track=s_track.has_secret_track,
             )
             db.add(new_track)
             
