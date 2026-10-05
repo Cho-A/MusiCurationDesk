@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music2, Clock } from 'lucide-react';
+import { Music2, Clock, Database, Globe } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SearchBar from '../components/SearchBar';
 import SongCard from '../components/SongCard';
@@ -160,35 +160,43 @@ const Songs = () => {
       />
 
       {/* タブ切り替え */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '6px', borderRadius: '30px', width: 'fit-content', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
         <button
           onClick={() => setSearchMode('local')}
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             padding: '10px 24px',
             borderRadius: '24px',
             border: 'none',
-            background: searchMode === 'local' ? 'var(--primary-color)' : 'var(--bg-secondary)',
-            color: searchMode === 'local' ? '#000' : 'var(--text-secondary)',
-            fontWeight: 'bold',
+            background: searchMode === 'local' ? 'var(--accent-primary)' : 'transparent',
+            color: searchMode === 'local' ? '#fff' : 'var(--text-secondary)',
+            fontWeight: searchMode === 'local' ? 'bold' : 'normal',
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
         >
+          <Database size={16} />
           ローカル検索
         </button>
         <button
           onClick={() => setSearchMode('spotify')}
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             padding: '10px 24px',
             borderRadius: '24px',
             border: 'none',
-            background: searchMode === 'spotify' ? '#1DB954' : 'var(--bg-secondary)',
+            background: searchMode === 'spotify' ? '#1DB954' : 'transparent',
             color: searchMode === 'spotify' ? '#fff' : 'var(--text-secondary)',
-            fontWeight: 'bold',
+            fontWeight: searchMode === 'spotify' ? 'bold' : 'normal',
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
         >
+          <Globe size={16} />
           Spotifyからインポート
         </button>
       </div>
