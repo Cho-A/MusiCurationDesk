@@ -637,23 +637,35 @@ def bulk_merge_disc(
         raise HTTPException(status_code=404, detail="Source tracks not found.")
 
     if request.target_disc_number == -1:
-        # 新しいディスクとしてそのまま移動する
+        # 新しいディスクとしてコピー（複製）する
         max_disc = db.query(func.max(models.AlbumDisc.disc_number)).filter(models.AlbumDisc.album_id == request.target_album_id).scalar()
         new_disc_num = (max_disc or 0) + 1
         
         source_disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number == disc_number).first()
         if source_disc:
-            source_disc.album_id = request.target_album_id
-            source_disc.disc_number = new_disc_num
-            db.flush()
+            new_disc = models.AlbumDisc(
+                album_id=request.target_album_id,
+                disc_number=new_disc_num,
+                title=source_disc.title,
+                media_format=source_disc.media_format,
+                edition=source_disc.edition,
+            )
+            db.add(new_disc)
             
         for s_track in source_tracks:
-            s_track.album_id = request.target_album_id
-            s_track.disc_number = new_disc_num
+            new_track = models.AlbumTrack(
+                album_id=request.target_album_id,
+                disc_number=new_disc_num,
+                track_number=s_track.track_number,
+                song_id=s_track.song_id,
+                is_unreleased=s_track.is_unreleased,
+                has_secret_track=s_track.has_secret_track,
+            )
+            db.add(new_track)
             
         db.commit()
         return {
-            "message": f"Successfully moved {len(source_tracks)} tracks as new Disc {new_disc_num}.",
+            "message": f"Successfully copied {len(source_tracks)} tracks as new Disc {new_disc_num}.",
             "merged_count": len(source_tracks),
             "skipped_count": 0,
         }
