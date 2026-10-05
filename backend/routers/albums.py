@@ -201,6 +201,7 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                 physical_release_date=request.release_date,
                 album_type=request.album_type,
                 album_group_id=db_album_group.id,
+                artist_id=request.artist_id,
             )
             db.add(album)
             db.commit()
@@ -264,6 +265,9 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             )
             db.add(album_disc)
 
+        # ディスク番号とメディアフォーマットのマッピングを作成
+        disc_formats = {d.disc_number: d.media_format for d in request.discs}
+
         # トラックリストを登録
         seen_tracks = set()
         for track_req in request.tracks:
@@ -279,7 +283,9 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
 
             # サブスク未解禁曲（song_idがnull）の場合は新規にSongレコードを作成
             if not song_id:
-                new_song = models.Song(title=track_req.title, spotify_song_id=None)
+                # ディスクのフォーマットがBlu-rayまたはDVDの場合は、映像作品として登録する
+                is_video = disc_formats.get(track_req.disc_number) in ["Blu-ray", "DVD"]
+                new_song = models.Song(title=track_req.title, spotify_song_id=None, is_video=is_video)
                 if getattr(track_req, 'base_song_id', None) is not None:
                     # 派生バージョンとして、元の楽曲から属性を引き継ぐ
                     base_song = db.query(models.Song).filter(models.Song.id == track_req.base_song_id).first()
