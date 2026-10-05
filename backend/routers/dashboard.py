@@ -117,19 +117,21 @@ def get_personal_recent_additions(
     # 1. 関心のあるアーティストIDの抽出
     artist_ids = set()
 
-    # 参加したライブのアーティスト
-    attended_performances = (
-        db.query(models.Performance)
-        .join(models.UserAttendance, models.Performance.id == models.UserAttendance.performance_id)
-        .filter(models.UserAttendance.user_id == current_user.id)
+    # 参加したライブのアーティスト (ライブ機能削除に伴い廃止)
+    
+    # 所有しているアルバムのアーティストから抽出
+    owned_albums = (
+        db.query(models.Album)
+        .join(models.UserPossession, models.Album.id == models.UserPossession.entity_id)
+        .filter(
+            models.UserPossession.user_id == current_user.id,
+            models.UserPossession.entity_type == "album"
+        )
         .all()
     )
-
-    for perf in attended_performances:
-        for roster in perf.roster_entries:
-            artist_ids.add(roster.artist_id)
-
-    # 所有しているアルバムのアーティスト (今回は簡略化のためライブ参加のみで抽出)
+    for album in owned_albums:
+        if album.artist_id:
+            artist_ids.add(album.artist_id)
 
     artist_ids_list = list(artist_ids)
 

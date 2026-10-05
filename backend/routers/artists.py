@@ -447,3 +447,4 @@ def remove_artist_tag(artist_id: int, tag_id: int, db: Session = Depends(get_db)
     db_artist.tags.remove(tag)
     db.commit()
     return {"message": "タグを削除しました。"}
+    return {"message": "タグを削除しました。"}

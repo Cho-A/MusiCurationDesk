@@ -132,8 +132,8 @@ def get_all_songs(
 
         if role_filter:
             role_list = [r.strip() for r in role_filter.split(",")]
-            # SongArtistLinkのroleがリストに含まれる AND (かつ) artist_idが一致
-            query = query.filter(models.SongArtistLink.role.in_(role_list))
+            # SongArtistLinkのrole_categoryがリストに含まれる AND (かつ) artist_idが一致
+            query = query.filter(models.SongArtistLink.role_category.in_(role_list))
 
         if artist_id_filter:
             # 必須: 特定のアーティストIDに絞り込む
@@ -460,7 +460,7 @@ def delete_song(song_id: int, db: Session = Depends(get_db)):
         )
 
     # 関連するタグ等の削除
-    db.query(models.TagSongLink).filter(models.TagSongLink.song_id == song_id).delete()
+    db_song.tags.clear()
 
     db.delete(db_song)
     db.commit()
@@ -562,7 +562,7 @@ def generate_spotify_ids_from_search(
         query = query.join(models.Song.artist_links)
         if search_params.role_filter:
             role_list = [r.strip() for r in search_params.role_filter.split(",")]
-            query = query.filter(models.SongArtistLink.role.in_(role_list))
+            query = query.filter(models.SongArtistLink.role_category.in_(role_list))
         if search_params.artist_id_filter:
             query = query.filter(models.SongArtistLink.artist_id == search_params.artist_id_filter)
 
@@ -576,7 +576,7 @@ def generate_spotify_ids_from_search(
 
     # --- ソート ---
     if search_params.sort_by == "release_date":
-        query = query.order_by(models.Song.release_date.desc(), models.Song.id.desc())
+        query = query.order_by(models.Song.id.desc())  # release_date は削除されたため id を使用
     elif search_params.sort_by == "title":
         query = query.order_by(models.Song.title)
     else:
@@ -703,6 +703,7 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
     target_song_id = target_song.id
 
     for album_link in list(source_song.album_links):
+        source_song.album_links.remove(album_link)
         existing = (
             db.query(models.AlbumTrack)
             .filter(
@@ -720,6 +721,7 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongArtistLink
     for artist_link in list(source_song.artist_links):
+        source_song.artist_links.remove(artist_link)
         existing = (
             db.query(models.SongArtistLink)
             .filter(
@@ -737,6 +739,7 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongTieupLink
     for tieup_link in list(source_song.tieup_links):
+        source_song.tieup_links.remove(tieup_link)
         existing = (
             db.query(models.SongTieupLink)
             .filter(
@@ -749,12 +752,11 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
         else:
             db.delete(tieup_link)
 
-    # Move SetlistEntry
-    for entry in list(source_song.setlist_entries):
-        entry.song_id = target_song_id
+    # (SetlistEntry migration was removed as the feature is deprecated)
 
     # Move SongWorksLink
     for work_link in list(source_song.works):
+        source_song.works.remove(work_link)
         existing = (
             db.query(models.SongWorksLink)
             .filter(models.SongWorksLink.song_id == target_song_id, models.SongWorksLink.work_id == work_link.work_id)

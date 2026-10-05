@@ -185,3 +185,43 @@ class TestSongsAPI:
         main_artists_updated = [l for l in song_detail_updated.get("artist_links", []) if l["role_category"] == "Artist"]
         assert len(main_artists_updated) == 1
         assert main_artists_updated[0]["artist_id"] == artist2_id
+
+    def test_merge_song_integrity_error_regression(self, client, db_session):
+        """
+        楽曲統合時にSQLAlchemyがAlbumTrackのsong_idをNULLにしてしまい
+        NOT NULL constraint failed (IntegrityError) が発生するバグの再発防止テスト。
+        SQLiteで外部キー制約とNOT NULL制約が厳密に検証されることを確認する。
+        """
+        from backend import models
+        # sqlite3に対して明示的に外部キー制約を有効化（テスト用DBでデフォルトOFFの場合があるため）
+        db_session.execute(models.text("PRAGMA foreign_keys = ON"))
+
+        # 1. アルバム作成
+        album = models.Album(main_title="Test Merge Album")
+        db_session.add(album)
+        db_session.flush()
+
+        # 2. 統合元と統合先の楽曲を作成
+        source_song = models.Song(title="Source Song")
+        target_song = models.Song(title="Target Song")
+        db_session.add_all([source_song, target_song])
+        db_session.flush()
+
+        # 3. 統合元にAlbumTrackを紐付ける
+        track = models.AlbumTrack(
+            album_id=album.id, song_id=source_song.id, track_number=1, disc_number=1
+        )
+        db_session.add(track)
+        db_session.commit()
+
+        # 4. 統合処理を実行
+        response = client.post(f"/songs/{source_song.id}/merge?target_song_id={target_song.id}")
+        
+        # 5. エラー（500 Internal Server Error など）にならず、200 OK になることを確認
+        assert response.status_code == 200, response.text
+        
+        # 6. DB上で正しく更新され、元楽曲が削除されたことを確認
+        db_session.expire_all()
+        assert db_session.query(models.Song).filter(models.Song.id == source_song.id).first() is None
+        updated_track = db_session.query(models.AlbumTrack).filter(models.AlbumTrack.id == track.id).first()
+        assert updated_track.song_id == target_song.id

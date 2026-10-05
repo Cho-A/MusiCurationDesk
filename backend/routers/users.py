@@ -63,8 +63,6 @@ def create_user_possession(
     # 1. entity_type のチェック (変更なし)
     if possession.entity_type == "album":
         db_item = db.query(models.Album).filter(models.Album.id == possession.entity_id).first()
-    elif possession.entity_type == "merchandise":
-        db_item = db.query(models.Merchandise).filter(models.Merchandise.id == possession.entity_id).first()
     else:
         raise HTTPException(status_code=400, detail=f"無効な entity_type: '{possession.entity_type}'")
 
@@ -86,34 +84,7 @@ def create_user_possession(
     return new_possession
 
 
-# --- ★ユーザーの参加履歴登録API (保護版)★ ---
-@router.post("/attendance", response_model=schemas.UserAttendance)
-def create_user_attendance(
-    attendance: schemas.UserAttendanceInput,  # 👈 Input用スキーマに変更
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(dependencies.get_current_user),  # 👈 ★門番を追加
-):
-    """
-    ログイン中のユーザーの参加履歴を登録します。
-    (トークン必須)
-    """
 
-    # 1. 公演チェック
-    db_performance = db.query(models.Performance).filter(models.Performance.id == attendance.performance_id).first()
-    if db_performance is None:
-        raise HTTPException(status_code=404, detail=f"Performance ID {attendance.performance_id} が見つかりません。")
-
-    # 2. データ作成
-    new_attendance = models.UserAttendance(
-        user_id=current_user.id,  # 👈 ★トークンから特定したIDを使う
-        **attendance.model_dump(),
-    )
-
-    db.add(new_attendance)
-    db.commit()
-    db.refresh(new_attendance)
-
-    return new_attendance
 
 
 # --- ★★★ 新規実装: マイページ情報取得 (保護されたAPI) ★★★ ---
