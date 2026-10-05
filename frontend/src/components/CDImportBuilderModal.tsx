@@ -43,6 +43,11 @@ interface CDImportBuilderModalProps {
   appendMode?: boolean;
   initialTargetAlbumId?: number | null;
   baseDiscNumber?: number;
+  
+  // 新機能用
+  targetDiscNumber?: number;
+  startingTrackNumber?: number;
+  replaceDiscMode?: boolean;
 }
 
 interface TrackMatchState {
@@ -231,7 +236,7 @@ const ArtistSearchCombobox: React.FC<{
   );
 };
 
-const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false, initialTargetAlbumId = null, baseDiscNumber = 0 }) => {
+const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onClose, release, appendMode = false, initialTargetAlbumId = null, baseDiscNumber = 0, targetDiscNumber, startingTrackNumber, replaceDiscMode }) => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [songs, setSongs] = useState<SongItem[]>([]);
   
@@ -243,6 +248,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedDiscs, setExpandedDiscs] = useState<number[]>([]); // 追加: 展開されているDiscのリスト
   const [isAutoMatchEnabled, setIsAutoMatchEnabled] = useState(true); // 追加: 自動マッチングを有効にするか
+  const [matchAsDerivativeVersion, setMatchAsDerivativeVersion] = useState(false); // 追加: 別バージョンとしてマッチさせるか
 
   // 楽曲検索サブモーダル用
   const [activeSongMatchIndex, setActiveSongMatchIndex] = useState<number | null>(null);
@@ -293,15 +299,33 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     const initialMatches: TrackMatchState[] = [];
     const initialDiscs: DiscState[] = [];
     
-    rel.media.forEach(media => {
-      const computedDiscNumber = media.position + baseDiscNumber;
-      initialDiscs.push({
-        disc_number: computedDiscNumber,
-        title: media.title || '',
-        media_format: media.format
-      });
+    let globalTrackCounter = startingTrackNumber || 0;
+    
+    rel.media.forEach((media, mIdx) => {
+      let computedDiscNumber = media.position + baseDiscNumber;
+      if (targetDiscNumber !== undefined) {
+        if (replaceDiscMode) {
+           computedDiscNumber = targetDiscNumber + mIdx;
+        } else {
+           computedDiscNumber = targetDiscNumber;
+        }
+      }
+
+      if (replaceDiscMode || targetDiscNumber === undefined || mIdx === 0) {
+        initialDiscs.push({
+          disc_number: computedDiscNumber,
+          title: media.title || '',
+          media_format: media.format
+        });
+      }
 
       media.tracks.forEach(track => {
+        let computedTrackNumber = track.position;
+        if (targetDiscNumber !== undefined && !replaceDiscMode) {
+           globalTrackCounter++;
+           computedTrackNumber = globalTrackCounter;
+        }
+        
         const normalizedMbTitle = normalizeTitle(track.title);
         // 記号などを除外した文字列で完全一致を探す
         const exactMatch = autoMatchEnabled ? availableSongs.find(s => normalizeTitle(s.title) === normalizedMbTitle) : undefined;
@@ -309,7 +333,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         if (exactMatch) {
           initialMatches.push({
             disc_number: computedDiscNumber,
-            track_number: track.position,
+            track_number: computedTrackNumber,
             mb_title: track.title,
             song_id: exactMatch.id,
             matched_title: exactMatch.title,
@@ -318,7 +342,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         } else {
           initialMatches.push({
             disc_number: computedDiscNumber,
-            track_number: track.position,
+            track_number: computedTrackNumber,
             mb_title: track.title,
             song_id: null,
             media_format: media.format
@@ -389,6 +413,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
       release_date: release.date ? `${release.date}-01-01`.slice(0,10) : null,
       album_type: "physical",
       append_mode: appendMode,
+      replace_disc_number: replaceDiscMode && targetDiscNumber !== undefined ? targetDiscNumber : null,
       artist_id: albumArtistId,
       apply_artist_to_tracks: applyArtistToTracks,
       discs: discs.map(d => ({
@@ -401,7 +426,8 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
         disc_number: m.disc_number,
         track_number: m.track_number,
         title: m.mb_title,
-        song_id: m.song_id,
+        song_id: (matchAsDerivativeVersion && m.song_id) ? null : m.song_id,
+        base_song_id: (matchAsDerivativeVersion && m.song_id) ? m.song_id : null,
         media_format: m.media_format,
         notes: m.notes || null
       }))
@@ -564,21 +590,36 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
               CDの各トラックに対して、データベース上のどの音源を割り当てるか設定します。データベースにない曲は「✨ 新規楽曲として登録」を選択してください。
             </p>
 
-            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input 
-                type="checkbox" 
-                id="autoMatchCheckbox"
-                checked={isAutoMatchEnabled}
-                onChange={(e) => {
-                  const enabled = e.target.checked;
-                  setIsAutoMatchEnabled(enabled);
-                  autoMatch(release, albums, songs, enabled);
-                }}
-                style={{ cursor: 'pointer' }}
-              />
-              <label htmlFor="autoMatchCheckbox" style={{ cursor: 'pointer', color: 'var(--text-primary)' }}>
-                既存の楽曲と自動でマッチングする（無効にすると全て新規楽曲としてインポートされます）
-              </label>
+            <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input 
+                  type="checkbox" 
+                  id="autoMatchCheckbox"
+                  checked={isAutoMatchEnabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setIsAutoMatchEnabled(enabled);
+                    autoMatch(release, albums, songs, enabled);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
+                <label htmlFor="autoMatchCheckbox" style={{ cursor: 'pointer', color: 'var(--text-primary)' }}>
+                  既存の楽曲と自動でマッチングする（無効にすると全て新規楽曲としてインポートされます）
+                </label>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '24px', opacity: isAutoMatchEnabled ? 1 : 0.5 }}>
+                <input 
+                  type="checkbox" 
+                  id="derivativeVersionCheckbox"
+                  checked={matchAsDerivativeVersion}
+                  disabled={!isAutoMatchEnabled}
+                  onChange={(e) => setMatchAsDerivativeVersion(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <label htmlFor="derivativeVersionCheckbox" style={{ cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  マッチした楽曲を「別バージョン（例: ライブ音源）」として新規登録する（作品情報やアーティストは引き継がれます）
+                </label>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -619,11 +660,11 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
                             <div style={{ width: '60px', color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
                               Track<br/><span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{match.track_number}</span>
                             </div>
-                            <div style={{ flex: 1, fontWeight: 'bold' }}>
+                            <div style={{ flex: 1, fontWeight: 'bold', minWidth: 0, wordBreak: 'break-word' }}>
                               {match.mb_title}
                             </div>
-                            <div style={{ color: 'var(--text-secondary)' }}>→</div>
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>→</div>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                               <button
                                 onClick={() => {
                                   setActiveSongMatchIndex(matches.findIndex(m => m.disc_number === match.disc_number && m.track_number === match.track_number));

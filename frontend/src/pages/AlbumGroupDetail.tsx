@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff, Scissors, FileText, ArrowUpCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowLeft, Disc3, Check, Edit2, Copy, Plus, X, AlertCircle, Save, GitMerge, Trash2, Cloud, CloudOff, Scissors, FileText, ArrowUpCircle, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -153,6 +153,9 @@ const AlbumGroupDetail = () => {
 
   // Smart Import for Append
   const [isSmartPasteOpen, setIsSmartPasteOpen] = useState(false);
+  const [smartPasteTargetDisc, setSmartPasteTargetDisc] = useState<number | undefined>(undefined);
+  const [smartPasteStartingTrack, setSmartPasteStartingTrack] = useState<number | undefined>(undefined);
+  const [smartPasteReplaceMode, setSmartPasteReplaceMode] = useState<boolean>(false);
   const [isCDImportBuilderOpen, setIsCDImportBuilderOpen] = useState(false);
   const [selectedFauxRelease, setSelectedFauxRelease] = useState<any>(null);
 
@@ -490,6 +493,37 @@ const AlbumGroupDetail = () => {
     } catch (err) {
       console.error(err);
       toast.error("通信エラーが発生しました");
+    }
+  };
+
+  const handleDirectFormatChange = async (discData: any, discNumber: number, newFormat: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const discId = discData?.id;
+      const payload = discId 
+        ? { media_format: newFormat }
+        : { disc_number: discNumber, title: null, media_format: newFormat };
+      const url = discId 
+        ? `${API_BASE_URL}/albums/${selectedAlbumId}/discs/${discId}`
+        : `${API_BASE_URL}/albums/${selectedAlbumId}/discs`;
+      const method = discId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        toast.success("フォーマットを更新しました");
+        fetchAlbum();
+      } else {
+        toast.error("フォーマットの更新に失敗しました");
+      }
+    } catch(err) {
+      toast.error("エラーが発生しました");
     }
   };
 
@@ -1338,18 +1372,6 @@ const AlbumGroupDetail = () => {
                       <>
                         {editingDiscId === (discData?.id || -discNum) ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                            <select
-                              value={discFormatForm}
-                              onChange={(e) => setDiscFormatForm(e.target.value)}
-                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
-                            >
-                              <option value="CD">CD</option>
-                              <option value="DVD">DVD</option>
-                              <option value="Blu-ray">Blu-ray</option>
-                              <option value="Digital Media">Digital</option>
-                              <option value="Vinyl">Vinyl</option>
-                              <option value="Cassette">Cassette</option>
-                            </select>
                             <input 
                               type="text" 
                               value={discTitleForm}
@@ -1368,11 +1390,47 @@ const AlbumGroupDetail = () => {
                           <>
                             {discData?.title ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>{icon} Disc {discNum}{formatStr}</span>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {icon} Disc {discNum}
+                                  {isEditMode ? (
+                                    <select
+                                      value={discData?.media_format || 'CD'}
+                                      onChange={(e) => handleDirectFormatChange(discData, discNum, e.target.value)}
+                                      style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    >
+                                      <option value="CD">CD</option>
+                                      <option value="DVD">DVD</option>
+                                      <option value="Blu-ray">Blu-ray</option>
+                                      <option value="Digital Media">Digital</option>
+                                      <option value="Vinyl">Vinyl</option>
+                                      <option value="Cassette">Cassette</option>
+                                    </select>
+                                  ) : (
+                                    formatStr
+                                  )}
+                                </span>
                                 <span style={{ fontSize: '1.3rem', color: 'var(--text-primary)', fontWeight: 700, marginTop: '2px' }}>{discData.title}</span>
                               </div>
                             ) : (
-                              <span>{icon} Disc {discNum}{formatStr}</span>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {icon} Disc {discNum}
+                                {isEditMode ? (
+                                  <select
+                                    value={discData?.media_format || 'CD'}
+                                    onChange={(e) => handleDirectFormatChange(discData, discNum, e.target.value)}
+                                    style={{ padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                  >
+                                    <option value="CD">CD</option>
+                                    <option value="DVD">DVD</option>
+                                    <option value="Blu-ray">Blu-ray</option>
+                                    <option value="Digital Media">Digital</option>
+                                    <option value="Vinyl">Vinyl</option>
+                                    <option value="Cassette">Cassette</option>
+                                  </select>
+                                ) : (
+                                  formatStr
+                                )}
+                              </span>
                             )}
 
                             {isEditMode && (
@@ -1443,6 +1501,30 @@ const AlbumGroupDetail = () => {
                                     <ArrowUpCircle size={14} /> 結合
                                   </button>
                                 )}
+                                <button
+                                  onClick={() => {
+                                    setSmartPasteTargetDisc(discNum);
+                                    setSmartPasteStartingTrack(tracks.length > 0 ? Math.max(...tracks.map((t: any) => t.track_number)) : 0);
+                                    setSmartPasteReplaceMode(false);
+                                    setIsSmartPasteOpen(true);
+                                  }}
+                                  title="このディスクにスマートインポートで楽曲を追加する"
+                                  style={{ background: 'transparent', border: '1px solid var(--spotify-color)', color: 'var(--spotify-color)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px', whiteSpace: 'nowrap' }}
+                                >
+                                  <FileText size={14} /> 追記
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSmartPasteTargetDisc(discNum);
+                                    setSmartPasteStartingTrack(0);
+                                    setSmartPasteReplaceMode(true);
+                                    setIsSmartPasteOpen(true);
+                                  }}
+                                  title="このディスクの全楽曲を削除し、スマートインポートで一括置換する"
+                                  style={{ background: 'transparent', border: '1px solid var(--warning-color)', color: 'var(--warning-color)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', marginRight: '8px', whiteSpace: 'nowrap' }}
+                                >
+                                  <RefreshCw size={14} /> 置換
+                                </button>
                                 <button
                                   onClick={async () => {
                                     const trackNum = window.prompt(`Disc ${discNum} を分割します。\n新しいディスク(Disc ${discNum + 1})に移動させる最初のトラック番号を入力してください:\n(例: 16番以降を移動する場合は 16)`);
@@ -1821,7 +1903,12 @@ const AlbumGroupDetail = () => {
           </Button>
           <Button
             variant="ghost"
-            onClick={() => setIsSmartPasteOpen(true)}
+            onClick={() => {
+              setSmartPasteTargetDisc(undefined);
+              setSmartPasteStartingTrack(undefined);
+              setSmartPasteReplaceMode(false);
+              setIsSmartPasteOpen(true);
+            }}
             icon={FileText}
           >
             スマートインポートで追加
@@ -2224,11 +2311,19 @@ const AlbumGroupDetail = () => {
       )}
       <CDImportBuilderModal 
         isOpen={isCDImportBuilderOpen}
-        onClose={() => setIsCDImportBuilderOpen(false)}
+        onClose={() => {
+          setIsCDImportBuilderOpen(false);
+          setSmartPasteTargetDisc(undefined);
+          setSmartPasteStartingTrack(undefined);
+          setSmartPasteReplaceMode(false);
+        }}
         release={selectedFauxRelease}
         appendMode={true}
         initialTargetAlbumId={selectedAlbumId}
         baseDiscNumber={album?.discs?.length ? Math.max(...album.discs.map(d => d.disc_number)) : 0}
+        targetDiscNumber={smartPasteTargetDisc}
+        startingTrackNumber={smartPasteStartingTrack}
+        replaceDiscMode={smartPasteReplaceMode}
       />
       <SmartPasteModal 
         isOpen={isSmartPasteOpen}
