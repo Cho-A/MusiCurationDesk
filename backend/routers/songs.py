@@ -703,7 +703,6 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
     target_song_id = target_song.id
 
     for album_link in list(source_song.album_links):
-        source_song.album_links.remove(album_link)
         existing = (
             db.query(models.AlbumTrack)
             .filter(
@@ -721,7 +720,6 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongArtistLink
     for artist_link in list(source_song.artist_links):
-        source_song.artist_links.remove(artist_link)
         existing = (
             db.query(models.SongArtistLink)
             .filter(
@@ -739,7 +737,6 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongTieupLink
     for tieup_link in list(source_song.tieup_links):
-        source_song.tieup_links.remove(tieup_link)
         existing = (
             db.query(models.SongTieupLink)
             .filter(
@@ -756,7 +753,6 @@ def perform_song_merge(db: Session, source_song: models.Song, target_song: model
 
     # Move SongWorksLink
     for work_link in list(source_song.works):
-        source_song.works.remove(work_link)
         existing = (
             db.query(models.SongWorksLink)
             .filter(models.SongWorksLink.song_id == target_song_id, models.SongWorksLink.work_id == work_link.work_id)
