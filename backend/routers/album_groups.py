@@ -75,12 +75,15 @@ def update_album_group(group_id: int, group_update: schemas.AlbumGroupUpdate, db
     for k, v in update_data.items():
         setattr(db_group, k, v)
 
-    # UIからアルバムグループの発売日が変更された場合、紐づくアルバム（バージョン）の物理/配信発売日にも反映させる
-    if "release_date" in update_data:
+    # UIからアルバムグループのタイトルや発売日が変更された場合、紐づくアルバム（バージョン）にも反映させる
+    if "title" in update_data or "release_date" in update_data:
         albums = db.query(models.Album).filter(models.Album.album_group_id == group_id).all()
         for album in albums:
-            album.physical_release_date = update_data["release_date"]
-            album.digital_release_date = update_data["release_date"]
+            if "title" in update_data:
+                album.main_title = update_data["title"]
+            if "release_date" in update_data:
+                album.physical_release_date = update_data["release_date"]
+                album.digital_release_date = update_data["release_date"]
 
     # UIからアルバムグループのメインアーティストが変更された場合、紐づくすべての楽曲のメインアーティストも同期する
     if "artist_id" in update_data and update_data["artist_id"] is not None:

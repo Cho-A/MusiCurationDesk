@@ -59,3 +59,28 @@ def test_update_album_group_artist_propagation(client, db_session):
     ).all()
     assert len(links2) == 1
     assert links2[0].artist_id == artist2.id
+
+def test_update_album_group_title_propagation(client, db_session):
+    """
+    アルバムグループのタイトルを変更した際に、
+    紐づくすべてのアルバムの main_title にも反映されるかを検証するテスト
+    """
+    group = models.AlbumGroup(title="Old Group Title")
+    db_session.add(group)
+    db_session.flush()
+
+    album1 = models.Album(main_title="Old Group Title", album_group_id=group.id)
+    album2 = models.Album(main_title="Old Group Title", album_group_id=group.id)
+    db_session.add_all([album1, album2])
+    db_session.commit()
+
+    # PUT /album-groups/{group_id} で title を変更
+    update_data = {"title": "New Group Title"}
+    response = client.put(f"/album-groups/{group.id}", json=update_data)
+    assert response.status_code == 200
+
+    # 伝播の検証
+    db_session.refresh(album1)
+    db_session.refresh(album2)
+    assert album1.main_title == "New Group Title"
+    assert album2.main_title == "New Group Title"
