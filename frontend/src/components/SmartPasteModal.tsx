@@ -64,9 +64,9 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
       let isDiscMarker = false;
 
       // 1. Disc markers
-      const discMatch = line.match(/^(?:Disc|CD|BD|DVD|Blu-ray|DISC)[\s\.-]*(\d+)/i) || 
-                        line.match(/^【(?:BD|DVD|CD).*収録/i) ||
-                        line.match(/^\[(?:BD|DVD|CD)/i);
+      const discMatch = line.match(/^(?:Disc|CD|BD|DVD|Blu-ray|DISC|ディスク|DISK)[\s\.\-：:]*(\d+)/i) || 
+                        line.match(/^【(?:BD|DVD|CD|Disc|ディスク).*収録/i) ||
+                        line.match(/^\[(?:BD|DVD|CD|Disc|ディスク)/i);
       
       if (discMatch) {
         isDiscMarker = true;
