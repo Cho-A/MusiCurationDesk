@@ -226,6 +226,31 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                     if album.album_group:
                         album.album_group.artist_id = request.artist_id
                     album.artist_id = request.artist_id
+            elif request.replace_disc_number is not None:
+                # 特定のディスクのみ削除して上書き（孤立した楽曲も削除する）
+                tracks_to_delete = db.query(models.AlbumTrack).filter(
+                    models.AlbumTrack.album_id == album.id,
+                    models.AlbumTrack.disc_number == request.replace_disc_number
+                ).all()
+                for t in tracks_to_delete:
+                    song_id = t.song_id
+                    db.delete(t)
+                    db.flush()
+                    # 他で使われていないかチェックして、孤立していればSongごと削除
+                    still_used = db.query(models.AlbumTrack).filter(models.AlbumTrack.song_id == song_id).first()
+                    if not still_used:
+                        song = db.query(models.Song).filter(models.Song.id == song_id).first()
+                        if song:
+                            # 関連データも念のためクリア
+                            song.album_links.clear()
+                            song.artist_links.clear()
+                            song.tieup_links.clear()
+                            song.works.clear()
+                            db.delete(song)
+                db.query(models.AlbumDisc).filter(
+                    models.AlbumDisc.album_id == album.id,
+                    models.AlbumDisc.disc_number == request.replace_disc_number
+                ).delete()
             db.commit()
 
         # ディスク情報の保存
@@ -255,9 +280,33 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
             # サブスク未解禁曲（song_idがnull）の場合は新規にSongレコードを作成
             if not song_id:
                 new_song = models.Song(title=track_req.title, spotify_song_id=None)
+                if getattr(track_req, 'base_song_id', None) is not None:
+                    # 派生バージョンとして、元の楽曲から属性を引き継ぐ
+                    base_song = db.query(models.Song).filter(models.Song.id == track_req.base_song_id).first()
+                    if base_song:
+                        new_song.work_id = base_song.work_id
+                        new_song.jasrac_code = base_song.jasrac_code
+                        # 他に引き継ぎたい属性があればここに追加
+
                 db.add(new_song)
                 db.flush()
                 song_id = new_song.id
+
+                # 派生バージョンの場合、アーティストリンクとワークリンクもコピーする
+                if getattr(track_req, 'base_song_id', None) is not None and base_song:
+                    for link in base_song.artist_links:
+                        db.add(models.SongArtistLink(
+                            song_id=new_song.id,
+                            artist_id=link.artist_id,
+                            role_category=link.role_category
+                        ))
+                    for w_link in base_song.works:
+                        db.add(models.SongWorksLink(
+                            song_id=new_song.id,
+                            work_id=w_link.work_id,
+                            order_index=w_link.order_index
+                        ))
+                    db.flush()
 
             # アルバムのメインアーティストを紐付ける (apply_artist_to_tracksがTrueの場合)
             if request.apply_artist_to_tracks and album.album_group and album.album_group.artist_id:
@@ -764,7 +813,30 @@ def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)
     if not disc:
         raise HTTPException(status_code=404, detail="Disc not found")
 
+    disc_number = disc.disc_number
     db.delete(disc)
+    db.flush()
+
+    # ディスクに紐づいていたトラックを削除し、孤立した楽曲も削除
+    tracks_to_delete = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number == disc_number
+    ).all()
+    for t in tracks_to_delete:
+        song_id = t.song_id
+        db.delete(t)
+        db.flush()
+        # 他のトラックで使われていないかチェック
+        still_used = db.query(models.AlbumTrack).filter(models.AlbumTrack.song_id == song_id).first()
+        if not still_used:
+            song = db.query(models.Song).filter(models.Song.id == song_id).first()
+            if song:
+                song.album_links.clear()
+                song.artist_links.clear()
+                song.tieup_links.clear()
+                song.works.clear()
+                db.delete(song)
+
     db.commit()
     return {"status": "success"}
 

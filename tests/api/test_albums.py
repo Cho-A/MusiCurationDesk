@@ -260,3 +260,130 @@ class TestAlbumsAPI:
         ).all()
         assert len(links) == 1
         assert links[0].artist_id == artist.id
+
+    def test_import_cd_replace_disc(self, client, db_session):
+        """特定のディスクのみを置換し、孤立した楽曲が削除されることのテスト"""
+        from backend.models import AlbumGroup, Album, AlbumDisc, AlbumTrack, Song
+        
+        album = Album(main_title="Target Album")
+        db_session.add(album)
+        db_session.flush()
+
+        # Disc 1 and its track
+        disc1 = AlbumDisc(album_id=album.id, disc_number=1, title="Disc 1")
+        song1 = Song(title="Song 1")
+        db_session.add_all([disc1, song1])
+        db_session.flush()
+        track1 = AlbumTrack(album_id=album.id, song_id=song1.id, disc_number=1, track_number=1)
+        db_session.add(track1)
+
+        # Disc 2 and its track
+        disc2 = AlbumDisc(album_id=album.id, disc_number=2, title="Disc 2")
+        song2 = Song(title="Song 2") # This song should be deleted later
+        db_session.add_all([disc2, song2])
+        db_session.flush()
+        track2 = AlbumTrack(album_id=album.id, song_id=song2.id, disc_number=2, track_number=1)
+        db_session.add(track2)
+
+        # Song 3 is also in Disc 2, but it's used elsewhere, so it shouldn't be deleted
+        song3 = Song(title="Song 3")
+        db_session.add(song3)
+        db_session.flush()
+        track3 = AlbumTrack(album_id=album.id, song_id=song3.id, disc_number=2, track_number=2)
+        other_track = AlbumTrack(album_id=album.id, song_id=song3.id, disc_number=1, track_number=2)
+        db_session.add_all([track3, other_track])
+
+        db_session.commit()
+        
+        # Disc 2を置換するリクエスト
+        payload = {
+            "target_album_id": album.id,
+            "title": "Target Album",
+            "append_mode": True,
+            "replace_disc_number": 2, # Disc 2を置換
+            "discs": [
+                {
+                    "disc_number": 2,
+                    "title": "Replaced Disc 2",
+                    "media_format": "CD"
+                }
+            ],
+            "tracks": [
+                {
+                    "disc_number": 2,
+                    "track_number": 1,
+                    "title": "New Song for Disc 2",
+                    "song_id": None
+                }
+            ]
+        }
+        
+        response = client.post("/albums/import-cd", json=payload)
+        assert response.status_code == 200, response.text
+        
+        db_session.expire_all()
+        
+        # Disc 1 はそのまま残っていること
+        assert db_session.query(AlbumDisc).filter_by(disc_number=1).first() is not None
+        assert db_session.query(AlbumTrack).filter_by(disc_number=1, track_number=1).first() is not None
+        assert db_session.query(AlbumTrack).filter_by(disc_number=1, track_number=2).first() is not None
+        
+        # Disc 2 は新しいタイトルになっていること
+        new_disc2 = db_session.query(AlbumDisc).filter_by(disc_number=2).first()
+        assert new_disc2.title == "Replaced Disc 2"
+        
+        # Disc 2 のトラックは1曲だけになっていること
+        disc2_tracks = db_session.query(AlbumTrack).filter_by(disc_number=2).all()
+        assert len(disc2_tracks) == 1
+        
+        # song2 はどこにも使われていないので削除されていること
+        assert db_session.query(Song).filter_by(id=song2.id).first() is None
+        
+        # song3 は Disc 1 で使われているので残っていること
+        assert db_session.query(Song).filter_by(id=song3.id).first() is not None
+
+    def test_delete_album_disc_cleanup(self, client, db_session):
+        """ディスク削除時にトラックと孤立した楽曲が正しく削除されることのテスト"""
+        from backend.models import AlbumGroup, Album, AlbumDisc, AlbumTrack, Song
+        
+        album = Album(main_title="Target Album")
+        db_session.add(album)
+        db_session.flush()
+
+        # Disc 1 and its track
+        disc1 = AlbumDisc(album_id=album.id, disc_number=1, title="Disc 1")
+        song1 = Song(title="Song 1") # This song should be deleted later
+        db_session.add_all([disc1, song1])
+        db_session.flush()
+        track1 = AlbumTrack(album_id=album.id, song_id=song1.id, disc_number=1, track_number=1)
+        db_session.add(track1)
+
+        # Disc 2 and its track
+        disc2 = AlbumDisc(album_id=album.id, disc_number=2, title="Disc 2")
+        song2 = Song(title="Song 2") # This song should NOT be deleted as it's used in Disc 1 too
+        db_session.add_all([disc2, song2])
+        db_session.flush()
+        track2 = AlbumTrack(album_id=album.id, song_id=song2.id, disc_number=2, track_number=1)
+        track2_other = AlbumTrack(album_id=album.id, song_id=song2.id, disc_number=1, track_number=2)
+        db_session.add_all([track2, track2_other])
+
+        db_session.commit()
+
+        # Disc 1を削除するリクエスト
+        response = client.delete(f"/albums/{album.id}/discs/{disc1.id}")
+        assert response.status_code == 200
+
+        db_session.expire_all()
+
+        # Disc 1自体が削除されていること
+        assert db_session.query(AlbumDisc).filter_by(id=disc1.id).first() is None
+
+        # Disc 1のトラックが削除されていること
+        tracks = db_session.query(AlbumTrack).filter_by(album_id=album.id, disc_number=1).all()
+        assert len(tracks) == 0
+
+        # song1は他で使われていないので削除されていること
+        assert db_session.query(Song).filter_by(id=song1.id).first() is None
+
+        # song2はDisc 2で使われているので残っていること
+        assert db_session.query(Song).filter_by(id=song2.id).first() is not None

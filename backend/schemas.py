@@ -1052,7 +1052,8 @@ class CDImportTrack(BaseModel):
     display_title: str | None = None
     media_format: str | None = None
     notes: str | None = None
-    song_id: int | None = None  # Noneの場合は新規楽曲として登録
+    song_id: int | None = None  # 指定があれば既存曲に紐づける
+    base_song_id: int | None = None # song_idがNoneのとき、この曲から情報を引き継ぐ（別バージョンとして）
 
 
 class CDImportRequest(BaseModel):
@@ -1061,6 +1062,7 @@ class CDImportRequest(BaseModel):
     release_date: date | None = None
     album_type: str | None = "physical"
     append_mode: bool = False
+    replace_disc_number: int | None = None
     discs: list[CDImportDisc] = []
     tracks: list[CDImportTrack]
     artist_id: int | None = None
