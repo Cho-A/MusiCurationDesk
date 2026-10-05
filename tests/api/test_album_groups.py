@@ -84,3 +84,28 @@ def test_update_album_group_title_propagation(client, db_session):
     db_session.refresh(album2)
     assert album1.main_title == "New Group Title"
     assert album2.main_title == "New Group Title"
+
+def test_update_album_group_type_propagation(client, db_session):
+    """
+    アルバムグループの区分(album_type)を変更した際に、
+    紐づくすべてのアルバムの album_type にも反映されるかを検証するテスト
+    """
+    group = models.AlbumGroup(title="Type Test Group", album_type="album")
+    db_session.add(group)
+    db_session.flush()
+
+    album1 = models.Album(main_title="Type Test Group", album_type="album", album_group_id=group.id)
+    album2 = models.Album(main_title="Type Test Group", album_type="album", album_group_id=group.id)
+    db_session.add_all([album1, album2])
+    db_session.commit()
+
+    # PUT /album-groups/{group_id} で album_type を変更
+    update_data = {"album_type": "single"}
+    response = client.put(f"/album-groups/{group.id}", json=update_data)
+    assert response.status_code == 200
+
+    # 伝播の検証
+    db_session.refresh(album1)
+    db_session.refresh(album2)
+    assert album1.album_type == "single"
+    assert album2.album_type == "single"
