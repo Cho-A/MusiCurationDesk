@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPin, Music, Disc3, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Edit3, Trash2, Plus, Calendar, Disc, Users, X, Search, MapPin, Music, Disc3, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import { API_BASE_URL } from '../api/config';
@@ -696,20 +696,86 @@ const ArtistDetail = () => {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => toggleFilter('album')}
-                  style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: albumTypeFilters.includes('album') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: albumTypeFilters.includes('album') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 16px', borderRadius: '24px', 
+                    border: `1px solid ${albumTypeFilters.includes('album') ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                    background: albumTypeFilters.includes('album') ? 'var(--primary-color)' : 'transparent',
+                    color: albumTypeFilters.includes('album') ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer', fontSize: '0.85rem', fontWeight: albumTypeFilters.includes('album') ? 600 : 400,
+                    transition: 'all 0.2s ease',
+                    boxShadow: albumTypeFilters.includes('album') ? '0 2px 8px rgba(0,0,0,0.2)' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!albumTypeFilters.includes('album')) {
+                      e.currentTarget.style.background = 'var(--bg-secondary)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!albumTypeFilters.includes('album')) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                    }
+                  }}
                 >
+                  {albumTypeFilters.includes('album') && <Check size={16} />}
                   アルバム
                 </button>
                 <button
                   onClick={() => toggleFilter('single')}
-                  style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: albumTypeFilters.includes('single') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: albumTypeFilters.includes('single') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 16px', borderRadius: '24px', 
+                    border: `1px solid ${albumTypeFilters.includes('single') ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                    background: albumTypeFilters.includes('single') ? 'var(--primary-color)' : 'transparent',
+                    color: albumTypeFilters.includes('single') ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer', fontSize: '0.85rem', fontWeight: albumTypeFilters.includes('single') ? 600 : 400,
+                    transition: 'all 0.2s ease',
+                    boxShadow: albumTypeFilters.includes('single') ? '0 2px 8px rgba(0,0,0,0.2)' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!albumTypeFilters.includes('single')) {
+                      e.currentTarget.style.background = 'var(--bg-secondary)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!albumTypeFilters.includes('single')) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                    }
+                  }}
                 >
+                  {albumTypeFilters.includes('single') && <Check size={16} />}
                   シングル
                 </button>
                 <button
                   onClick={() => toggleFilter('dvd')}
-                  style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', background: albumTypeFilters.includes('dvd') ? 'var(--primary-color)' : 'var(--bg-secondary)', color: albumTypeFilters.includes('dvd') ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 16px', borderRadius: '24px', 
+                    border: `1px solid ${albumTypeFilters.includes('dvd') ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                    background: albumTypeFilters.includes('dvd') ? 'var(--primary-color)' : 'transparent',
+                    color: albumTypeFilters.includes('dvd') ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer', fontSize: '0.85rem', fontWeight: albumTypeFilters.includes('dvd') ? 600 : 400,
+                    transition: 'all 0.2s ease',
+                    boxShadow: albumTypeFilters.includes('dvd') ? '0 2px 8px rgba(0,0,0,0.2)' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!albumTypeFilters.includes('dvd')) {
+                      e.currentTarget.style.background = 'var(--bg-secondary)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!albumTypeFilters.includes('dvd')) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                    }
+                  }}
                 >
+                  {albumTypeFilters.includes('dvd') && <Check size={16} />}
                   映像作品
                 </button>
               </div>
