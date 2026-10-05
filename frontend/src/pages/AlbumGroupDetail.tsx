@@ -1659,8 +1659,8 @@ const AlbumGroupDetail = () => {
                           </div>
                           
                           {editingTrackId === track.id ? (
-                            <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                            <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: 'column', minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px' }}>マスター楽曲:</span>
                                 <div style={{ position: 'relative', flex: 1 }}>
                                   <input 
@@ -1668,7 +1668,7 @@ const AlbumGroupDetail = () => {
                                     value={editForm.song_title}
                                     onChange={(e) => handleSongSearch(e.target.value)}
                                     placeholder="検索..."
-                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
                                   />
                                   {songSearchResults.length > 0 && (
                                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto' }}>
@@ -1690,21 +1690,21 @@ const AlbumGroupDetail = () => {
                                   )}
                                 </div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px' }}>アルバム表記:</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px', flexShrink: 0 }}>アルバム表記:</span>
                                 <input 
                                   type="text"
                                   value={editForm.display_title}
                                   onChange={(e) => setEditForm({ ...editForm, display_title: e.target.value })}
                                   placeholder={`(空の場合はマスター「${track.song.title}」を表示)`}
-                                  style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                                  style={{ flex: 1, minWidth: 0, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
                                 />
                                 <input 
                                   type="text"
                                   value={editForm.notes}
                                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                                   placeholder="備考(例: Live)"
-                                  style={{ width: '120px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                                  style={{ width: '120px', minWidth: 0, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
                                 />
                                 <input
                                   type="number"
@@ -1712,18 +1712,18 @@ const AlbumGroupDetail = () => {
                                   value={editForm.disc_number}
                                   onChange={(e) => setEditForm({ ...editForm, disc_number: parseInt(e.target.value) || 1 })}
                                   title="Disc番号"
-                                  style={{ width: '60px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                                  style={{ width: '60px', minWidth: 0, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
                                 />
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px' }}>アーティスト:</span>
-                                <div style={{ position: 'relative', flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', width: '80px', flexShrink: 0 }}>アーティスト:</span>
+                                <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
                                   <input 
                                     type="text"
                                     value={editForm.main_artist_name}
                                     onChange={(e) => handleTrackArtistSearch(e.target.value)}
                                     placeholder="メインアーティストを変更 (任意)"
-                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
                                   />
                                   {editForm.main_artist_id === null && (trackArtistSearchResults.length > 0 || editForm.main_artist_name.length >= 2) && (
                                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', zIndex: 10, maxHeight: '150px', overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
@@ -1755,7 +1755,7 @@ const AlbumGroupDetail = () => {
                                   )}
                                 </div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', paddingLeft: '88px', justifyContent: 'flex-end' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', boxSizing: 'border-box', justifyContent: 'flex-end' }}>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   <Button variant="primary" icon={Save} onClick={(e) => handleSaveTrack(e, track)}>保存</Button>
                                   <Button variant="secondary" icon={X} onClick={handleCancelEdit}>キャンセル</Button>
