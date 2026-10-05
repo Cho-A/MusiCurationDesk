@@ -13,3 +13,5 @@
 - **Dependency Injection**: Use `from backend.dependencies import get_db, get_current_user` instead of redefining or importing from `models.py`. Standardize DB injection as `db: Session = Depends(get_db)`.
 - **Absolute Imports**: Always use absolute imports for backend modules (e.g., `from backend import models, schemas, auth_utils`) instead of relative imports (`from .. import ...`).
 - **Ruff Formatting**: The project uses `ruff` for formatting and linting. After writing or modifying backend code, run `ruff check --select I --fix backend` to sort imports, and `ruff format backend` to enforce PEP 8 style standards automatically.
+
+- **CSS Layout Prevention**: When placing forms or text inputs inside a `display: flex` container, always explicitly add `minWidth: 0` to the flex children and use `box-sizing: border-box` to prevent the children from forcing the container to expand beyond 100% width. This must be validated by visual inspection and documented when writing UI code.
