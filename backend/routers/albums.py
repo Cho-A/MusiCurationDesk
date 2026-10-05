@@ -624,6 +624,7 @@ def bulk_merge_disc(
     """
     import unicodedata
 
+    from sqlalchemy import func
     from backend.routers.songs import perform_song_merge
 
     source_tracks = (
@@ -632,13 +633,36 @@ def bulk_merge_disc(
         .all()
     )
 
+    if not source_tracks:
+        raise HTTPException(status_code=404, detail="Source tracks not found.")
+
+    if request.target_disc_number == -1:
+        # 新しいディスクとしてそのまま移動する
+        max_disc = db.query(func.max(models.AlbumDisc.disc_number)).filter(models.AlbumDisc.album_id == request.target_album_id).scalar()
+        new_disc_num = (max_disc or 0) + 1
+        
+        source_disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number == disc_number).first()
+        if source_disc:
+            source_disc.album_id = request.target_album_id
+            source_disc.disc_number = new_disc_num
+            db.flush()
+            
+        for s_track in source_tracks:
+            s_track.album_id = request.target_album_id
+            s_track.disc_number = new_disc_num
+            
+        db.commit()
+        return {
+            "message": f"Successfully moved {len(source_tracks)} tracks as new Disc {new_disc_num}.",
+            "merged_count": len(source_tracks),
+            "skipped_count": 0,
+        }
+
     query = db.query(models.AlbumTrack).filter(models.AlbumTrack.album_id == request.target_album_id)
     if request.target_disc_number is not None:
         query = query.filter(models.AlbumTrack.disc_number == request.target_disc_number)
     target_tracks = query.all()
 
-    if not source_tracks:
-        raise HTTPException(status_code=404, detail="Source tracks not found.")
     if not target_tracks:
         raise HTTPException(status_code=404, detail="Target tracks not found.")
 

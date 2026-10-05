@@ -2065,6 +2065,7 @@ const AlbumGroupDetail = () => {
                         style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
                       >
                         <option value="">自動マッチング (指定なし)</option>
+                        <option value="-1">新しいディスクとして追加</option>
                         {albumGroup?.albums.find(a => a.id === bulkMergeTargetAlbumId)?.discs?.map(d => (
                           <option key={d.id} value={d.disc_number}>
                             Disc {d.disc_number} {d.title ? `(${d.title})` : ''}
@@ -2144,6 +2145,7 @@ const AlbumGroupDetail = () => {
                             style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '1rem' }}
                           >
                             <option value="">自動マッチング (指定なし)</option>
+                            <option value="-1">新しいディスクとして追加</option>
                             {crossTargetAlbumGroup.albums.find(a => a.id === crossTargetAlbumId)?.discs?.map(d => (
                               <option key={d.id} value={d.disc_number}>
                                 Disc {d.disc_number} {d.title ? `(${d.title})` : ''}
