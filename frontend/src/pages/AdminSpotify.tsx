@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UserCheck, ListMusic, DownloadCloud } from 'lucide-react';
 import { API_BASE_URL } from '../api/config';
 
 const AdminSpotify = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   
   const [albumId, setAlbumId] = useState('');
   const [artistId, setArtistId] = useState('');
@@ -20,6 +23,10 @@ const AdminSpotify = () => {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (res.status === 401) {
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
       if (!res.ok) throw new Error('Failed to fetch job progress');
       const data = await res.json();
       setJobProgress(data);
@@ -53,6 +60,10 @@ const AdminSpotify = () => {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (res.status === 401) {
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(`Album import request failed (Status: ${res.status}): ${errText}`);
@@ -85,6 +96,10 @@ const AdminSpotify = () => {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (res.status === 401) {
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(`Artist import request failed (Status: ${res.status}): ${errText}`);
@@ -115,6 +130,10 @@ const AdminSpotify = () => {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (res.status === 401) {
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(`Playlist import request failed (Status: ${res.status}): ${errText}`);

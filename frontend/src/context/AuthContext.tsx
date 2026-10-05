@@ -18,8 +18,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
+  const [user, setUser] = useState<User | null>(() => {
+    const username = localStorage.getItem('username');
+    const is_admin = localStorage.getItem('is_admin') === 'true';
+    return username ? { username, is_admin } : null;
+  });
 
   const fetchProfile = async (currentToken: string) => {
     try {
@@ -30,6 +34,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const data = await res.json();
         setUser({ username: data.username, is_admin: data.is_admin });
         localStorage.setItem('is_admin', data.is_admin ? 'true' : 'false');
+      } else if (res.status === 401) {
+        // トークンが期限切れ、または無効な場合はログアウト処理を行う
+        logout();
       }
     } catch (err) {
       console.error("Failed to fetch user profile", err);
@@ -39,11 +46,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 初回レンダリング時にローカルストレージからトークンを復元
   useEffect(() => {
     const storedToken = localStorage.getItem('access_token');
-    const storedUsername = localStorage.getItem('username');
-    const storedIsAdmin = localStorage.getItem('is_admin') === 'true';
-    if (storedToken && storedUsername) {
-      setToken(storedToken);
-      setUser({ username: storedUsername, is_admin: storedIsAdmin });
+    if (storedToken) {
       // 背景で最新プロフィールを取得して同期
       fetchProfile(storedToken);
     }

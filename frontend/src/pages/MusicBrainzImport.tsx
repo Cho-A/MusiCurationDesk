@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Disc, PlusCircle, CheckSquare, Square, DownloadCloud } from 'lucide-react';
 import CDImportBuilderModal from '../components/CDImportBuilderModal';
 import { API_BASE_URL } from '../api/config';
@@ -49,6 +50,9 @@ const MusicBrainzImport = () => {
   // モーダルステート
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query) return;
@@ -61,6 +65,11 @@ const MusicBrainzImport = () => {
         }
       });
       const data = await res.json();
+      
+      if (res.status === 401) {
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
       
       if (!res.ok) {
         throw new Error(data.detail || '検索に失敗しました');
@@ -87,6 +96,11 @@ const MusicBrainzImport = () => {
         }
       });
       const data = await res.json();
+      
+      if (res.status === 401) {
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
       
       if (!res.ok) {
         throw new Error(data.detail || '詳細取得に失敗しました');
