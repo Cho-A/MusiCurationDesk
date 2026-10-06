@@ -15,3 +15,5 @@
 - **Ruff Formatting**: The project uses `ruff` for formatting and linting. After writing or modifying backend code, run `ruff check --select I --fix backend` to sort imports, and `ruff format backend` to enforce PEP 8 style standards automatically.
 
 - **CSS Layout Prevention**: When placing forms or text inputs inside a `display: flex` container, always explicitly add `minWidth: 0` to the flex children and use `box-sizing: border-box` to prevent the children from forcing the container to expand beyond 100% width. This must be validated by visual inspection and documented when writing UI code.
+
+- **Album Version Title Best Practice**: When handling or registering albums that belong to a multi-edition release (having an `album_group_id`), never leave the `version_title` of the normal edition as `None` or empty. Always explicitly set `version_title="通常盤"` in the database. This ensures that songs exclusive to the normal edition still properly display their edition name in the UI.
