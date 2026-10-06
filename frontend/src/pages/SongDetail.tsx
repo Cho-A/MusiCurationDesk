@@ -668,6 +668,9 @@ const SongDetail = () => {
                   setEditVersionNameValue(displaySong.version_name || "");
                   setEditTrackCategoryValue(displaySong.track_category || "");
                   setEditStreamingValue(displaySong.is_streaming_available !== false);
+                  if (baseSong?.work) {
+                    setEditWorkTitleValue(baseSong.work.title);
+                  }
                 }
                 setIsEditMode(!isEditMode);
               }} 
