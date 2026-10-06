@@ -82,7 +82,7 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
       // 2. Track markers
       let matchedTrack = false;
       if (!isDiscMarker) {
-        const trackMatch = line.match(/^(?:M?\d+[\.\s\-:\]\)]+)(.*)$/i) || line.match(/^(\d{1,2})\s+(.*)$/);
+        const trackMatch = line.match(/^(?:M?\d+[\.\s\-:\]\)]+)(.+)$/i) || line.match(/^(\d{1,2})\s+(.+)$/);
         if (trackMatch) {
           matchedTrack = true;
           title = trackMatch[1].trim();
@@ -96,6 +96,8 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
       if (!isDiscMarker && !matchedTrack) {
         if (title.length > 60) include = false;
         if (title.match(/^(?:※|初回|通常|特典|発売日|価格|規格|ボーナス|監督|プロデューサー)/)) include = false;
+        if (title.match(/^M?\d+[\.\s\-:\]\)]*$/i)) include = false;
+        if (title.match(/^(?:<|＜|\[|【|《|~|〜)?\s*ENCORE\s*(?:>|＞|\]|】|》|~|〜)?$/i)) include = false;
       }
 
       parsedRows.push({
