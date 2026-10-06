@@ -375,17 +375,22 @@ class TestAlbumsAPI:
 
         db_session.expire_all()
 
-        # Disc 1自体が削除されていること
+        # Disc 1自体が削除されていること (元のdisc1のIDは存在しない)
         assert db_session.query(AlbumDisc).filter_by(id=disc1.id).first() is None
 
-        # Disc 1のトラックが削除されていること
+        # Disc 2が繰り上がってDisc 1になっていること
+        new_disc1 = db_session.query(AlbumDisc).filter_by(id=disc2.id).first()
+        assert new_disc1.disc_number == 1
+        
+        # Disc 1のトラックは、元のDisc 2のトラックのみになっていること
         tracks = db_session.query(AlbumTrack).filter_by(album_id=album.id, disc_number=1).all()
-        assert len(tracks) == 0
+        assert len(tracks) == 1
+        assert tracks[0].song_id == song2.id
 
         # song1は他で使われていないので削除されていること
         assert db_session.query(Song).filter_by(id=song1.id).first() is None
 
-        # song2はDisc 2で使われているので残っていること
+        # song2は残っていること
         assert db_session.query(Song).filter_by(id=song2.id).first() is not None
 
     def test_update_album_track_partial(self, client, db_session):

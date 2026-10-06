@@ -877,6 +877,21 @@ def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)
                 song.tieup_links.clear()
                 song.works.clear()
                 db.delete(song)
+    
+    # 削除したディスクより後ろのディスクの番号を繰り上げる
+    subsequent_discs = db.query(models.AlbumDisc).filter(
+        models.AlbumDisc.album_id == album_id,
+        models.AlbumDisc.disc_number > disc_number
+    ).all()
+    for d in subsequent_discs:
+        d.disc_number -= 1
+        
+    subsequent_tracks = db.query(models.AlbumTrack).filter(
+        models.AlbumTrack.album_id == album_id,
+        models.AlbumTrack.disc_number > disc_number
+    ).all()
+    for t in subsequent_tracks:
+        t.disc_number -= 1
 
     db.commit()
     return {"status": "success"}
