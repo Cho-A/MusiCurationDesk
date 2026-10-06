@@ -164,7 +164,19 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
   };
 
   const updateRow = (id: string, field: keyof ParsedRow, value: any) => {
-    setRows(rows.map(r => r.id === id ? { ...r, [field]: value } : r));
+    setRows(prevRows => {
+      let newRows = prevRows.map(r => r.id === id ? { ...r, [field]: value } : r);
+      if (field === 'include' || field === 'disc') {
+        const discCounters: Record<number, number> = {};
+        newRows = newRows.map(r => {
+          if (!r.include) return { ...r, track: 0 };
+          if (!discCounters[r.disc]) discCounters[r.disc] = 1;
+          const newTrack = discCounters[r.disc]++;
+          return { ...r, track: newTrack };
+        });
+      }
+      return newRows;
+    });
   };
 
   return (
