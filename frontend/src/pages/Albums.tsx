@@ -41,7 +41,7 @@ const Albums = () => {
   // 最近追加されたアルバムを取得（初回のみ）
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({ limit: '24', skip: '0' });
+    const params = new URLSearchParams({ limit: '24', skip: '0', sort_by: 'id' });
     fetch(`${API_BASE_URL}/album-groups/?${params}`)
       .then(res => res.json())
       .then(data => {

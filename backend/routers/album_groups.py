@@ -15,6 +15,7 @@ def list_album_groups(
     limit: int = Query(50, ge=1, le=100),
     artist_id: Optional[int] = Query(None),
     q: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("release_date"),
     db: Session = Depends(get_db),
 ):
     query = db.query(models.AlbumGroup)
@@ -26,8 +27,10 @@ def list_album_groups(
     # Eagerly load the artist so search results can display it
     query = query.options(joinedload(models.AlbumGroup.artist))
 
-    # Sort by release date descending
-    query = query.order_by(models.AlbumGroup.release_date.desc().nullslast())
+    if sort_by == "id":
+        query = query.order_by(models.AlbumGroup.id.desc())
+    else:
+        query = query.order_by(models.AlbumGroup.release_date.desc().nullslast())
 
     return query.offset(skip).limit(limit).all()
 
