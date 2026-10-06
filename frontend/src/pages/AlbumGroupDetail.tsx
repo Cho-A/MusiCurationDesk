@@ -1688,17 +1688,19 @@ const AlbumGroupDetail = () => {
                         border: 'none'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flex: 1 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedTrackIds.has(track.id)}
-                            onChange={(e) => {
-                              const newSelected = new Set(selectedTrackIds);
-                              if (e.target.checked) newSelected.add(track.id);
-                              else newSelected.delete(track.id);
-                              setSelectedTrackIds(newSelected);
-                            }}
-                            style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
-                          />
+                          {isEditMode && (
+                            <input
+                              type="checkbox"
+                              checked={selectedTrackIds.has(track.id)}
+                              onChange={(e) => {
+                                const newSelected = new Set(selectedTrackIds);
+                                if (e.target.checked) newSelected.add(track.id);
+                                else newSelected.delete(track.id);
+                                setSelectedTrackIds(newSelected);
+                              }}
+                              style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
+                            />
+                          )}
                           <div style={{ color: 'var(--text-tertiary)', fontWeight: 600, width: '24px', textAlign: 'right' }}>
                             {track.track_number}
                           </div>
@@ -2323,7 +2325,7 @@ const AlbumGroupDetail = () => {
         </div>
       )}
 
-      {selectedTrackIds.size > 0 && (
+      {isEditMode && selectedTrackIds.size > 0 && (
         <div style={{
           position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
           background: 'var(--bg-secondary)', padding: '16px 24px', borderRadius: '32px',
