@@ -1,10 +1,11 @@
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Music, Users, BarChart3, Settings, Disc3, User, LogOut, LogIn, UserPlus, Shield, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ isOpen = true, closeSidebar }: { isOpen?: boolean, closeSidebar?: () => void }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -178,7 +179,7 @@ const Sidebar = ({ isOpen = true, closeSidebar }: { isOpen?: boolean, closeSideb
           </>
         ) : (
           <>
-            <Link to="/login" style={{ textDecoration: 'none' }}>
+            <Link to="/login" state={{ from: location }} style={{ textDecoration: 'none' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px',
                 background: 'var(--bg-tertiary)', borderRadius: '8px', color: 'var(--text-primary)',
@@ -191,7 +192,7 @@ const Sidebar = ({ isOpen = true, closeSidebar }: { isOpen?: boolean, closeSideb
                 <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>ログイン</span>
               </div>
             </Link>
-            <Link to="/register" style={{ textDecoration: 'none' }}>
+            <Link to="/register" state={{ from: location }} style={{ textDecoration: 'none' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px',
                 background: 'var(--bg-tertiary)', borderRadius: '8px', color: 'var(--text-primary)',

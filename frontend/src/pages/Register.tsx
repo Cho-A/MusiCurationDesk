@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 import { API_BASE_URL } from '../api/config';
 
@@ -11,6 +11,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +31,7 @@ const Register = () => {
       }
 
       // 登録成功後はログイン画面へ
-      navigate('/login');
+      navigate('/login', { state: location.state });
     } catch (err: any) {
       setError(err.message || '登録中にエラーが発生しました');
     } finally {
@@ -104,7 +105,7 @@ const Register = () => {
         </form>
 
         <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          すでにアカウントをお持ちですか？ <Link to="/login" style={{ color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600 }}>ログイン</Link>
+          すでにアカウントをお持ちですか？ <Link to="/login" state={location.state} style={{ color: 'var(--spotify-color)', textDecoration: 'none', fontWeight: 600 }}>ログイン</Link>
         </div>
         
         <div style={{ textAlign: 'center', marginTop: '-8px' }}>
