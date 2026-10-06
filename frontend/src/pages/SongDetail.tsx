@@ -662,7 +662,15 @@ const SongDetail = () => {
 
           {isAuthenticated && (
             <button 
-              onClick={() => setIsEditMode(!isEditMode)} 
+              onClick={() => {
+                if (!isEditMode && displaySong) {
+                  setEditTitleValue(displaySong.title);
+                  setEditVersionNameValue(displaySong.version_name || "");
+                  setEditTrackCategoryValue(displaySong.track_category || "");
+                  setEditStreamingValue(displaySong.is_streaming_available !== false);
+                }
+                setIsEditMode(!isEditMode);
+              }} 
               style={{ 
                 padding: '8px 16px', 
                 borderRadius: '20px', 

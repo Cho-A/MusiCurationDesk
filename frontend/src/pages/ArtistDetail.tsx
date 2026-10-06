@@ -551,7 +551,14 @@ const ArtistDetail = () => {
 
       <div className="responsive-detail-header" style={{ position: 'relative', background: 'var(--bg-secondary)', padding: '32px', borderRadius: '16px' }}>
         <button 
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            if (artist) {
+              setEditNameKana(artist.name_kana || "");
+              setEditImageUrl(artist.image_url || "");
+              setEditSpotifyId(artist.spotify_artist_id || "");
+            }
+            setIsEditing(true);
+          }}
           style={{ position: 'absolute', top: '24px', right: '24px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
         >
           <Edit3 size={18} />
