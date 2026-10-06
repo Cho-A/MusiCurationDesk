@@ -593,20 +593,22 @@ const AlbumGroupDetail = () => {
   const handleBulkCategorySelectedTracks = async () => {
     if (selectedTrackIds.size === 0) return;
     try {
-      const tracksToUpdate = album?.discs.flatMap(d => d.tracks).filter(t => selectedTrackIds.has(t.id));
+      const tracksToUpdate = album?.album_tracks.filter(t => selectedTrackIds.has(t.id));
       if (!tracksToUpdate) return;
       
       const token = localStorage.getItem('access_token');
-      const promises = tracksToUpdate.map(t => 
-        fetch(`${API_BASE_URL}/songs/${t.song_id}`, {
+      const promises = tracksToUpdate.map(async (t) => {
+        const res = await fetch(`${API_BASE_URL}/songs/${t.song_id}`, {
           method: 'PATCH',
           headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ track_category: bulkCategory || null })
-        })
-      );
+        });
+        if (!res.ok) throw new Error('Failed to update category');
+        return res;
+      });
       await Promise.all(promises);
       toast.success(`${selectedTrackIds.size}曲にカテゴリ「${bulkCategory || 'なし'}」を設定しました`);
       setSelectedTrackIds(new Set());
