@@ -114,7 +114,9 @@ const AlbumGroupDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(initialAlbumId);
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, main_artist_id: number | null, main_artist_name: string, disc_number: number}>({ display_title: '', notes: '', song_id: null, song_title: '', main_artist_id: null, main_artist_name: '', disc_number: 1 });
+  const [selectedTrackIds, setSelectedTrackIds] = useState<Set<number>>(new Set());
+  const [bulkCategory, setBulkCategory] = useState<string>('');
+  const [editForm, setEditForm] = useState<{display_title: string, notes: string, song_id: number | null, song_title: string, main_artist_id: number | null, main_artist_name: string, disc_number: number, track_category: string | null}>({ display_title: '', notes: '', song_id: null, song_title: '', main_artist_id: null, main_artist_name: '', disc_number: 1, track_category: null });
   const [songSearchResults, setSongSearchResults] = useState<SongMini[]>([]);
   const [, setIsSearchingSong] = useState(false);
   const [trackArtistSearchResults, setTrackArtistSearchResults] = useState<{id: number, name: string}[]>([]);
@@ -372,7 +374,8 @@ const AlbumGroupDetail = () => {
       song_title: track.song.title,
       main_artist_id: null,
       main_artist_name: '',
-      disc_number: track.disc_number
+      disc_number: track.disc_number,
+      track_category: track.song.track_category || null
     });
     setSongSearchResults([]);
   };
@@ -545,19 +548,23 @@ const AlbumGroupDetail = () => {
       
       if (!res.ok) throw new Error("Failed to update track");
 
-      // Update Master Song title if modified manually
-      if (editForm.song_id === track.song.id && editForm.song_title !== track.song.title) {
+      // Update Master Song title or track_category if modified manually
+      if (editForm.song_id === track.song.id && (editForm.song_title !== track.song.title || editForm.track_category !== track.song.track_category)) {
+        const payload: any = {};
+        if (editForm.song_title !== track.song.title) payload.title = editForm.song_title;
+        if (editForm.track_category !== track.song.track_category) payload.track_category = editForm.track_category;
+        
         const songRes = await fetch(`${API_BASE_URL}/songs/${editForm.song_id}`, {
-          method: 'PUT',
+          method: 'PATCH',
           headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ title: editForm.song_title })
+          body: JSON.stringify(payload)
         });
         if (!songRes.ok) {
           const errData = await songRes.json().catch(() => null);
-          throw new Error(`マスター楽曲名の更新に失敗しました: ${errData?.detail || ''}`);
+          throw new Error(`マスター楽曲の更新に失敗しました: ${errData?.detail || ''}`);
         }
       }
 
@@ -580,6 +587,33 @@ const AlbumGroupDetail = () => {
     } catch (err) {
       console.error(err);
       toast.error('保存に失敗しました');
+    }
+  };
+
+  const handleBulkCategorySelectedTracks = async () => {
+    if (selectedTrackIds.size === 0) return;
+    try {
+      const tracksToUpdate = album?.discs.flatMap(d => d.tracks).filter(t => selectedTrackIds.has(t.id));
+      if (!tracksToUpdate) return;
+      
+      const token = localStorage.getItem('access_token');
+      const promises = tracksToUpdate.map(t => 
+        fetch(`${API_BASE_URL}/songs/${t.song_id}`, {
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ track_category: bulkCategory || null })
+        })
+      );
+      await Promise.all(promises);
+      toast.success(`${selectedTrackIds.size}曲にカテゴリ「${bulkCategory || 'なし'}」を設定しました`);
+      setSelectedTrackIds(new Set());
+      fetchAlbum();
+    } catch (err) {
+      console.error(err);
+      toast.error('選択した曲へのカテゴリ設定に失敗しました');
     }
   };
 
@@ -1654,6 +1688,17 @@ const AlbumGroupDetail = () => {
                         border: 'none'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flex: 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedTrackIds.has(track.id)}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedTrackIds);
+                              if (e.target.checked) newSelected.add(track.id);
+                              else newSelected.delete(track.id);
+                              setSelectedTrackIds(newSelected);
+                            }}
+                            style={{ cursor: 'pointer', transform: 'scale(1.2)' }}
+                          />
                           <div style={{ color: 'var(--text-tertiary)', fontWeight: 600, width: '24px', textAlign: 'right' }}>
                             {track.track_number}
                           </div>
@@ -1756,6 +1801,19 @@ const AlbumGroupDetail = () => {
                                 </div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', boxSizing: 'border-box', justifyContent: 'flex-end' }}>
+                                <select 
+                                  value={editForm.track_category || ''} 
+                                  onChange={(e) => setEditForm({ ...editForm, track_category: e.target.value || null })}
+                                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px', borderRadius: '4px' }}
+                                >
+                                  <option value="">カテゴリなし</option>
+                                  <option value="Live">Live</option>
+                                  <option value="MV">MV</option>
+                                  <option value="Studio">Studio</option>
+                                  <option value="Acoustic">Acoustic</option>
+                                  <option value="Cover">Cover</option>
+                                  <option value="Instrumental">Instrumental</option>
+                                </select>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   <Button variant="primary" icon={Save} onClick={(e) => handleSaveTrack(e, track)}>保存</Button>
                                   <Button variant="secondary" icon={X} onClick={handleCancelEdit}>キャンセル</Button>
@@ -2264,6 +2322,45 @@ const AlbumGroupDetail = () => {
           </div>
         </div>
       )}
+
+      {selectedTrackIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-secondary)', padding: '16px 24px', borderRadius: '32px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)', border: '1px solid var(--border-color)',
+          display: 'flex', alignItems: 'center', gap: '16px', zIndex: 100
+        }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+            {selectedTrackIds.size}曲を選択中
+          </span>
+          <select 
+            value={bulkCategory}
+            onChange={(e) => setBulkCategory(e.target.value)}
+            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '8px 16px', borderRadius: '20px' }}
+          >
+            <option value="">カテゴリなし</option>
+            <option value="Live">Live</option>
+            <option value="MV">MV</option>
+            <option value="Studio">Studio</option>
+            <option value="Acoustic">Acoustic</option>
+            <option value="Cover">Cover</option>
+            <option value="Instrumental">Instrumental</option>
+          </select>
+          <button 
+            onClick={handleBulkCategorySelectedTracks}
+            style={{ background: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '8px 24px', borderRadius: '20px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            一括設定
+          </button>
+          <button 
+            onClick={() => setSelectedTrackIds(new Set())}
+            style={{ background: 'transparent', color: 'var(--text-secondary)', border: 'none', cursor: 'pointer', marginLeft: '8px' }}
+          >
+            キャンセル
+          </button>
+        </div>
+      )}
+
       {/* Duplicate Modal */}
       {isDuplicateModalOpen && (
         <div style={{
