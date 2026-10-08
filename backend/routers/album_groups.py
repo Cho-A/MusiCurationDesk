@@ -31,7 +31,13 @@ def list_album_groups(
     query = query.options(joinedload(models.AlbumGroup.artist))
 
     if sort_by == "id":
-        query = query.order_by(models.AlbumGroup.id.desc())
+        from sqlalchemy import func
+
+        query = (
+            query.outerjoin(models.Album, models.Album.album_group_id == models.AlbumGroup.id)
+            .group_by(models.AlbumGroup.id)
+            .order_by(func.max(models.Album.id).desc().nullslast(), models.AlbumGroup.id.desc())
+        )
     else:
         query = query.order_by(models.AlbumGroup.release_date.desc().nullslast())
 
