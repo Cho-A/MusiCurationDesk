@@ -71,8 +71,8 @@ def get_release_details(release_id: str) -> dict[str, Any]:
                 {
                     "position": t.get("position"),
                     "number": t.get("number"),
-                    "title": recording.get("title"),
-                    "length": recording.get("length"),  # milliseconds
+                    "title": t.get("title") or recording.get("title"),
+                    "length": t.get("length") or recording.get("length"),  # milliseconds
                 }
             )
 
