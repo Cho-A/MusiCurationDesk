@@ -79,15 +79,14 @@ const Albums = () => {
         skip: String((page - 1) * PAGE_SIZE),
       });
       if (debouncedQuery.trim()) params.append('q', debouncedQuery.trim());
+      if (typeFilter) params.append('album_type', typeFilter);
 
       const res = await fetch(`${API_BASE_URL}/album-groups/?${params}`);
       if (res.ok) {
         const data: AlbumGroup[] = await res.json();
-        // type filterはフロントで絞る（APIが未対応のため）
-        const filtered = typeFilter ? data.filter(a => a.album_type === typeFilter) : data;
-        setSearchResults(filtered);
-        setSearchTotal(filtered.length);
-        setTotalPages(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
+        setSearchResults(data);
+        setSearchTotal(data.length); // Ideally should come from API but pagination isn't returning total yet
+        setTotalPages(Math.max(1, Math.ceil(data.length / PAGE_SIZE)));
       }
     } catch (err) {
       console.error(err);

@@ -15,6 +15,7 @@ def list_album_groups(
     limit: int = Query(50, ge=1, le=100),
     artist_id: Optional[int] = Query(None),
     q: Optional[str] = Query(None),
+    album_type: Optional[str] = Query(None),
     sort_by: Optional[str] = Query("release_date"),
     db: Session = Depends(get_db),
 ):
@@ -23,6 +24,8 @@ def list_album_groups(
         query = query.filter(models.AlbumGroup.artist_id == artist_id)
     if q:
         query = query.filter(models.AlbumGroup.title.ilike(f"%{q}%"))
+    if album_type:
+        query = query.filter(models.AlbumGroup.album_type == album_type)
 
     # Eagerly load the artist so search results can display it
     query = query.options(joinedload(models.AlbumGroup.artist))
