@@ -84,9 +84,6 @@ def create_user_possession(
     return new_possession
 
 
-
-
-
 # --- ★★★ 新規実装: マイページ情報取得 (保護されたAPI) ★★★ ---
 # GET /users/me
 @router.get("/me", response_model=schemas.User)

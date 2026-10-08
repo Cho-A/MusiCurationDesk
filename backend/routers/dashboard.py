@@ -118,15 +118,12 @@ def get_personal_recent_additions(
     artist_ids = set()
 
     # 参加したライブのアーティスト (ライブ機能削除に伴い廃止)
-    
+
     # 所有しているアルバムのアーティストから抽出
     owned_albums = (
         db.query(models.Album)
         .join(models.UserPossession, models.Album.id == models.UserPossession.entity_id)
-        .filter(
-            models.UserPossession.user_id == current_user.id,
-            models.UserPossession.entity_type == "album"
-        )
+        .filter(models.UserPossession.user_id == current_user.id, models.UserPossession.entity_type == "album")
         .all()
     )
     for album in owned_albums:

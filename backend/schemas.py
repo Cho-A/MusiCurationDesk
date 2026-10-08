@@ -1053,7 +1053,7 @@ class CDImportTrack(BaseModel):
     media_format: str | None = None
     notes: str | None = None
     song_id: int | None = None  # 指定があれば既存曲に紐づける
-    base_song_id: int | None = None # song_idがNoneのとき、この曲から情報を引き継ぐ（別バージョンとして）
+    base_song_id: int | None = None  # song_idがNoneのとき、この曲から情報を引き継ぐ（別バージョンとして）
 
 
 class CDImportRequest(BaseModel):

@@ -229,10 +229,14 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                     album.artist_id = request.artist_id
             elif request.replace_disc_number is not None:
                 # 特定のディスクのみ削除して上書き（孤立した楽曲も削除する）
-                tracks_to_delete = db.query(models.AlbumTrack).filter(
-                    models.AlbumTrack.album_id == album.id,
-                    models.AlbumTrack.disc_number == request.replace_disc_number
-                ).all()
+                tracks_to_delete = (
+                    db.query(models.AlbumTrack)
+                    .filter(
+                        models.AlbumTrack.album_id == album.id,
+                        models.AlbumTrack.disc_number == request.replace_disc_number,
+                    )
+                    .all()
+                )
                 for t in tracks_to_delete:
                     song_id = t.song_id
                     db.delete(t)
@@ -249,21 +253,34 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                             song.works.clear()
                             db.delete(song)
                 db.query(models.AlbumDisc).filter(
-                    models.AlbumDisc.album_id == album.id,
-                    models.AlbumDisc.disc_number == request.replace_disc_number
+                    models.AlbumDisc.album_id == album.id, models.AlbumDisc.disc_number == request.replace_disc_number
                 ).delete()
             db.commit()
 
         # ディスク情報の保存
         for disc_req in request.discs:
-            album_disc = models.AlbumDisc(
-                album_id=album.id,
-                disc_number=disc_req.disc_number,
-                title=disc_req.title,
-                media_format=disc_req.media_format,
-                edition=disc_req.edition,
+            existing_disc = (
+                db.query(models.AlbumDisc)
+                .filter(models.AlbumDisc.album_id == album.id, models.AlbumDisc.disc_number == disc_req.disc_number)
+                .first()
             )
-            db.add(album_disc)
+            if not existing_disc:
+                album_disc = models.AlbumDisc(
+                    album_id=album.id,
+                    disc_number=disc_req.disc_number,
+                    title=disc_req.title,
+                    media_format=disc_req.media_format,
+                    edition=disc_req.edition,
+                )
+                db.add(album_disc)
+            else:
+                # 既存のディスクがある場合はタイトルなどの情報を更新する
+                if disc_req.title:
+                    existing_disc.title = disc_req.title
+                if disc_req.media_format:
+                    existing_disc.media_format = disc_req.media_format
+                if disc_req.edition:
+                    existing_disc.edition = disc_req.edition
 
         # ディスク番号とメディアフォーマットのマッピングを作成
         disc_formats = {d.disc_number: d.media_format for d in request.discs}
@@ -286,7 +303,7 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                 # ディスクのフォーマットがBlu-rayまたはDVDの場合は、映像作品として登録する
                 is_video = disc_formats.get(track_req.disc_number) in ["Blu-ray", "DVD"]
                 new_song = models.Song(title=track_req.title, spotify_song_id=None, is_video=is_video)
-                if getattr(track_req, 'base_song_id', None) is not None:
+                if getattr(track_req, "base_song_id", None) is not None:
                     # 派生バージョンとして、元の楽曲から属性を引き継ぐ
                     base_song = db.query(models.Song).filter(models.Song.id == track_req.base_song_id).first()
                     if base_song:
@@ -299,19 +316,19 @@ def import_cd_album(request: schemas.CDImportRequest, db: Session = Depends(get_
                 song_id = new_song.id
 
                 # 派生バージョンの場合、アーティストリンクとワークリンクもコピーする
-                if getattr(track_req, 'base_song_id', None) is not None and base_song:
+                if getattr(track_req, "base_song_id", None) is not None and base_song:
                     for link in base_song.artist_links:
-                        db.add(models.SongArtistLink(
-                            song_id=new_song.id,
-                            artist_id=link.artist_id,
-                            role_category=link.role_category
-                        ))
+                        db.add(
+                            models.SongArtistLink(
+                                song_id=new_song.id, artist_id=link.artist_id, role_category=link.role_category
+                            )
+                        )
                     for w_link in base_song.works:
-                        db.add(models.SongWorksLink(
-                            song_id=new_song.id,
-                            work_id=w_link.work_id,
-                            order_index=w_link.order_index
-                        ))
+                        db.add(
+                            models.SongWorksLink(
+                                song_id=new_song.id, work_id=w_link.work_id, order_index=w_link.order_index
+                            )
+                        )
                     db.flush()
 
             # アルバムのメインアーティストを紐付ける (apply_artist_to_tracksがTrueの場合)
@@ -626,6 +643,7 @@ def bulk_merge_disc(
     import unicodedata
 
     from sqlalchemy import func
+
     from backend.routers.songs import perform_song_merge
 
     source_tracks = (
@@ -639,10 +657,18 @@ def bulk_merge_disc(
 
     if request.target_disc_number == -1:
         # 新しいディスクとしてコピー（複製）する
-        max_disc = db.query(func.max(models.AlbumDisc.disc_number)).filter(models.AlbumDisc.album_id == request.target_album_id).scalar()
+        max_disc = (
+            db.query(func.max(models.AlbumDisc.disc_number))
+            .filter(models.AlbumDisc.album_id == request.target_album_id)
+            .scalar()
+        )
         new_disc_num = (max_disc or 0) + 1
-        
-        source_disc = db.query(models.AlbumDisc).filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number == disc_number).first()
+
+        source_disc = (
+            db.query(models.AlbumDisc)
+            .filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number == disc_number)
+            .first()
+        )
         if source_disc:
             new_disc = models.AlbumDisc(
                 album_id=request.target_album_id,
@@ -652,7 +678,7 @@ def bulk_merge_disc(
                 edition=source_disc.edition,
             )
             db.add(new_disc)
-            
+
         for s_track in source_tracks:
             new_track = models.AlbumTrack(
                 album_id=request.target_album_id,
@@ -661,7 +687,7 @@ def bulk_merge_disc(
                 song_id=s_track.song_id,
             )
             db.add(new_track)
-            
+
         db.commit()
         return {
             "message": f"Successfully copied {len(source_tracks)} tracks as new Disc {new_disc_num}.",
@@ -859,10 +885,11 @@ def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)
     db.flush()
 
     # ディスクに紐づいていたトラックを削除し、孤立した楽曲も削除
-    tracks_to_delete = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number == disc_number
-    ).all()
+    tracks_to_delete = (
+        db.query(models.AlbumTrack)
+        .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number == disc_number)
+        .all()
+    )
     for t in tracks_to_delete:
         song_id = t.song_id
         db.delete(t)
@@ -877,19 +904,21 @@ def delete_album_disc(album_id: int, disc_id: int, db: Session = Depends(get_db)
                 song.tieup_links.clear()
                 song.works.clear()
                 db.delete(song)
-    
+
     # 削除したディスクより後ろのディスクの番号を繰り上げる
-    subsequent_discs = db.query(models.AlbumDisc).filter(
-        models.AlbumDisc.album_id == album_id,
-        models.AlbumDisc.disc_number > disc_number
-    ).all()
+    subsequent_discs = (
+        db.query(models.AlbumDisc)
+        .filter(models.AlbumDisc.album_id == album_id, models.AlbumDisc.disc_number > disc_number)
+        .all()
+    )
     for d in subsequent_discs:
         d.disc_number -= 1
-        
-    subsequent_tracks = db.query(models.AlbumTrack).filter(
-        models.AlbumTrack.album_id == album_id,
-        models.AlbumTrack.disc_number > disc_number
-    ).all()
+
+    subsequent_tracks = (
+        db.query(models.AlbumTrack)
+        .filter(models.AlbumTrack.album_id == album_id, models.AlbumTrack.disc_number > disc_number)
+        .all()
+    )
     for t in subsequent_tracks:
         t.disc_number -= 1
 
