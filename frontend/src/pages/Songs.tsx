@@ -160,19 +160,19 @@ const Songs = () => {
       />
 
       {/* タブ切り替え */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', background: 'var(--bg-secondary)', padding: '6px', borderRadius: '30px', width: 'fit-content', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <button
           onClick={() => setSearchMode('local')}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '10px 24px',
+            padding: '8px 20px',
             borderRadius: '24px',
-            border: 'none',
-            background: searchMode === 'local' ? 'var(--accent-primary)' : 'transparent',
+            border: `1px solid ${searchMode === 'local' ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+            background: searchMode === 'local' ? 'var(--accent-primary)' : 'var(--bg-secondary)',
             color: searchMode === 'local' ? '#fff' : 'var(--text-secondary)',
-            fontWeight: searchMode === 'local' ? 'bold' : 'normal',
+            fontWeight: searchMode === 'local' ? 600 : 400,
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
@@ -186,12 +186,12 @@ const Songs = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '10px 24px',
+            padding: '8px 20px',
             borderRadius: '24px',
-            border: 'none',
-            background: searchMode === 'spotify' ? '#1DB954' : 'transparent',
+            border: `1px solid ${searchMode === 'spotify' ? '#1DB954' : 'var(--border-color)'}`,
+            background: searchMode === 'spotify' ? '#1DB954' : 'var(--bg-secondary)',
             color: searchMode === 'spotify' ? '#fff' : 'var(--text-secondary)',
-            fontWeight: searchMode === 'spotify' ? 'bold' : 'normal',
+            fontWeight: searchMode === 'spotify' ? 600 : 400,
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}

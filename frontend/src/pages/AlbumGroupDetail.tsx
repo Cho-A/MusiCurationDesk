@@ -1685,9 +1685,10 @@ const AlbumGroupDetail = () => {
                     <div key={track.id} style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div style={{ 
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '16px 20px', backgroundColor: isUnreleased ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)', 
-                        borderRadius: '8px', transition: 'background-color 0.2s',
-                        border: 'none'
+                        padding: '16px 20px', 
+                        backgroundColor: selectedTrackIds.has(track.id) ? 'rgba(29, 185, 84, 0.15)' : (isUnreleased ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)'), 
+                        borderRadius: '8px', transition: 'all 0.2s',
+                        border: selectedTrackIds.has(track.id) ? '1px solid var(--spotify-color)' : '1px solid transparent'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flex: 1 }}>
                           {isEditMode && (

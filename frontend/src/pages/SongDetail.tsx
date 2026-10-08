@@ -903,7 +903,7 @@ const SongDetail = () => {
                     </span>
                   )}
                 </h2>
-                {/* <button 
+                <button 
                   onClick={() => { 
                     setEditTitleValue(displaySong.title); 
                     setEditVersionNameValue(displaySong.version_name || "");
@@ -915,10 +915,10 @@ const SongDetail = () => {
                     display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)', cursor: 'pointer',
                     marginTop: '4px'
                   }}
-                  title="バージョン名を編集"
+                  title="曲名を編集"
                 >
                   <Edit2 size={14} />
-                </button> */}
+                </button>
               </div>
               {displaySong.version_name && (
                 <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: '1.4', marginTop: '4px' }}>
