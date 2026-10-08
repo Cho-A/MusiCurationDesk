@@ -299,7 +299,7 @@ const CDImportBuilderModal: React.FC<CDImportBuilderModalProps> = ({ isOpen, onC
     const initialMatches: TrackMatchState[] = [];
     const initialDiscs: DiscState[] = [];
     
-    let globalTrackCounter = startingTrackNumber || 0;
+    let globalTrackCounter = startingTrackNumber !== undefined ? startingTrackNumber - 1 : 0;
     
     rel.media.forEach((media, mIdx) => {
       let computedDiscNumber = media.position + baseDiscNumber;

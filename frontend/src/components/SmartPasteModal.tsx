@@ -266,7 +266,7 @@ const SmartPasteModal: React.FC<SmartPasteModalProps> = ({ isOpen, onClose, onPa
               </div>
 
               <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                   <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-tertiary)', zIndex: 10 }}>
                     <tr>
                       <th style={{ padding: '12px', borderBottom: '1px solid var(--border-color)', width: '60px', textAlign: 'center' }}>対象</th>
